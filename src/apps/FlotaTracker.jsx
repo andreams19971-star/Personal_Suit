@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useFlotaData } from "../hooks/useFlotaData.js";
 
 // ─── COLORES ──────────────────────────────────────────────────────────────────
 const C = {
@@ -110,80 +111,66 @@ function seedData() {
 
 // ─── APP PRINCIPAL ────────────────────────────────────────────────────────────
 export default function FlotaTracker({ onBack }) {
-  const [data, setData]       = useState(seedData);
-  const [view, setView]       = useState("dashboard");
-  const [selCarro, setSelCarro] = useState(null);
+  const {
+    cars, loading, online,
+    togglePayment, addWorkDay, addExpense,
+  } = useFlotaData();
+
+  const [view, setView]           = useState("dashboard");
   const [filterMonth, setFilterMonth] = useState(td().slice(0,7));
-  const [modal, setModal]     = useState(null); // {type, carroId}
-  const [toast, setToast]     = useState(null);
+  const [modal, setModal]         = useState(null);
+  const [toast, setToast]         = useState(null);
 
   const showToast = (m, t="ok") => { setToast({m,t}); setTimeout(()=>setToast(null),2200); };
 
   const [y, mo] = filterMonth.split("-").map(Number);
   const year = y; const month = mo - 1;
 
-  // ── STATS por carro ──
+  // ── STATS por carro (usa cars del hook) ──
   const getStats = (carro) => {
-    const pagosC = data.pagos[carro.id] || [];
+    const pagosC   = carro.pagos  || [];
+    const gastosC  = carro.gastos || [];
     const pagosMes = pagosC.filter(p => p.fecha.startsWith(filterMonth));
 
     if (carro.tipo === "diario") {
       const workDaysTotal  = getWorkDaysInMonth(year, month);
       const workDaysPassed = getWorkDaysPassed(year, month);
-      const esperadoPasado = workDaysPassed * carro.valorDiario;
-      const esperadoMes    = workDaysTotal  * carro.valorDiario;
+      const esperadoMes    = workDaysTotal  * (carro.valor_diario || CARRO1_DIARIO);
       const cobrado        = pagosMes.filter(p=>p.pagado).reduce((s,p)=>s+p.monto,0);
       const pendiente      = pagosMes.filter(p=>!p.pagado).reduce((s,p)=>s+p.monto,0);
       const diasPagados    = pagosMes.filter(p=>p.pagado).length;
       const diasPendientes = pagosMes.filter(p=>!p.pagado).length;
-      return { esperadoMes, esperadoPasado, cobrado, pendiente, diasPagados, diasPendientes, workDaysTotal };
+      return { esperadoMes, cobrado, pendiente, diasPagados, diasPendientes, workDaysTotal };
     } else {
-      const pagoMes = pagosMes[0];
-      const pagado  = pagoMes?.pagado ? carro.valorMensual : 0;
-      const pendiente = pagoMes?.pagado ? 0 : carro.valorMensual;
-      return { esperadoMes: carro.valorMensual, cobrado: pagado, pendiente, pagado: !!pagoMes?.pagado };
+      const pagoMes   = pagosMes[0];
+      const pagado    = pagoMes?.pagado ? (carro.valor_mensual || CARRO2_MENSUAL) : 0;
+      const pendiente = pagoMes?.pagado ? 0 : (carro.valor_mensual || CARRO2_MENSUAL);
+      return { esperadoMes: carro.valor_mensual || CARRO2_MENSUAL, cobrado: pagado, pendiente, pagado: !!pagoMes?.pagado };
     }
   };
 
-  // ── TOTALES globales ──
-  const totalEsperado = data.carros.reduce((s,c) => s + getStats(c).esperadoMes, 0);
-  const totalCobrado  = data.carros.reduce((s,c) => s + getStats(c).cobrado, 0);
-  const totalPendiente= data.carros.reduce((s,c) => s + getStats(c).pendiente, 0);
-  const totalGastos   = data.carros.reduce((s,c) =>
+  // ── TOTALES ──
+  const totalEsperado  = cars.reduce((s,c) => s + getStats(c).esperadoMes, 0);
+  const totalCobrado   = cars.reduce((s,c) => s + getStats(c).cobrado, 0);
+  const totalPendiente = cars.reduce((s,c) => s + getStats(c).pendiente, 0);
+  const totalGastos    = cars.reduce((s,c) =>
     s + (c.gastos||[]).filter(g=>g.fecha.startsWith(filterMonth)).reduce((a,g)=>a+g.monto,0), 0);
-  const totalNeto     = totalCobrado - totalGastos;
+  const totalNeto = totalCobrado - totalGastos;
 
   // ── ACCIONES ──
   const marcarPagado = (carroId, pagoId) => {
-    setData(d => ({
-      ...d,
-      pagos: {
-        ...d.pagos,
-        [carroId]: d.pagos[carroId].map(p =>
-          p.id === pagoId ? {...p, pagado: !p.pagado} : p
-        )
-      }
-    }));
+    togglePayment(carroId, pagoId);
     showToast("Pago actualizado ✓");
   };
 
   const agregarGasto = (carroId, gasto) => {
-    setData(d => ({
-      ...d,
-      carros: d.carros.map(c =>
-        c.id !== carroId ? c : {...c, gastos:[{...gasto,id:"G"+Date.now()},...c.gastos]}
-      )
-    }));
+    addExpense(carroId, gasto);
     showToast("Gasto registrado ✓");
     setModal(null);
   };
 
   const agregarPagoDiario = (carroId, fecha) => {
-    const id = "P1-"+Date.now();
-    setData(d => ({
-      ...d,
-      pagos:{...d.pagos,[carroId]:[{id,fecha,monto:CARRO1_DIARIO,pagado:false,nota:""},...(d.pagos[carroId]||[])]}
-    }));
+    addWorkDay(carroId, fecha);
     showToast("Día agregado ✓");
     setModal(null);
   };
@@ -205,6 +192,7 @@ export default function FlotaTracker({ onBack }) {
         ::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:${C.border};border-radius:2px}
         @keyframes su{from{transform:translateY(60px);opacity:0}to{transform:translateY(0);opacity:1}}
         @keyframes fu{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes ft-spin{to{transform:rotate(360deg)}}
         .fu{animation:fu .3s ease both}
         .row:hover{background:${C.cardHover}!important}
         .bp:active{transform:scale(.97)}
@@ -224,10 +212,16 @@ export default function FlotaTracker({ onBack }) {
 
       {/* CONTENT */}
       <div style={{flex:1,overflowY:"auto",paddingBottom:58}}>
-        {view==="dashboard" && <Dashboard carros={data.carros} getStats={getStats} totalEsperado={totalEsperado} totalCobrado={totalCobrado} totalPendiente={totalPendiente} totalGastos={totalGastos} totalNeto={totalNeto} filterMonth={filterMonth} setView={setView} pagos={data.pagos} />}
-        {view==="carro1"    && <CarroView carro={data.carros[0]} stats={getStats(data.carros[0])} pagos={data.pagos["C1"]||[]} filterMonth={filterMonth} marcarPagado={marcarPagado} setModal={setModal} />}
-        {view==="carro2"    && <CarroView carro={data.carros[1]} stats={getStats(data.carros[1])} pagos={data.pagos["C2"]||[]} filterMonth={filterMonth} marcarPagado={marcarPagado} setModal={setModal} />}
-        {view==="gastos"    && <GastosView carros={data.carros} filterMonth={filterMonth} setModal={setModal} totalGastos={totalGastos} />}
+        {loading && (
+          <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:200,gap:14}}>
+            <div style={{width:32,height:32,border:`3px solid ${C.border}`,borderTop:`3px solid ${C.accent}`,borderRadius:"50%",animation:"ft-spin .8s linear infinite"}}/>
+            <div style={{fontSize:13,color:C.textMuted}}>Cargando datos...</div>
+          </div>
+        )}
+        {!loading && view==="dashboard" && <Dashboard carros={cars} getStats={getStats} totalEsperado={totalEsperado} totalCobrado={totalCobrado} totalPendiente={totalPendiente} totalGastos={totalGastos} totalNeto={totalNeto} filterMonth={filterMonth} setView={setView} />}
+        {!loading && view==="carro1"    && cars[0] && <CarroView carro={cars[0]} stats={getStats(cars[0])} pagos={cars[0]?.pagos||[]} filterMonth={filterMonth} marcarPagado={marcarPagado} setModal={setModal} />}
+        {!loading && view==="carro2"    && cars[1] && <CarroView carro={cars[1]} stats={getStats(cars[1])} pagos={cars[1]?.pagos||[]} filterMonth={filterMonth} marcarPagado={marcarPagado} setModal={setModal} />}
+        {!loading && view==="gastos"    && <GastosView carros={cars} filterMonth={filterMonth} setModal={setModal} totalGastos={totalGastos} />}
       </div>
 
       {/* BOTTOM NAV */}
@@ -240,7 +234,7 @@ export default function FlotaTracker({ onBack }) {
       </div>
 
       {/* MODALS */}
-      {modal?.type==="gasto"    && <GastoModal carroId={modal.carroId} carros={data.carros} onClose={()=>setModal(null)} onAdd={agregarGasto}/>}
+      {modal?.type==="gasto"    && <GastoModal carroId={modal.carroId} carros={cars} onClose={()=>setModal(null)} onAdd={agregarGasto}/>}
       {modal?.type==="dia"      && <DiaModal   carroId={modal.carroId} onClose={()=>setModal(null)} onAdd={agregarPagoDiario}/>}
 
       {toast && <div style={{position:"fixed",bottom:68,left:"50%",transform:"translateX(-50%)",background:toast.t==="err"?C.red:C.green,color:"#fff",padding:"8px 20px",borderRadius:100,fontWeight:700,fontSize:13,zIndex:999,whiteSpace:"nowrap",animation:"su .25s ease"}}>{toast.m}</div>}
@@ -249,7 +243,7 @@ export default function FlotaTracker({ onBack }) {
 }
 
 // ─── DASHBOARD ────────────────────────────────────────────────────────────────
-function Dashboard({carros,getStats,totalEsperado,totalCobrado,totalPendiente,totalGastos,totalNeto,filterMonth,setView,pagos}) {
+function Dashboard({carros,getStats,totalEsperado,totalCobrado,totalPendiente,totalGastos,totalNeto,filterMonth,setView}) {
   const pctCobrado = totalEsperado > 0 ? Math.round((totalCobrado/totalEsperado)*100) : 0;
 
   return (

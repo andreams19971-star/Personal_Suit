@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useFinanzData } from "../hooks/useFinanzData.js";
 
 // ─── PALETTE ─────────────────────────────────────────────────────────────────
 const C = {
@@ -87,8 +88,15 @@ function seedLoans(){
 
 // ─── APP ──────────────────────────────────────────────────────────────────────
 export default function FinanzApp({ onBack }){
-  const [transactions,setTransactions]=useState(seedTx);
-  const [loans,setLoans]=useState(seedLoans);
+  // ── Supabase hook ──────────────────────────────────────────────────────────
+  const {
+    transactions, loans, loading, online,
+    addTransaction: dbAddTx,
+    deleteTransaction: dbDelTx,
+    addLoan: dbAddLoan,
+    addPayment: dbAddPayment,
+  } = useFinanzData();
+
   const [accounts,setAccounts]=useState(()=>ACCOUNTS_DEF.map(a=>({...a,initialBalance:500000})));
   const [view,setView]=useState("dashboard");
   const [sidebarOpen,setSidebarOpen]=useState(false);
@@ -115,24 +123,26 @@ export default function FinanzApp({ onBack }){
   const totalExpense=monthTxs.filter(t=>t.type==="expense").reduce((s,t)=>s+t.amount,0);
   const netBalance=totalIncome-totalExpense;
 
-  const addTransaction=tx=>{setTransactions(prev=>[{...tx,id:Date.now()},...prev]);showToast("Movimiento registrado ✓");setShowAddModal(false);setAddModalOpts({});};
-  const deleteTransaction=id=>{setTransactions(prev=>prev.filter(t=>t.id!==id));showToast("Eliminado","error");};
+  const addTransaction=async tx=>{
+    await dbAddTx({...tx,id:"tx-"+Date.now()});
+    showToast("Movimiento registrado ✓");
+    setShowAddModal(false);
+    setAddModalOpts({});
+  };
+  const deleteTransaction=async id=>{
+    await dbDelTx(id);
+    showToast("Eliminado","error");
+  };
 
-  const addLoan=data=>{
-    const loanId="L"+Date.now();
-    setLoans(prev=>[{id:loanId,debtor:data.debtor,amount:data.amount,balance:data.amount,date:data.date,account:data.account,note:data.note,status:"active",payments:[]},...prev]);
-    setTransactions(prev=>[{id:Date.now(),date:data.date,type:"expense",category:"loans_out",subcategory:data.subcategory||"Préstamo personal",account:data.account,amount:data.amount,note:`Préstamo a ${data.debtor}`,loanId},...prev]);
+  const addLoan=async data=>{
+    await dbAddLoan(data);
     showToast(`Préstamo registrado a ${data.debtor} ✓`);
     setShowLoanModal(false);
   };
 
-  const addPayment=(loan,payData)=>{
-    const amt=Math.min(parseFloat(payData.amount),loan.balance);
-    if(!amt||amt<=0)return;
-    const newBalance=Math.max(0,loan.balance-amt);
-    setLoans(prev=>prev.map(l=>l.id!==loan.id?l:{...l,balance:newBalance,status:newBalance===0?"paid":"active",payments:[...l.payments,{id:"P"+Date.now(),date:payData.date,amount:amt,note:payData.note}]}));
-    setTransactions(prev=>[{id:Date.now(),date:payData.date,type:"income",category:"loan_pay",subcategory:payData.note||"Abono",account:payData.account,amount:amt,note:`Cobro a ${loan.debtor}`,loanId:loan.id},...prev]);
-    showToast(newBalance===0?`¡Préstamo de ${loan.debtor} saldado! 🎉`:"Abono registrado ✓");
+  const addPayment=async(loan,payData)=>{
+    await dbAddPayment(loan,payData);
+    showToast(loan.balance-parseFloat(payData.amount)<=0?`¡Préstamo de ${loan.debtor} saldado! 🎉`:"Abono registrado ✓");
     setShowPayModal(null);
   };
 
@@ -146,12 +156,19 @@ export default function FinanzApp({ onBack }){
         @keyframes fa-slideUp{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}
         @keyframes fa-fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
         @keyframes fa-toastIn{from{transform:translateY(60px);opacity:0}to{transform:translateY(0);opacity:1}}
+        @keyframes fa-spin{to{transform:rotate(360deg)}}
         .fa-fade-up{animation:fa-fadeUp .35s ease both}
         .fa-tx-row:hover{background:${C.cardHover}!important}
         .fa-btn:active{transform:scale(.96)}
         @media(max-width:640px){.fa-desktop{display:none!important}}
         @media(min-width:641px){.fa-mobile{display:none!important}}
       `}</style>
+      {loading && (
+        <div style={{position:"absolute",inset:0,background:C.bg,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",zIndex:50,gap:14}}>
+          <div style={{width:36,height:36,border:`3px solid ${C.border}`,borderTop:`3px solid ${C.accent}`,borderRadius:"50%",animation:"fa-spin .8s linear infinite"}}/>
+          <div style={{fontSize:14,color:C.textMuted}}>Cargando datos...</div>
+        </div>
+      )}
       <div style={{display:"flex",flex:1,overflow:"hidden",minHeight:0}}>
         <DesktopNav view={view} setView={setView} setSidebarOpen={setSidebarOpen} loans={loans}/>
         <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden",minWidth:0}}>
@@ -214,7 +231,7 @@ function TopBar({view,filterMonth,setFilterMonth,setSidebarOpen,openAddModal,onB
     <div style={{background:C.surface,borderBottom:`1px solid ${C.border}`,padding:"14px 20px",display:"flex",alignItems:"center",gap:12,flexShrink:0}}>
       {onBack&&<button onClick={onBack} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:8,padding:"6px 12px",color:C.textSub,cursor:"pointer",fontSize:13,fontWeight:600}}>← Suite</button>}
       <div style={{fontSize:18,fontWeight:800,flex:1}}>{titles[view]||""}</div>
-      <div style={{display:"flex",alignItems:"center",gap:6,background:C.card,borderRadius:10,padding:"6px 12px",border:`1px solid ${C.border}`}}>
+      <div style={{display:"flex",alignItems:"center",gap:4,background:C.card,borderRadius:10,padding:"6px 12px",border:`1px solid ${C.border}`}}>
         <button onClick={prev} style={{background:"none",border:"none",color:C.textSub,cursor:"pointer",fontSize:16,padding:"0 4px"}}>‹</button>
         <span style={{fontSize:13,fontWeight:600,minWidth:70,textAlign:"center"}}>{MONTHS[parseInt(m)-1]} {y}</span>
         <button onClick={next} style={{background:"none",border:"none",color:C.textSub,cursor:"pointer",fontSize:16,padding:"0 4px"}}>›</button>
