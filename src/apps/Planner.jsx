@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { usePlannerData } from "../hooks/usePlannerData.js";
 
 const C = {
   bg: "#080C14", surface: "#0F1624", card: "#141E30", cardHover: "#192338",
@@ -58,7 +59,14 @@ function seedData() {
 }
 
 export default function Planner({ onBack }) {
-  const [data, setData] = useState(seedData);
+  const {
+    tasks, habits, goals, notes, loading,
+    addTask: dbAddTask, toggleTask: dbToggleTask, deleteTask: dbDeleteTask,
+    addHabit: dbAddHabit, toggleHabit: dbToggleHabit, deleteHabit: dbDeleteHabit,
+    addGoal: dbAddGoal, updateGoalProgress: dbUpdateGoal, deleteGoal: dbDeleteGoal,
+    addNote: dbAddNote, deleteNote: dbDeleteNote,
+  } = usePlannerData();
+
   const [view, setView] = useState("today");
   const [calDate, setCalDate] = useState(new Date());
   const [selDate, setSelDate] = useState(td());
@@ -71,50 +79,46 @@ export default function Planner({ onBack }) {
 
   const showToast = (m, t = "ok") => { setToast({ m, t }); setTimeout(() => setToast(null), 2200); };
 
-  const toggleTask = (id) => {
-    setData(d => ({ ...d, tasks: d.tasks.map(t => t.id === id ? { ...t, done: !t.done } : t) }));
-  };
-  const deleteTask = (id) => { setData(d => ({ ...d, tasks: d.tasks.filter(t => t.id !== id) })); showToast("Tarea eliminada", "err"); };
-  const addTask = (task) => { setData(d => ({ ...d, tasks: [{ ...task, id: "T" + Date.now(), done: false }, ...d.tasks] })); showToast("Tarea creada ✓"); setShowTaskModal(false); };
+  const toggleTask        = (id)        => dbToggleTask(id);
+  const deleteTask        = (id)        => { dbDeleteTask(id); showToast("Tarea eliminada", "err"); };
+  const addTask           = (task)      => { dbAddTask(task); showToast("Tarea creada ✓"); setShowTaskModal(false); };
+  const toggleHabit       = (hId, date) => dbToggleHabit(hId, date);
+  const addHabit          = (habit)     => { dbAddHabit(habit); showToast("Hábito creado ✓"); setShowHabitModal(false); };
+  const deleteHabit       = (id)        => dbDeleteHabit(id);
+  const addGoal           = (goal)      => { dbAddGoal(goal); showToast("Meta creada ✓"); setShowGoalModal(false); };
+  const updateGoalProgress= (id, val)   => dbUpdateGoal(id, val);
+  const deleteGoal        = (id)        => { dbDeleteGoal(id); showToast("Meta eliminada", "err"); };
+  const addNote           = (note)      => { dbAddNote(note); showToast("Nota guardada ✓"); setShowNoteModal(false); };
+  const deleteNote        = (id)        => dbDeleteNote(id);
 
-  const toggleHabit = (hId, date) => {
-    setData(d => ({
-      ...d,
-      habits: d.habits.map(h => h.id !== hId ? h : {
-        ...h,
-        completions: { ...h.completions, [date]: h.completions[date] ? 0 : 1 }
-      })
-    }));
-  };
-  const addHabit = (habit) => { setData(d => ({ ...d, habits: [...d.habits, { ...habit, id: "H" + Date.now(), completions: {} }] })); showToast("Hábito creado ✓"); setShowHabitModal(false); };
-
-  const addGoal = (goal) => { setData(d => ({ ...d, goals: [...d.goals, { ...goal, id: "G" + Date.now() }] })); showToast("Meta creada ✓"); setShowGoalModal(false); };
-  const updateGoalProgress = (id, val) => { setData(d => ({ ...d, goals: d.goals.map(g => g.id !== id ? g : { ...g, current: Math.min(g.target, Math.max(0, val)) }) })); };
-  const deleteGoal = (id) => { setData(d => ({ ...d, goals: d.goals.filter(g => g.id !== id) })); showToast("Meta eliminada", "err"); };
-
-  const addNote = (note) => { setData(d => ({ ...d, notes: [{ ...note, id: "N" + Date.now(), date: td() }, ...d.notes] })); showToast("Nota guardada ✓"); setShowNoteModal(false); };
-  const deleteNote = (id) => { setData(d => ({ ...d, notes: d.notes.filter(n => n.id !== id) })); };
-
-  const todayTasks = data.tasks.filter(t => t.date === selDate);
+  const todayTasks = tasks.filter(t => t.date === selDate);
   const doneTodayCount = todayTasks.filter(t => t.done).length;
   const nav = [
-    { id: "today", icon: "☀️", label: "Hoy" },
+    { id: "today",    icon: "☀️", label: "Hoy" },
     { id: "calendar", icon: "📅", label: "Calendario" },
-    { id: "habits", icon: "🔁", label: "Hábitos" },
-    { id: "goals", icon: "🎯", label: "Metas" },
-    { id: "notes", icon: "📝", label: "Notas" },
+    { id: "habits",   icon: "🔁", label: "Hábitos" },
+    { id: "goals",    icon: "🎯", label: "Metas" },
+    { id: "notes",    icon: "📝", label: "Notas" },
   ];
 
   return (
-    <div style={{ fontFamily: "-apple-system, BlinkMacSystemFont, sans-serif", background: C.bg, minHeight: "100vh", color: C.text, overflow: "hidden" }}>
+    <div style={{ fontFamily: "-apple-system, BlinkMacSystemFont, sans-serif", background: C.bg, height: "100%", color: C.text, overflow: "hidden", display: "flex", flexDirection: "column" }}>
       <style>{`
-        *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+        *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
         input,select,textarea{outline:none;font-family:inherit}
-        ::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:${C.border};border-radius:2px}
+        ::-webkit-scrollbar{width:0}
         @keyframes su{from{transform:translateY(50px);opacity:0}to{transform:translateY(0);opacity:1}}
         @keyframes fu{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes pl-spin{to{transform:rotate(360deg)}}
         .fu{animation:fu .3s ease both}.bp:active{transform:scale(.96)}.hr:hover{background:${C.cardHover}!important}
       `}</style>
+
+      {loading && (
+        <div style={{position:"absolute",inset:0,background:C.bg,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",zIndex:50,gap:14}}>
+          <div style={{width:32,height:32,border:`3px solid ${C.border}`,borderTop:`3px solid ${C.accent}`,borderRadius:"50%",animation:"pl-spin .8s linear infinite"}}/>
+          <div style={{fontSize:14,color:C.textMuted}}>Cargando...</div>
+        </div>
+      )}
 
       {/* TOP BAR */}
       <div style={{ background: C.surface, borderBottom: `1px solid ${C.border}`, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
@@ -131,16 +135,16 @@ export default function Planner({ onBack }) {
       </div>
 
       {/* CONTENT */}
-      <div style={{ flex: 1, overflowY: "auto", paddingBottom: 60, height: "calc(100vh - 108px)", overflowX: "hidden" }}>
-        {view === "today" && <TodayView tasks={todayTasks} allTasks={data.tasks} habits={data.habits} selDate={selDate} toggleTask={toggleTask} deleteTask={deleteTask} toggleHabit={toggleHabit} doneTodayCount={doneTodayCount} />}
-        {view === "calendar" && <CalendarView tasks={data.tasks} calDate={calDate} setCalDate={setCalDate} selDate={selDate} setSelDate={setSelDate} toggleTask={toggleTask} deleteTask={deleteTask} setShowTaskModal={setShowTaskModal} />}
-        {view === "habits" && <HabitsView habits={data.habits} toggleHabit={toggleHabit} deleteHabit={id => setData(d => ({ ...d, habits: d.habits.filter(h => h.id !== id) }))} />}
-        {view === "goals" && <GoalsView goals={data.goals} updateGoalProgress={updateGoalProgress} deleteGoal={deleteGoal} setEditGoal={setEditGoal} />}
-        {view === "notes" && <NotesView notes={data.notes} deleteNote={deleteNote} />}
+      <div style={{ flex: 1, overflowY: "auto", paddingBottom: 60, minHeight: 0 }}>
+        {view === "today"    && <TodayView tasks={todayTasks} allTasks={tasks} habits={habits} selDate={selDate} toggleTask={toggleTask} deleteTask={deleteTask} toggleHabit={toggleHabit} doneTodayCount={doneTodayCount} />}
+        {view === "calendar" && <CalendarView tasks={tasks} calDate={calDate} setCalDate={setCalDate} selDate={selDate} setSelDate={setSelDate} toggleTask={toggleTask} deleteTask={deleteTask} setShowTaskModal={setShowTaskModal} />}
+        {view === "habits"   && <HabitsView habits={habits} toggleHabit={toggleHabit} deleteHabit={deleteHabit} />}
+        {view === "goals"    && <GoalsView goals={goals} updateGoalProgress={updateGoalProgress} deleteGoal={deleteGoal} setEditGoal={setEditGoal} />}
+        {view === "notes"    && <NotesView notes={notes} deleteNote={deleteNote} />}
       </div>
 
       {/* BOTTOM NAV */}
-      <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: C.surface, borderTop: `1px solid ${C.border}`, display: "flex", zIndex: 50 }}>
+      <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: C.surface, borderTop: `1px solid ${C.border}`, display: "flex", zIndex: 50, paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
         {nav.map(n => (
           <button key={n.id} onClick={() => setView(n.id)} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 2, padding: "8px 0", border: "none", background: "transparent", color: view === n.id ? C.accent : C.textMuted, cursor: "pointer", fontSize: 9, fontWeight: 600 }}>
             <span style={{ fontSize: 17 }}>{n.icon}</span>{n.label}
