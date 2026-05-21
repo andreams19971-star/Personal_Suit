@@ -38,9 +38,12 @@ function txToRow(tx) {
 export function useFinanzData() {
   const [transactions, setTransactions] = useState([])
   const [loans,        setLoans]        = useState([])
+  const [accountBalances, setAccountBalances] = useState({
+    cash:0, nequi:0, bbva:0, daviplata:0, bancolombia:0, savings_acc:0
+  })
   const [loading,      setLoading]      = useState(true)
   const [online,       setOnline]       = useState(false)
-  const onlineRef = useRef(false)  // ref para evitar stale closure
+  const onlineRef = useRef(false)
 
   const setOnlineState = (val) => {
     onlineRef.current = val
@@ -52,14 +55,20 @@ export function useFinanzData() {
   async function loadAll() {
     setLoading(true)
     try {
-      const [txRes, loanRes] = await Promise.all([
+      const [txRes, loanRes, balRes] = await Promise.all([
         supabase.from('transactions').select('*').order('date', { ascending: false }),
         supabase.from('loans').select('*').order('created_at', { ascending: false }),
+        supabase.from('account_balances').select('*'),
       ])
       if (txRes.error)   throw new Error('transactions: ' + txRes.error.message)
       if (loanRes.error) throw new Error('loans: '        + loanRes.error.message)
       setTransactions((txRes.data   || []).map(rowToTx))
       setLoans(       (loanRes.data || []).map(rowToLoan))
+      if (!balRes.error && balRes.data?.length > 0) {
+        const balMap = {}
+        balRes.data.forEach(r => { balMap[r.id] = Number(r.initial_balance) })
+        setAccountBalances(prev => ({ ...prev, ...balMap }))
+      }
       setOnlineState(true)
       console.log(`[FinanzData] ✅ Online — ${txRes.data?.length||0} txs, ${loanRes.data?.length||0} loans`)
     } catch (err) {
@@ -71,6 +80,16 @@ export function useFinanzData() {
     } finally {
       setLoading(false)
     }
+  }
+
+  async function updateAccountBalance(accountId, newBalance) {
+    setAccountBalances(prev => ({ ...prev, [accountId]: newBalance }))
+    if (!onlineRef.current) return
+    const { error } = await supabase
+      .from('account_balances')
+      .upsert({ id: accountId, initial_balance: newBalance, updated_at: new Date().toISOString() })
+    if (error) console.error('[updateAccountBalance]', error.message)
+    else console.log('[updateAccountBalance] ✅', accountId, newBalance)
   }
 
   async function addTransaction(tx) {
@@ -130,5 +149,9 @@ export function useFinanzData() {
     else console.log('[addPayment] ✓ guardado')
   }
 
-  return { transactions, loans, loading, online, addTransaction, deleteTransaction, addLoan, addPayment, reload:loadAll }
+  return {
+    transactions, loans, accountBalances, loading, online,
+    addTransaction, deleteTransaction, addLoan, addPayment,
+    updateAccountBalance, reload:loadAll
+  }
 }
