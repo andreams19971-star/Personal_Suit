@@ -90,14 +90,19 @@ function seedLoans(){
 export default function FinanzApp({ onBack }){
   // ── Supabase hook ──────────────────────────────────────────────────────────
   const {
-    transactions, loans, loading, online,
+    transactions, loans, accountBalances, loading, online,
     addTransaction: dbAddTx,
     deleteTransaction: dbDelTx,
     addLoan: dbAddLoan,
     addPayment: dbAddPayment,
+    updateAccountBalance,
   } = useFinanzData();
 
-  const [accounts,setAccounts]=useState(()=>ACCOUNTS_DEF.map(a=>({...a,initialBalance:500000})));
+  // Cuentas: definición base + saldos iniciales desde Supabase
+  const accounts = ACCOUNTS_DEF.map(a => ({
+    ...a,
+    initialBalance: accountBalances[a.id] ?? 0
+  }));
   const [view,setView]=useState("dashboard");
   const [sidebarOpen,setSidebarOpen]=useState(false);
   const [showAddModal,setShowAddModal]=useState(false);
@@ -176,12 +181,12 @@ export default function FinanzApp({ onBack }){
           <div className="fa-scroll" style={{flex:1,overflowY:"auto",paddingBottom:80,minHeight:0}}>
             {view==="dashboard" && <Dashboard transactions={transactions} accounts={computedAccounts} loans={loans} totalIncome={totalIncome} totalExpense={totalExpense} netBalance={netBalance} filterMonth={filterMonth} setView={setView} setSelAccount={setSelAccount} monthTxs={monthTxs}/>}
             {view==="movements" && <Movements transactions={transactions} filterMonth={filterMonth} deleteTransaction={deleteTransaction} openAddModal={openAddModal} loans={loans}/>}
-            {view==="accounts"  && <AccountsView accounts={computedAccounts} transactions={transactions} selAccount={selAccount} setSelAccount={setSelAccount} filterMonth={filterMonth} setAccounts={setAccounts} showToast={showToast}/>}
+            {view==="accounts"  && <AccountsView accounts={computedAccounts} transactions={transactions} selAccount={selAccount} setSelAccount={setSelAccount} filterMonth={filterMonth} showToast={showToast}/>}
             {view==="loans"     && <LoansView loans={loans} transactions={transactions} setShowLoanModal={setShowLoanModal} setShowPayModal={setShowPayModal} accounts={computedAccounts} setLoans={setLoans} showToast={showToast}/>}
             {view==="stats"     && <Stats monthTxs={monthTxs} totalIncome={totalIncome} totalExpense={totalExpense}/>}
           </div>
         </div>
-        <Sidebar open={sidebarOpen} onClose={()=>setSidebarOpen(false)} accounts={computedAccounts} setAccounts={setAccounts} settings={settings} setSettings={setSettings} showToast={showToast}/>
+        <Sidebar open={sidebarOpen} onClose={()=>setSidebarOpen(false)} accounts={computedAccounts} updateAccountBalance={updateAccountBalance} settings={settings} setSettings={setSettings} showToast={showToast}/>
       </div>
       <MobileNav view={view} setView={setView} openAddModal={openAddModal} loans={loans}/>
       <button onClick={()=>openAddModal()} className="fa-btn fa-mobile" style={{position:"fixed",bottom:82,right:20,width:54,height:54,borderRadius:"50%",background:C.accent,border:"none",cursor:"pointer",fontSize:24,boxShadow:`0 8px 24px ${C.accent}66`,zIndex:100,display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
@@ -411,7 +416,7 @@ function Movements({transactions,filterMonth,deleteTransaction,openAddModal,loan
 }
 
 // ─── ACCOUNTS ─────────────────────────────────────────────────────────────────
-function AccountsView({accounts,transactions,selAccount,setSelAccount,filterMonth,setAccounts,showToast}){
+function AccountsView({accounts,transactions,selAccount,setSelAccount,filterMonth,showToast}){
   const active=selAccount||accounts[0]?.id;
   const acc=accounts.find(a=>a.id===active)||accounts[0];
   const accTxs=transactions.filter(t=>t.account===active&&t.date.startsWith(filterMonth));
@@ -680,7 +685,7 @@ function Stats({monthTxs,totalIncome,totalExpense}){
 }
 
 // ─── SIDEBAR ──────────────────────────────────────────────────────────────────
-function Sidebar({open,onClose,accounts,setAccounts,settings,setSettings,showToast}){
+function Sidebar({open,onClose,accounts,updateAccountBalance,settings,setSettings,showToast}){
   const [tab,setTab]=useState("accounts");
   return(
     <>
@@ -699,15 +704,32 @@ function Sidebar({open,onClose,accounts,setAccounts,settings,setSettings,showToa
           {tab==="accounts"&&(
             <div style={{display:"grid",gap:12}}>
               <div style={{fontSize:12,color:C.textMuted,fontWeight:700}}>SALDOS INICIALES</div>
+              <div style={{fontSize:11,color:C.textMuted,marginTop:-6}}>El saldo inicial es el dinero que tenías antes de empezar a registrar movimientos</div>
               {accounts.map(acc=>(
                 <div key={acc.id} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:14,padding:"12px 14px"}}>
                   <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
                     <span style={{fontSize:18}}>{acc.icon}</span>
-                    <div><div style={{fontWeight:700,fontSize:14}}>{acc.label}</div><div style={{fontSize:12,color:C.accentText}}>Saldo: {fmtCOP(acc.balance)}</div></div>
+                    <div>
+                      <div style={{fontWeight:700,fontSize:14}}>{acc.label}</div>
+                      <div style={{fontSize:12,color:C.accentText}}>Saldo actual: {fmtCOP(acc.balance)}</div>
+                      <div style={{fontSize:11,color:C.textMuted}}>Saldo inicial: {fmtCOP(acc.initialBalance)}</div>
+                    </div>
                   </div>
                   <div style={{display:"flex",gap:8}}>
-                    <input type="number" defaultValue={acc.initialBalance} id={`bal-${acc.id}`} style={{flex:1,background:C.bg,border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 10px",color:C.text,fontSize:13}}/>
-                    <button onClick={()=>{const v=parseFloat(document.getElementById(`bal-${acc.id}`).value)||0;setAccounts(prev=>prev.map(a=>a.id===acc.id?{...a,initialBalance:v}:a));showToast("Saldo actualizado");}} style={{background:C.accentDim,border:`1px solid ${C.accentText}44`,color:C.accentText,borderRadius:8,padding:"8px 12px",cursor:"pointer",fontSize:12,fontWeight:700}}>Guardar</button>
+                    <input
+                      type="number"
+                      defaultValue={acc.initialBalance}
+                      id={`bal-${acc.id}`}
+                      placeholder="0"
+                      style={{flex:1,background:C.bg,border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 10px",color:C.text,fontSize:13}}
+                    />
+                    <button onClick={async ()=>{
+                      const v = parseFloat(document.getElementById(`bal-${acc.id}`).value) || 0;
+                      await updateAccountBalance(acc.id, v);
+                      showToast(`${acc.label} actualizado ✓`);
+                    }} style={{background:C.accentDim,border:`1px solid ${C.accentText}44`,color:C.accentText,borderRadius:8,padding:"8px 12px",cursor:"pointer",fontSize:12,fontWeight:700}}>
+                      Guardar
+                    </button>
                   </div>
                 </div>
               ))}
