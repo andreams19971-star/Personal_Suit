@@ -139,25 +139,25 @@ export default function FinanzApp({ onBack }){
   const openAddModal=opts=>{setAddModalOpts(opts||{});setShowAddModal(true);};
 
   return(
-    <div style={{fontFamily:"'SF Pro Display',-apple-system,BlinkMacSystemFont,sans-serif",background:C.bg,height:"100vh",color:C.text,display:"flex",flexDirection:"column",overflow:"hidden",position:"relative"}}>
+    <div style={{position:"fixed",inset:0,fontFamily:"'SF Pro Display',-apple-system,BlinkMacSystemFont,sans-serif",background:C.bg,color:C.text,display:"flex",flexDirection:"column",zIndex:10}}>
       <style>{`
-        *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-        ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:${C.border};border-radius:2px}
-        input,select,textarea{outline:none;font-family:inherit}
-        @keyframes slideUp{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}
-        @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
-        @keyframes toastIn{from{transform:translateY(60px);opacity:0}to{transform:translateY(0);opacity:1}}
-        .fade-up{animation:fadeUp .35s ease both}
-        .tx-row:hover{background:${C.cardHover}!important}
-        .btn-p:active{transform:scale(.96)}
-        @media(max-width:640px){.d-only{display:none!important}}
-        @media(min-width:641px){.m-only{display:none!important}}
+        .fa-scroll::-webkit-scrollbar{width:4px}
+        .fa-scroll::-webkit-scrollbar-thumb{background:${C.border};border-radius:2px}
+        .fa-input input,.fa-input select,.fa-input textarea{outline:none;font-family:inherit;box-sizing:border-box}
+        @keyframes fa-slideUp{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}
+        @keyframes fa-fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes fa-toastIn{from{transform:translateY(60px);opacity:0}to{transform:translateY(0);opacity:1}}
+        .fa-fade-up{animation:fa-fadeUp .35s ease both}
+        .fa-tx-row:hover{background:${C.cardHover}!important}
+        .fa-btn:active{transform:scale(.96)}
+        @media(max-width:640px){.fa-desktop{display:none!important}}
+        @media(min-width:641px){.fa-mobile{display:none!important}}
       `}</style>
       <div style={{display:"flex",flex:1,overflow:"hidden"}}>
         <DesktopNav view={view} setView={setView} setSidebarOpen={setSidebarOpen} loans={loans}/>
         <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden",minWidth:0}}>
-          <TopBar view={view} filterMonth={filterMonth} setFilterMonth={setFilterMonth} setSidebarOpen={setSidebarOpen} openAddModal={openAddModal}/>
-          <div style={{flex:1,overflowY:"auto",paddingBottom:80}}>
+          <TopBar view={view} filterMonth={filterMonth} setFilterMonth={setFilterMonth} setSidebarOpen={setSidebarOpen} openAddModal={openAddModal} onBack={onBack}/>
+          <div className="fa-scroll" style={{flex:1,overflowY:"auto",paddingBottom:80}}>
             {view==="dashboard" && <Dashboard transactions={transactions} accounts={computedAccounts} loans={loans} totalIncome={totalIncome} totalExpense={totalExpense} netBalance={netBalance} filterMonth={filterMonth} setView={setView} setSelAccount={setSelAccount} monthTxs={monthTxs}/>}
             {view==="movements" && <Movements transactions={transactions} filterMonth={filterMonth} deleteTransaction={deleteTransaction} openAddModal={openAddModal} loans={loans}/>}
             {view==="accounts"  && <AccountsView accounts={computedAccounts} transactions={transactions} selAccount={selAccount} setSelAccount={setSelAccount} filterMonth={filterMonth} setAccounts={setAccounts} showToast={showToast}/>}
@@ -168,11 +168,11 @@ export default function FinanzApp({ onBack }){
         <Sidebar open={sidebarOpen} onClose={()=>setSidebarOpen(false)} accounts={computedAccounts} setAccounts={setAccounts} settings={settings} setSettings={setSettings} showToast={showToast}/>
       </div>
       <MobileNav view={view} setView={setView} openAddModal={openAddModal} loans={loans}/>
-      <button onClick={()=>openAddModal()} className="btn-p m-only" style={{position:"fixed",bottom:82,right:20,width:54,height:54,borderRadius:"50%",background:C.accent,border:"none",cursor:"pointer",fontSize:24,boxShadow:`0 8px 24px ${C.accent}66`,zIndex:100,display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
+      <button onClick={()=>openAddModal()} className="fa-btn fa-mobile" style={{position:"fixed",bottom:82,right:20,width:54,height:54,borderRadius:"50%",background:C.accent,border:"none",cursor:"pointer",fontSize:24,boxShadow:`0 8px 24px ${C.accent}66`,zIndex:100,display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
       {showAddModal  && <AddModal  onClose={()=>{ setShowAddModal(false); setAddModalOpts({}); }} onAdd={addTransaction} accounts={accounts} opts={addModalOpts}/>}
       {showLoanModal && <LoanModal onClose={()=>setShowLoanModal(false)} onAdd={addLoan} accounts={accounts}/>}
       {showPayModal  && <PayModal  onClose={()=>setShowPayModal(null)} loan={showPayModal} onPay={addPayment} accounts={accounts}/>}
-      {toast && <div style={{position:"fixed",bottom:96,left:"50%",transform:"translateX(-50%)",background:toast.type==="error"?C.red:C.accent,color:toast.type==="error"?"#fff":"#000",padding:"10px 20px",borderRadius:100,fontWeight:700,fontSize:14,zIndex:9999,animation:"toastIn .3s ease",whiteSpace:"nowrap",boxShadow:"0 8px 24px #0006"}}>{toast.msg}</div>}
+      {toast && <div style={{position:"fixed",bottom:96,left:"50%",transform:"translateX(-50%)",background:toast.type==="error"?C.red:C.accent,color:toast.type==="error"?"#fff":"#000",padding:"10px 20px",borderRadius:100,fontWeight:700,fontSize:14,zIndex:9999,animation:"fa-toastIn .3s ease",whiteSpace:"nowrap",boxShadow:"0 8px 24px #0006"}}>{toast.msg}</div>}
     </div>
   );
 }
@@ -188,7 +188,7 @@ function DesktopNav({view,setView,setSidebarOpen,loans}){
     {id:"stats",    icon:"◉",label:"Estadísticas"},
   ];
   return(
-    <div className="d-only" style={{width:220,background:C.surface,borderRight:`1px solid ${C.border}`,display:"flex",flexDirection:"column",padding:"24px 16px",flexShrink:0}}>
+    <div className="fa-desktop" style={{width:220,background:C.surface,borderRight:`1px solid ${C.border}`,display:"flex",flexDirection:"column",padding:"24px 16px",flexShrink:0}}>
       <div style={{marginBottom:32}}>
         <div style={{fontSize:20,fontWeight:800,color:C.accent,letterSpacing:-1}}>💰 FinanzApp</div>
         <div style={{fontSize:11,color:C.textMuted,marginTop:2}}>Control financiero total</div>
@@ -206,22 +206,22 @@ function DesktopNav({view,setView,setSidebarOpen,loans}){
 }
 
 // ─── TOP BAR ──────────────────────────────────────────────────────────────────
-function TopBar({view,filterMonth,setFilterMonth,setSidebarOpen,openAddModal}){
+function TopBar({view,filterMonth,setFilterMonth,setSidebarOpen,openAddModal,onBack}){
   const titles={dashboard:"Dashboard",movements:"Movimientos",accounts:"Cuentas",loans:"Por Cobrar",stats:"Estadísticas"};
   const prev=()=>{const d=new Date(filterMonth+"-01");d.setMonth(d.getMonth()-1);setFilterMonth(d.toISOString().slice(0,7));};
   const next=()=>{const d=new Date(filterMonth+"-01");d.setMonth(d.getMonth()+1);if(d<=new Date())setFilterMonth(d.toISOString().slice(0,7));};
   const [y,m]=filterMonth.split("-");
   return(
     <div style={{background:C.surface,borderBottom:`1px solid ${C.border}`,padding:"14px 20px",display:"flex",alignItems:"center",gap:12,flexShrink:0}}>
+      {onBack&&<button onClick={onBack} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:8,padding:"6px 12px",color:C.textSub,cursor:"pointer",fontSize:13,fontWeight:600}}>← Suite</button>}
       <div style={{fontSize:18,fontWeight:800,flex:1}}>{titles[view]||""}</div>
       <div style={{display:"flex",alignItems:"center",gap:6,background:C.card,borderRadius:10,padding:"6px 12px",border:`1px solid ${C.border}`}}>
         <button onClick={prev} style={{background:"none",border:"none",color:C.textSub,cursor:"pointer",fontSize:16,padding:"0 4px"}}>‹</button>
         <span style={{fontSize:13,fontWeight:600,minWidth:70,textAlign:"center"}}>{MONTHS[parseInt(m)-1]} {y}</span>
         <button onClick={next} style={{background:"none",border:"none",color:C.textSub,cursor:"pointer",fontSize:16,padding:"0 4px"}}>›</button>
       </div>
-      {onBack&&<button onClick={onBack} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:8,padding:"6px 12px",color:C.textSub,cursor:"pointer",fontSize:13,fontWeight:600}} className="d-only">← Suite</button>}
-      <button onClick={()=>openAddModal()} className="btn-p d-only" style={{background:C.accent,color:"#000",border:"none",borderRadius:10,padding:"8px 16px",fontWeight:700,fontSize:13,cursor:"pointer"}}>+ Agregar</button>
-      <button onClick={()=>setSidebarOpen(true)} className="btn-p" style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:10,padding:"8px 12px",color:C.textSub,cursor:"pointer",fontSize:16}}>⚙</button>
+      <button onClick={()=>openAddModal()} className="fa-btn fa-desktop" style={{background:C.accent,color:"#000",border:"none",borderRadius:10,padding:"8px 16px",fontWeight:700,fontSize:13,cursor:"pointer"}}>+ Agregar</button>
+      <button onClick={()=>setSidebarOpen(true)} className="fa-btn" style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:10,padding:"8px 12px",color:C.textSub,cursor:"pointer",fontSize:16}}>⚙</button>
     </div>
   );
 }
@@ -237,7 +237,7 @@ function MobileNav({view,setView,openAddModal,loans}){
     {id:"stats",    icon:"◉",label:"Stats"},
   ];
   return(
-    <div className="m-only" style={{position:"fixed",bottom:0,left:0,right:0,zIndex:90,background:C.surface,borderTop:`1px solid ${C.border}`,display:"flex",paddingBottom:"env(safe-area-inset-bottom,6px)"}}>
+    <div className="fa-mobile" style={{position:"fixed",bottom:0,left:0,right:0,zIndex:90,background:C.surface,borderTop:`1px solid ${C.border}`,display:"flex",paddingBottom:"env(safe-area-inset-bottom,6px)"}}>
       {items.map(item=>(
         <button key={item.id} onClick={()=>setView(item.id)} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:2,padding:"9px 0",border:"none",background:"transparent",color:view===item.id?C.accent:C.textMuted,cursor:"pointer",fontSize:10,fontWeight:600,position:"relative"}}>
           <span style={{fontSize:19}}>{item.icon}</span>{item.label}
@@ -262,7 +262,7 @@ function Dashboard({transactions,accounts,loans,totalIncome,totalExpense,netBala
   });
   const maxDay=Math.max(...last7.map(d=>d.total),1);
   return(
-    <div style={{padding:"20px 16px",display:"grid",gap:16}} className="fade-up">
+    <div style={{padding:"20px 16px",display:"grid",gap:16}} className="fa-fade-up">
       <div style={{background:`linear-gradient(135deg,${C.accentDim},${C.card})`,border:`1px solid ${C.accentText}33`,borderRadius:20,padding:24,position:"relative",overflow:"hidden"}}>
         <div style={{position:"absolute",top:-30,right:-30,width:120,height:120,borderRadius:"50%",background:`${C.accent}11`}}/>
         <div style={{fontSize:12,color:C.accentText,fontWeight:700,marginBottom:4}}>PATRIMONIO TOTAL</div>
@@ -278,7 +278,7 @@ function Dashboard({transactions,accounts,loans,totalIncome,totalExpense,netBala
         <SectionHeader title="Mis Cuentas" action="Ver todas" onAction={()=>setView("accounts")}/>
         <div style={{display:"flex",gap:12,overflowX:"auto",paddingBottom:4}}>
           {accounts.map(acc=>(
-            <button key={acc.id} onClick={()=>{setSelAccount(acc.id);setView("accounts");}} className="btn-p"
+            <button key={acc.id} onClick={()=>{setSelAccount(acc.id);setView("accounts");}} className="fa-btn"
               style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:16,padding:"14px 16px",minWidth:130,flexShrink:0,cursor:"pointer",textAlign:"left"}}>
               <div style={{fontSize:22,marginBottom:6}}>{acc.icon}</div>
               <div style={{fontSize:11,color:C.textSub,fontWeight:600}}>{acc.label}</div>
@@ -366,7 +366,7 @@ function Movements({transactions,filterMonth,deleteTransaction,openAddModal,loan
   filtered.forEach(t=>{(grouped[t.date]=grouped[t.date]||[]).push(t);});
   const sortedDates=Object.keys(grouped).sort((a,b)=>b.localeCompare(a));
   return(
-    <div style={{padding:"16px",display:"grid",gap:12}} className="fade-up">
+    <div style={{padding:"16px",display:"grid",gap:12}} className="fa-fade-up">
       <div style={{position:"relative"}}>
         <span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",color:C.textMuted}}>🔍</span>
         <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar..."
@@ -402,7 +402,7 @@ function AccountsView({accounts,transactions,selAccount,setSelAccount,filterMont
   const totalIn=accTxs.filter(t=>t.type==="income").reduce((s,t)=>s+t.amount,0);
   const totalOut=accTxs.filter(t=>t.type==="expense").reduce((s,t)=>s+t.amount,0);
   return(
-    <div style={{padding:"16px",display:"grid",gap:16}} className="fade-up">
+    <div style={{padding:"16px",display:"grid",gap:16}} className="fa-fade-up">
       <div style={{display:"flex",gap:10,overflowX:"auto",paddingBottom:4}}>
         {accounts.map(a=>(
           <button key={a.id} onClick={()=>setSelAccount(a.id)} style={{padding:"10px 14px",borderRadius:14,border:active!==a.id?`1px solid ${C.border}`:"none",cursor:"pointer",background:active===a.id?C.accent:C.card,color:active===a.id?"#000":C.textSub,fontWeight:700,fontSize:13,flexShrink:0,display:"flex",alignItems:"center",gap:6}}>
@@ -453,7 +453,7 @@ function LoansView({loans,transactions,setShowLoanModal,setShowPayModal,accounts
   );
 
   return(
-    <div style={{padding:"16px",display:"grid",gap:16}} className="fade-up">
+    <div style={{padding:"16px",display:"grid",gap:16}} className="fa-fade-up">
       <div style={{background:`linear-gradient(135deg,${C.orangeDim},${C.card})`,border:`1px solid ${C.orange}44`,borderRadius:20,padding:20,position:"relative",overflow:"hidden"}}>
         <div style={{position:"absolute",top:-20,right:-20,width:100,height:100,borderRadius:"50%",background:`${C.orange}11`}}/>
         <div style={{fontSize:12,color:C.orange,fontWeight:700,marginBottom:4}}>TOTAL POR COBRAR</div>
@@ -465,7 +465,7 @@ function LoansView({loans,transactions,setShowLoanModal,setShowPayModal,accounts
         </div>
       </div>
 
-      <button onClick={()=>setShowLoanModal(true)} className="btn-p" style={{background:C.orange,color:"#fff",border:"none",borderRadius:14,padding:14,fontWeight:800,fontSize:15,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+      <button onClick={()=>setShowLoanModal(true)} className="fa-btn" style={{background:C.orange,color:"#fff",border:"none",borderRadius:14,padding:14,fontWeight:800,fontSize:15,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
         🤝 Registrar Nuevo Préstamo
       </button>
 
@@ -481,7 +481,7 @@ function LoansView({loans,transactions,setShowLoanModal,setShowPayModal,accounts
           const pct=Math.round(((loan.amount-loan.balance)/loan.amount)*100);
           const acc=accounts.find(a=>a.id===loan.account);
           return(
-            <button key={loan.id} onClick={()=>setSelLoan(loan.id)} className="btn-p" style={{background:C.card,border:`1px solid ${loan.status==="paid"?C.accentText+"44":C.orange+"44"}`,borderRadius:18,padding:16,cursor:"pointer",textAlign:"left",width:"100%"}}>
+            <button key={loan.id} onClick={()=>setSelLoan(loan.id)} className="fa-btn" style={{background:C.card,border:`1px solid ${loan.status==="paid"?C.accentText+"44":C.orange+"44"}`,borderRadius:18,padding:16,cursor:"pointer",textAlign:"left",width:"100%"}}>
               <div style={{display:"flex",alignItems:"flex-start",gap:12}}>
                 <div style={{width:44,height:44,borderRadius:12,background:loan.status==="paid"?C.accentDim:C.orangeDim,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>
                   {loan.status==="paid"?"✅":"👤"}
@@ -507,7 +507,7 @@ function LoansView({loans,transactions,setShowLoanModal,setShowPayModal,accounts
                     </div>
                   </div>
                   {loan.status==="active"&&(
-                    <button onClick={e=>{e.stopPropagation();setShowPayModal(loan);}} className="btn-p" style={{marginTop:10,padding:"6px 14px",borderRadius:100,border:`1px solid ${C.orange}`,background:C.orangeDim,color:C.orange,fontSize:12,fontWeight:700,cursor:"pointer"}}>
+                    <button onClick={e=>{e.stopPropagation();setShowPayModal(loan);}} className="fa-btn" style={{marginTop:10,padding:"6px 14px",borderRadius:100,border:`1px solid ${C.orange}`,background:C.orangeDim,color:C.orange,fontSize:12,fontWeight:700,cursor:"pointer"}}>
                       + Registrar Abono
                     </button>
                   )}
@@ -527,7 +527,7 @@ function LoanDetail({loan,transactions,onBack,setShowPayModal,accounts}){
   const pct=Math.round(((loan.amount-loan.balance)/loan.amount)*100);
   const loanTx=transactions.filter(t=>t.loanId===loan.id);
   return(
-    <div style={{padding:"16px",display:"grid",gap:16}} className="fade-up">
+    <div style={{padding:"16px",display:"grid",gap:16}} className="fa-fade-up">
       <button onClick={onBack} style={{display:"flex",alignItems:"center",gap:6,background:"none",border:"none",color:C.orange,cursor:"pointer",fontWeight:600,fontSize:14,padding:0}}>← Volver a Préstamos</button>
       <div style={{background:`linear-gradient(135deg,${C.orangeDim},${C.card})`,border:`1px solid ${C.orange}44`,borderRadius:20,padding:20}}>
         <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:16}}>
@@ -562,14 +562,14 @@ function LoanDetail({loan,transactions,onBack,setShowPayModal,accounts}){
         <div style={{fontSize:11,color:C.textMuted,marginTop:6}}>Cuenta: {acc?.icon} {acc?.label}</div>
       </div>
       {loan.status==="active"&&(
-        <button onClick={()=>setShowPayModal(loan)} className="btn-p" style={{background:C.orange,color:"#fff",border:"none",borderRadius:14,padding:14,fontWeight:800,fontSize:15,cursor:"pointer"}}>+ Registrar Abono / Pago</button>
+        <button onClick={()=>setShowPayModal(loan)} className="fa-btn" style={{background:C.orange,color:"#fff",border:"none",borderRadius:14,padding:14,fontWeight:800,fontSize:15,cursor:"pointer"}}>+ Registrar Abono / Pago</button>
       )}
       <div>
         <div style={{fontSize:13,fontWeight:700,color:C.textMuted,marginBottom:10}}>HISTORIAL DE PAGOS ({loan.payments.length})</div>
         {loan.payments.length===0&&<EmptyState label="Sin pagos registrados aún"/>}
         <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:16,overflow:"hidden"}}>
           {[...loan.payments].reverse().map((p,i)=>(
-            <div key={p.id} className="tx-row" style={{padding:"12px 16px",borderBottom:i<loan.payments.length-1?`1px solid ${C.border}`:"none",display:"flex",alignItems:"center",gap:12}}>
+            <div key={p.id} className="fa-tx-row" style={{padding:"12px 16px",borderBottom:i<loan.payments.length-1?`1px solid ${C.border}`:"none",display:"flex",alignItems:"center",gap:12}}>
               <div style={{width:36,height:36,borderRadius:10,background:C.accentDim,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>💸</div>
               <div style={{flex:1}}>
                 <div style={{fontSize:14,fontWeight:600}}>{p.note||"Abono"}</div>
@@ -608,7 +608,7 @@ function Stats({monthTxs,totalIncome,totalExpense}){
   const savings=totalIncome-totalExpense;
   const savRate=totalIncome>0?Math.round((savings/totalIncome)*100):0;
   return(
-    <div style={{padding:"16px",display:"grid",gap:16}} className="fade-up">
+    <div style={{padding:"16px",display:"grid",gap:16}} className="fa-fade-up">
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10}}>
         <StatCard label="Ingresos"    value={fmtCOP(totalIncome)}  color={C.accentText} icon="↑"/>
         <StatCard label="Egresos"     value={fmtCOP(totalExpense)} color={C.red}        icon="↓"/>
@@ -744,7 +744,7 @@ function AddModal({onClose,onAdd,accounts,opts}){
   };
   return(
     <div style={{position:"fixed",inset:0,background:"#000000BB",zIndex:500,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
-      <div onClick={e=>e.stopPropagation()} style={{background:C.surface,borderRadius:"24px 24px 0 0",width:"100%",maxWidth:480,padding:"20px 20px 36px",animation:"slideUp .3s cubic-bezier(.4,0,.2,1)",maxHeight:"92vh",overflowY:"auto",borderTop:`1px solid ${C.border}`}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:C.surface,borderRadius:"24px 24px 0 0",width:"100%",maxWidth:480,padding:"20px 20px 36px",animation:"fa-slideUp .3s cubic-bezier(.4,0,.2,1)",maxHeight:"92vh",overflowY:"auto",borderTop:`1px solid ${C.border}`}}>
         <div style={{width:36,height:4,background:C.border,borderRadius:2,margin:"0 auto 20px"}}/>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20}}>
           <div style={{fontSize:18,fontWeight:800}}>Nuevo Movimiento</div>
@@ -797,7 +797,7 @@ function LoanModal({onClose,onAdd,accounts}){
   const ok=form.debtor&&form.amount&&form.account;
   return(
     <div style={{position:"fixed",inset:0,background:"#000000BB",zIndex:500,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
-      <div onClick={e=>e.stopPropagation()} style={{background:C.surface,borderRadius:"24px 24px 0 0",width:"100%",maxWidth:480,padding:"20px 20px 36px",animation:"slideUp .3s cubic-bezier(.4,0,.2,1)",maxHeight:"90vh",overflowY:"auto",borderTop:`1px solid ${C.orange}66`}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:C.surface,borderRadius:"24px 24px 0 0",width:"100%",maxWidth:480,padding:"20px 20px 36px",animation:"fa-slideUp .3s cubic-bezier(.4,0,.2,1)",maxHeight:"90vh",overflowY:"auto",borderTop:`1px solid ${C.orange}66`}}>
         <div style={{width:36,height:4,background:C.border,borderRadius:2,margin:"0 auto 20px"}}/>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
           <div style={{fontSize:18,fontWeight:800}}>🤝 Registrar Préstamo</div>
@@ -843,7 +843,7 @@ function PayModal({onClose,loan,onPay,accounts}){
   const ok=form.amount&&amt>0;
   return(
     <div style={{position:"fixed",inset:0,background:"#000000BB",zIndex:500,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
-      <div onClick={e=>e.stopPropagation()} style={{background:C.surface,borderRadius:"24px 24px 0 0",width:"100%",maxWidth:480,padding:"20px 20px 36px",animation:"slideUp .3s cubic-bezier(.4,0,.2,1)",maxHeight:"90vh",overflowY:"auto",borderTop:`1px solid ${C.accentText}66`}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:C.surface,borderRadius:"24px 24px 0 0",width:"100%",maxWidth:480,padding:"20px 20px 36px",animation:"fa-slideUp .3s cubic-bezier(.4,0,.2,1)",maxHeight:"90vh",overflowY:"auto",borderTop:`1px solid ${C.accentText}66`}}>
         <div style={{width:36,height:4,background:C.border,borderRadius:2,margin:"0 auto 20px"}}/>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
           <div style={{fontSize:18,fontWeight:800}}>💸 Registrar Cobro</div>
@@ -901,7 +901,7 @@ function TxRow({tx,onDelete,showDivider=false,compact=false}){
   const acc=ACCOUNTS_DEF.find(a=>a.id===tx.account)||{icon:"💰",label:tx.account};
   const isLoan=tx.category==="loans_out"||tx.category==="loan_pay";
   return(
-    <div className="tx-row" style={{padding:compact?"10px 14px":"12px 14px",borderBottom:showDivider?`1px solid ${C.border}`:"none",display:"flex",alignItems:"center",gap:12,transition:"background .15s"}}>
+    <div className="fa-tx-row" style={{padding:compact?"10px 14px":"12px 14px",borderBottom:showDivider?`1px solid ${C.border}`:"none",display:"flex",alignItems:"center",gap:12,transition:"background .15s"}}>
       <div style={{width:36,height:36,borderRadius:10,background:tx.type==="income"?C.accentDim:(isLoan?C.orangeDim:C.redDim),display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>{cat.icon}</div>
       <div style={{flex:1,minWidth:0}}>
         <div style={{fontSize:14,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:6}}>
