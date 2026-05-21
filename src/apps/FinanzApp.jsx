@@ -139,7 +139,7 @@ export default function FinanzApp({ onBack }){
   const openAddModal=opts=>{setAddModalOpts(opts||{});setShowAddModal(true);};
 
   return(
-    <div style={{fontFamily:"'SF Pro Display',-apple-system,BlinkMacSystemFont,sans-serif",background:C.bg,minHeight:"100vh",color:C.text,overflow:"hidden"}}>
+    <div style={{fontFamily:"'SF Pro Display',-apple-system,BlinkMacSystemFont,sans-serif",background:C.bg,height:"100vh",color:C.text,display:"flex",flexDirection:"column",overflow:"hidden",position:"relative"}}>
       <style>{`
         *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
         ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:${C.border};border-radius:2px}
@@ -153,9 +153,9 @@ export default function FinanzApp({ onBack }){
         @media(max-width:640px){.d-only{display:none!important}}
         @media(min-width:641px){.m-only{display:none!important}}
       `}</style>
-      <div style={{display:"flex",height:"100vh",overflow:"hidden"}}>
+      <div style={{display:"flex",flex:1,overflow:"hidden"}}>
         <DesktopNav view={view} setView={setView} setSidebarOpen={setSidebarOpen} loans={loans}/>
-        <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
+        <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden",minWidth:0}}>
           <TopBar view={view} filterMonth={filterMonth} setFilterMonth={setFilterMonth} setSidebarOpen={setSidebarOpen} openAddModal={openAddModal}/>
           <div style={{flex:1,overflowY:"auto",paddingBottom:80}}>
             {view==="dashboard" && <Dashboard transactions={transactions} accounts={computedAccounts} loans={loans} totalIncome={totalIncome} totalExpense={totalExpense} netBalance={netBalance} filterMonth={filterMonth} setView={setView} setSelAccount={setSelAccount} monthTxs={monthTxs}/>}
@@ -169,7 +169,7 @@ export default function FinanzApp({ onBack }){
       </div>
       <MobileNav view={view} setView={setView} openAddModal={openAddModal} loans={loans}/>
       <button onClick={()=>openAddModal()} className="btn-p m-only" style={{position:"fixed",bottom:82,right:20,width:54,height:54,borderRadius:"50%",background:C.accent,border:"none",cursor:"pointer",fontSize:24,boxShadow:`0 8px 24px ${C.accent}66`,zIndex:100,display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
-      {showAddModal  && <AddModal  onClose={()=>{setShowAddModal(false);setAddModalOpts({})}} onAdd={addTransaction} accounts={accounts} opts={addModalOpts}/>}
+      {showAddModal  && <AddModal  onClose={()=>{ setShowAddModal(false); setAddModalOpts({}); }} onAdd={addTransaction} accounts={accounts} opts={addModalOpts}/>}
       {showLoanModal && <LoanModal onClose={()=>setShowLoanModal(false)} onAdd={addLoan} accounts={accounts}/>}
       {showPayModal  && <PayModal  onClose={()=>setShowPayModal(null)} loan={showPayModal} onPay={addPayment} accounts={accounts}/>}
       {toast && <div style={{position:"fixed",bottom:96,left:"50%",transform:"translateX(-50%)",background:toast.type==="error"?C.red:C.accent,color:toast.type==="error"?"#fff":"#000",padding:"10px 20px",borderRadius:100,fontWeight:700,fontSize:14,zIndex:9999,animation:"toastIn .3s ease",whiteSpace:"nowrap",boxShadow:"0 8px 24px #0006"}}>{toast.msg}</div>}
