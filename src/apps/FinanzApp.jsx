@@ -182,7 +182,7 @@ export default function FinanzApp({ onBack }){
             {view==="dashboard" && <Dashboard transactions={transactions} accounts={computedAccounts} loans={loans} totalIncome={totalIncome} totalExpense={totalExpense} netBalance={netBalance} filterMonth={filterMonth} setView={setView} setSelAccount={setSelAccount} monthTxs={monthTxs}/>}
             {view==="movements" && <Movements transactions={transactions} filterMonth={filterMonth} deleteTransaction={deleteTransaction} openAddModal={openAddModal} loans={loans}/>}
             {view==="accounts"  && <AccountsView accounts={computedAccounts} transactions={transactions} selAccount={selAccount} setSelAccount={setSelAccount} filterMonth={filterMonth} showToast={showToast}/>}
-            {view==="loans"     && <LoansView loans={loans} transactions={transactions} setShowLoanModal={setShowLoanModal} setShowPayModal={setShowPayModal} accounts={computedAccounts} setLoans={setLoans} showToast={showToast}/>}
+            {view==="loans"     && <LoansView loans={loans} transactions={transactions} setShowLoanModal={setShowLoanModal} setShowPayModal={setShowPayModal} accounts={computedAccounts} showToast={showToast}/>}
             {view==="stats"     && <Stats monthTxs={monthTxs} totalIncome={totalIncome} totalExpense={totalExpense}/>}
           </div>
         </div>
@@ -460,7 +460,7 @@ function AccountsView({accounts,transactions,selAccount,setSelAccount,filterMont
 }
 
 // ─── LOANS VIEW ───────────────────────────────────────────────────────────────
-function LoansView({loans,transactions,setShowLoanModal,setShowPayModal,accounts,setLoans,showToast}){
+function LoansView({loans,transactions,setShowLoanModal,setShowPayModal,accounts,showToast}){
   const [filter,setFilter]=useState("active");
   const [selLoan,setSelLoan]=useState(null);
   const filtered=loans.filter(l=>filter==="all"||l.status===filter);
