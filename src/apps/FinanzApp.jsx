@@ -139,11 +139,10 @@ export default function FinanzApp({ onBack }){
   const openAddModal=opts=>{setAddModalOpts(opts||{});setShowAddModal(true);};
 
   return(
-    <div style={{position:"fixed",inset:0,fontFamily:"'SF Pro Display',-apple-system,BlinkMacSystemFont,sans-serif",background:C.bg,color:C.text,display:"flex",flexDirection:"column",zIndex:10}}>
+    <div style={{fontFamily:"'SF Pro Display',-apple-system,BlinkMacSystemFont,sans-serif",background:C.bg,height:"100%",color:C.text,display:"flex",flexDirection:"column",overflow:"hidden"}}>
       <style>{`
         .fa-scroll::-webkit-scrollbar{width:4px}
         .fa-scroll::-webkit-scrollbar-thumb{background:${C.border};border-radius:2px}
-        .fa-input input,.fa-input select,.fa-input textarea{outline:none;font-family:inherit;box-sizing:border-box}
         @keyframes fa-slideUp{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}
         @keyframes fa-fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
         @keyframes fa-toastIn{from{transform:translateY(60px);opacity:0}to{transform:translateY(0);opacity:1}}
@@ -153,11 +152,11 @@ export default function FinanzApp({ onBack }){
         @media(max-width:640px){.fa-desktop{display:none!important}}
         @media(min-width:641px){.fa-mobile{display:none!important}}
       `}</style>
-      <div style={{display:"flex",flex:1,overflow:"hidden"}}>
+      <div style={{display:"flex",flex:1,overflow:"hidden",minHeight:0}}>
         <DesktopNav view={view} setView={setView} setSidebarOpen={setSidebarOpen} loans={loans}/>
         <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden",minWidth:0}}>
           <TopBar view={view} filterMonth={filterMonth} setFilterMonth={setFilterMonth} setSidebarOpen={setSidebarOpen} openAddModal={openAddModal} onBack={onBack}/>
-          <div className="fa-scroll" style={{flex:1,overflowY:"auto",paddingBottom:80}}>
+          <div className="fa-scroll" style={{flex:1,overflowY:"auto",paddingBottom:80,minHeight:0}}>
             {view==="dashboard" && <Dashboard transactions={transactions} accounts={computedAccounts} loans={loans} totalIncome={totalIncome} totalExpense={totalExpense} netBalance={netBalance} filterMonth={filterMonth} setView={setView} setSelAccount={setSelAccount} monthTxs={monthTxs}/>}
             {view==="movements" && <Movements transactions={transactions} filterMonth={filterMonth} deleteTransaction={deleteTransaction} openAddModal={openAddModal} loans={loans}/>}
             {view==="accounts"  && <AccountsView accounts={computedAccounts} transactions={transactions} selAccount={selAccount} setSelAccount={setSelAccount} filterMonth={filterMonth} setAccounts={setAccounts} showToast={showToast}/>}
