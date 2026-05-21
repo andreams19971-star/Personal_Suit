@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../supabase.js'
 
 const ago = d => { const x = new Date(); x.setDate(x.getDate()-d); return x.toISOString().slice(0,10) }
@@ -40,6 +40,12 @@ export function useFinanzData() {
   const [loans,        setLoans]        = useState([])
   const [loading,      setLoading]      = useState(true)
   const [online,       setOnline]       = useState(false)
+  const onlineRef = useRef(false)  // ref para evitar stale closure
+
+  const setOnlineState = (val) => {
+    onlineRef.current = val
+    setOnline(val)
+  }
 
   useEffect(() => { loadAll() }, [])
 
@@ -54,14 +60,14 @@ export function useFinanzData() {
       if (loanRes.error) throw new Error('loans: '        + loanRes.error.message)
       setTransactions((txRes.data   || []).map(rowToTx))
       setLoans(       (loanRes.data || []).map(rowToLoan))
-      setOnline(true)
+      setOnlineState(true)
       console.log(`[FinanzData] ✅ Online — ${txRes.data?.length||0} txs, ${loanRes.data?.length||0} loans`)
     } catch (err) {
       console.warn('[FinanzData] ❌ Offline →', err.message)
       const s = seed()
       setTransactions(s.transactions)
       setLoans(s.loans)
-      setOnline(false)
+      setOnlineState(false)
     } finally {
       setLoading(false)
     }
@@ -70,8 +76,8 @@ export function useFinanzData() {
   async function addTransaction(tx) {
     const newTx = { ...tx, id:'tx-'+Date.now() }
     setTransactions(prev => [newTx, ...prev])
-    if (!online) {
-      console.warn('[addTransaction] ⚠️ Sin conexión - guardado solo localmente')
+    if (!onlineRef.current) {
+      console.warn('[addTransaction] ⚠️ offline — solo local')
       return
     }
     console.log('[addTransaction] Enviando a Supabase...', txToRow(newTx))
@@ -85,7 +91,7 @@ export function useFinanzData() {
 
   async function deleteTransaction(id) {
     setTransactions(prev => prev.filter(t => t.id !== id))
-    if (!online) return
+    if (!onlineRef.current) return
     await supabase.from('transactions').delete().eq('id', id)
   }
 
@@ -95,7 +101,7 @@ export function useFinanzData() {
     const expTx   = { id:'tx-'+Date.now(), date:data.date, type:'expense', category:'loans_out', subcategory:data.subcategory||'Préstamo personal', account:data.account, amount:data.amount, note:'Préstamo a '+data.debtor, loanId }
     setLoans(prev        => [newLoan, ...prev])
     setTransactions(prev => [expTx,   ...prev])
-    if (!online) return
+    if (!onlineRef.current) return
     const [lr, tr] = await Promise.all([
       supabase.from('loans').insert([{ id:newLoan.id, debtor:newLoan.debtor, amount:newLoan.amount, balance:newLoan.balance, date:newLoan.date, account:newLoan.account, note:newLoan.note, status:newLoan.status, payments:[] }]),
       supabase.from('transactions').insert([txToRow(expTx)]),
@@ -114,7 +120,7 @@ export function useFinanzData() {
     const incomeTx   = { id:'tx-'+Date.now(), date:payData.date, type:'income', category:'loan_pay', subcategory:payData.note||'Abono', account:payData.account, amount:amt, note:'Cobro a '+loan.debtor, loanId:loan.id }
     setLoans(prev        => prev.map(l => l.id !== loan.id ? l : updLoan))
     setTransactions(prev => [incomeTx, ...prev])
-    if (!online) return
+    if (!onlineRef.current) return
     const [lr, tr] = await Promise.all([
       supabase.from('loans').update({ balance:newBalance, status:updLoan.status, payments:updLoan.payments }).eq('id', loan.id),
       supabase.from('transactions').insert([txToRow(incomeTx)]),

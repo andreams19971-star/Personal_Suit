@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../supabase.js'
 
 const ago = d => { const x = new Date(); x.setDate(x.getDate()-d); return x.toISOString().slice(0,10) }
@@ -36,6 +36,8 @@ export function useFlotaData() {
   const [expenses, setExpenses] = useState({})
   const [loading,  setLoading]  = useState(true)
   const [online,   setOnline]   = useState(false)
+  const onlineRef = useRef(false)
+  const setOnlineState = v => { onlineRef.current = v; setOnline(v) }
 
   useEffect(() => { loadAll() }, [])
 
@@ -62,13 +64,13 @@ export function useFlotaData() {
       ;(pr.data||[]).forEach(p => { (pBycar[p.car_id]=pBycar[p.car_id]||[]).push(p) })
       ;(er.data||[]).forEach(e => { (eBycar[e.car_id]=eBycar[e.car_id]||[]).push(e) })
       setPayments(pBycar); setExpenses(eBycar)
-      setOnline(true)
+      setOnlineState(true)
     } catch(err) {
       console.warn('[FlotaData] Offline →', err.message)
       setCars(DEFAULT_CARS)
       setPayments(seedPayments(DEFAULT_CARS))
       setExpenses({ C1:[{id:'se1',car_id:'C1',fecha:ago(5),categoria:'Gasolina',monto:80000,nota:''}], C2:[] })
-      setOnline(false)
+      setOnlineState(false)
     } finally { setLoading(false) }
   }
 
@@ -78,7 +80,7 @@ export function useFlotaData() {
       const list = (prev[carId]||[]).map(p => { if(p.id!==pagoId) return p; updated={...p,pagado:!p.pagado}; return updated })
       return {...prev,[carId]:list}
     })
-    if (!online||!updated) return
+    if (!onlineRef.current||!updated) return
     await supabase.from('car_payments').update({pagado:updated.pagado}).eq('id', pagoId)
   }
 
@@ -86,20 +88,20 @@ export function useFlotaData() {
     const car = cars.find(c=>c.id===carId)
     const row = { id:'P'+Date.now(), car_id:carId, fecha, monto:car?.valor_diario||70000, pagado:false, nota:'' }
     setPayments(prev => ({...prev,[carId]:[row,...(prev[carId]||[])]}))
-    if (!online) return
+    if (!onlineRef.current) return
     await supabase.from('car_payments').insert([row])
   }
 
   async function addExpense(carId, gasto) {
     const row = { ...gasto, id:'E'+Date.now(), car_id:carId }
     setExpenses(prev => ({...prev,[carId]:[row,...(prev[carId]||[])]}))
-    if (!online) return
+    if (!onlineRef.current) return
     await supabase.from('car_expenses').insert([row])
   }
 
   async function updateCar(carId, updates) {
     setCars(prev => prev.map(c => c.id!==carId ? c : {...c,...updates}))
-    if (!online) return
+    if (!onlineRef.current) return
     await supabase.from('cars').update(updates).eq('id', carId)
   }
 

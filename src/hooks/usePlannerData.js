@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../supabase.js'
 
 const ago = d => { const x = new Date(); x.setDate(x.getDate()+d); return x.toISOString().slice(0,10) }
@@ -44,6 +44,8 @@ export function usePlannerData() {
   const [notes,   setNotes]   = useState([])
   const [loading, setLoading] = useState(true)
   const [online,  setOnline]  = useState(false)
+  const onlineRef = useRef(false)
+  const setOnlineState = v => { onlineRef.current = v; setOnline(v) }
 
   useEffect(() => { loadAll() }, [])
 
@@ -61,78 +63,78 @@ export function usePlannerData() {
       setHabits((hr.data||[]).map(h => ({ ...h, completions: parseComp(h.completions) })))
       setGoals( gr.data || [])
       setNotes( nr.data || [])
-      setOnline(true)
+      setOnlineState(true)
     } catch(err) {
       console.warn('[PlannerData] Offline →', err.message)
       const s = seed()
       setTasks(s.tasks); setHabits(s.habits); setGoals(s.goals); setNotes(s.notes)
-      setOnline(false)
+      setOnlineState(false)
     } finally { setLoading(false) }
   }
 
   async function addTask(t) {
     const row = { ...t, id:'T'+Date.now(), done:false }
     setTasks(p => [row,...p])
-    if (!online) return
+    if (!onlineRef.current) return
     const { error } = await supabase.from('tasks').insert([row])
     if (error) console.error('[addTask]', error.message)
   }
   async function toggleTask(id) {
     let updated
     setTasks(p => p.map(t => { if(t.id!==id) return t; updated={...t,done:!t.done}; return updated }))
-    if (!online||!updated) return
+    if (!onlineRef.current||!updated) return
     await supabase.from('tasks').update({ done:updated.done }).eq('id', id)
   }
   async function deleteTask(id) {
     setTasks(p => p.filter(t => t.id!==id))
-    if (!online) return
+    if (!onlineRef.current) return
     await supabase.from('tasks').delete().eq('id', id)
   }
 
   async function addHabit(h) {
     const row = { ...h, id:'H'+Date.now(), completions:{} }
     setHabits(p => [...p, row])
-    if (!online) return
+    if (!onlineRef.current) return
     await supabase.from('habits').insert([{ ...row, completions:{} }])
   }
   async function toggleHabit(hId, date) {
     let updated
     setHabits(p => p.map(h => { if(h.id!==hId) return h; const c={...h.completions,[date]:h.completions[date]?0:1}; updated={...h,completions:c}; return updated }))
-    if (!online||!updated) return
+    if (!onlineRef.current||!updated) return
     await supabase.from('habits').update({ completions: updated.completions }).eq('id', hId)
   }
   async function deleteHabit(id) {
     setHabits(p => p.filter(h => h.id!==id))
-    if (!online) return
+    if (!onlineRef.current) return
     await supabase.from('habits').delete().eq('id', id)
   }
 
   async function addGoal(g) {
     const row = { ...g, id:'G'+Date.now() }
     setGoals(p => [...p, row])
-    if (!online) return
+    if (!onlineRef.current) return
     await supabase.from('goals').insert([row])
   }
   async function updateGoalProgress(id, val) {
     setGoals(p => p.map(g => g.id!==id ? g : { ...g, current:Math.min(g.target,Math.max(0,val)) }))
-    if (!online) return
+    if (!onlineRef.current) return
     await supabase.from('goals').update({ current:val }).eq('id', id)
   }
   async function deleteGoal(id) {
     setGoals(p => p.filter(g => g.id!==id))
-    if (!online) return
+    if (!onlineRef.current) return
     await supabase.from('goals').delete().eq('id', id)
   }
 
   async function addNote(n) {
     const row = { ...n, id:'N'+Date.now(), date:td() }
     setNotes(p => [row,...p])
-    if (!online) return
+    if (!onlineRef.current) return
     await supabase.from('notes').insert([row])
   }
   async function deleteNote(id) {
     setNotes(p => p.filter(n => n.id!==id))
-    if (!online) return
+    if (!onlineRef.current) return
     await supabase.from('notes').delete().eq('id', id)
   }
 
