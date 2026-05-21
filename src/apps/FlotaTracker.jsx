@@ -113,88 +113,65 @@ function seedData() {
 export default function FlotaTracker({ onBack }) {
   const {
     cars, loading, online,
-    togglePayment, addWorkDay, addExpense,
+    togglePayment, addWorkDay, addExpense, updateCar,
   } = useFlotaData();
 
-  const [view, setView]           = useState("dashboard");
+  const [view,        setView]        = useState("dashboard");
   const [filterMonth, setFilterMonth] = useState(td().slice(0,7));
-  const [modal, setModal]         = useState(null);
-  const [toast, setToast]         = useState(null);
+  const [modal,       setModal]       = useState(null);
+  const [sidebar,     setSidebar]     = useState(false);
+  const [toast,       setToast]       = useState(null);
 
   const showToast = (m, t="ok") => { setToast({m,t}); setTimeout(()=>setToast(null),2200); };
 
   const [y, mo] = filterMonth.split("-").map(Number);
   const year = y; const month = mo - 1;
 
-  // ── STATS por carro (usa cars del hook) ──
   const getStats = (carro) => {
-    const pagosC   = carro.pagos  || [];
-    const gastosC  = carro.gastos || [];
-    const pagosMes = pagosC.filter(p => p.fecha.startsWith(filterMonth));
-
+    const pagosMes = (carro.pagos||[]).filter(p => p.fecha.startsWith(filterMonth));
     if (carro.tipo === "diario") {
-      const workDaysTotal  = getWorkDaysInMonth(year, month);
-      const workDaysPassed = getWorkDaysPassed(year, month);
-      const esperadoMes    = workDaysTotal  * (carro.valor_diario || CARRO1_DIARIO);
-      const cobrado        = pagosMes.filter(p=>p.pagado).reduce((s,p)=>s+p.monto,0);
-      const pendiente      = pagosMes.filter(p=>!p.pagado).reduce((s,p)=>s+p.monto,0);
-      const diasPagados    = pagosMes.filter(p=>p.pagado).length;
-      const diasPendientes = pagosMes.filter(p=>!p.pagado).length;
-      return { esperadoMes, cobrado, pendiente, diasPagados, diasPendientes, workDaysTotal };
+      const workDaysTotal = getWorkDaysInMonth(year, month);
+      const esperadoMes   = workDaysTotal * (carro.valor_diario || CARRO1_DIARIO);
+      const cobrado       = pagosMes.filter(p=>p.pagado).reduce((s,p)=>s+p.monto,0);
+      const pendiente     = pagosMes.filter(p=>!p.pagado).reduce((s,p)=>s+p.monto,0);
+      return { esperadoMes, cobrado, pendiente, diasPagados:pagosMes.filter(p=>p.pagado).length, diasPendientes:pagosMes.filter(p=>!p.pagado).length, workDaysTotal };
     } else {
-      const pagoMes   = pagosMes[0];
-      const pagado    = pagoMes?.pagado ? (carro.valor_mensual || CARRO2_MENSUAL) : 0;
-      const pendiente = pagoMes?.pagado ? 0 : (carro.valor_mensual || CARRO2_MENSUAL);
-      return { esperadoMes: carro.valor_mensual || CARRO2_MENSUAL, cobrado: pagado, pendiente, pagado: !!pagoMes?.pagado };
+      const pagoMes = pagosMes[0];
+      const val     = carro.valor_mensual || CARRO2_MENSUAL;
+      return { esperadoMes:val, cobrado:pagoMes?.pagado?val:0, pendiente:pagoMes?.pagado?0:val, pagado:!!pagoMes?.pagado };
     }
   };
 
-  // ── TOTALES ──
   const totalEsperado  = cars.reduce((s,c) => s + getStats(c).esperadoMes, 0);
   const totalCobrado   = cars.reduce((s,c) => s + getStats(c).cobrado, 0);
   const totalPendiente = cars.reduce((s,c) => s + getStats(c).pendiente, 0);
-  const totalGastos    = cars.reduce((s,c) =>
-    s + (c.gastos||[]).filter(g=>g.fecha.startsWith(filterMonth)).reduce((a,g)=>a+g.monto,0), 0);
-  const totalNeto = totalCobrado - totalGastos;
+  const totalGastos    = cars.reduce((s,c) => s + (c.gastos||[]).filter(g=>g.fecha.startsWith(filterMonth)).reduce((a,g)=>a+g.monto,0), 0);
+  const totalNeto      = totalCobrado - totalGastos;
 
-  // ── ACCIONES ──
-  const marcarPagado = (carroId, pagoId) => {
-    togglePayment(carroId, pagoId);
-    showToast("Pago actualizado ✓");
-  };
-
-  const agregarGasto = (carroId, gasto) => {
-    addExpense(carroId, gasto);
-    showToast("Gasto registrado ✓");
-    setModal(null);
-  };
-
-  const agregarPagoDiario = (carroId, fecha) => {
-    addWorkDay(carroId, fecha);
-    showToast("Día agregado ✓");
-    setModal(null);
-  };
+  const marcarPagado      = (carroId, pagoId) => { togglePayment(carroId, pagoId); showToast("Pago actualizado ✓"); };
+  const agregarGasto      = (carroId, gasto)  => { addExpense(carroId, gasto);     showToast("Gasto registrado ✓");  setModal(null); };
+  const agregarPagoDiario = (carroId, fecha)  => { addWorkDay(carroId, fecha);     showToast("Día agregado ✓");      setModal(null); };
 
   const nav = [
     {id:"dashboard",icon:"📊",label:"Resumen"},
-    {id:"carro1",   icon:"🚗",label:"Carro 1"},
-    {id:"carro2",   icon:"🚙",label:"Carro 2"},
+    {id:"carro1",   icon:"🚗",label: cars[0]?.nombre||"Carro 1"},
+    {id:"carro2",   icon:"🚙",label: cars[1]?.nombre||"Carro 2"},
     {id:"gastos",   icon:"🔧",label:"Gastos"},
   ];
 
   const [yStr, mStr] = filterMonth.split("-");
 
   return (
-    <div style={{fontFamily:"-apple-system,BlinkMacSystemFont,sans-serif",background:C.bg,height:"100vh",color:C.text,display:"flex",flexDirection:"column",overflow:"hidden"}}>
+    <div style={{fontFamily:"-apple-system,BlinkMacSystemFont,sans-serif",background:C.bg,height:"100%",color:C.text,display:"flex",flexDirection:"column",overflow:"hidden"}}>
       <style>{`
-        *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+        *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
         input,select,textarea{outline:none;font-family:inherit}
         ::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:${C.border};border-radius:2px}
         @keyframes su{from{transform:translateY(60px);opacity:0}to{transform:translateY(0);opacity:1}}
         @keyframes fu{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
         @keyframes ft-spin{to{transform:rotate(360deg)}}
         .fu{animation:fu .3s ease both}
-        .row:hover{background:${C.cardHover}!important}
+        .ft-row:hover{background:${C.cardHover}!important}
         .bp:active{transform:scale(.97)}
       `}</style>
 
@@ -202,12 +179,12 @@ export default function FlotaTracker({ onBack }) {
       <div style={{background:C.surface,borderBottom:`1px solid ${C.border}`,padding:"13px 16px",display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
         <button onClick={onBack} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:8,padding:"6px 12px",color:C.textSub,cursor:"pointer",fontSize:13,fontWeight:600}}>← Suite</button>
         <div style={{fontSize:16,fontWeight:800,flex:1}}>🚗 FlotaTracker</div>
-        {/* MES SELECTOR */}
         <div style={{display:"flex",alignItems:"center",gap:4,background:C.card,borderRadius:8,padding:"5px 10px",border:`1px solid ${C.border}`}}>
           <button onClick={()=>{const d=new Date(filterMonth+"-01");d.setMonth(d.getMonth()-1);setFilterMonth(d.toISOString().slice(0,7));}} style={{background:"none",border:"none",color:C.textSub,cursor:"pointer",fontSize:14,lineHeight:1}}>‹</button>
           <span style={{fontSize:11,fontWeight:700,minWidth:55,textAlign:"center"}}>{MONTHS[parseInt(mStr)-1]} {yStr}</span>
           <button onClick={()=>{const d=new Date(filterMonth+"-01");d.setMonth(d.getMonth()+1);if(d<=new Date())setFilterMonth(d.toISOString().slice(0,7));}} style={{background:"none",border:"none",color:C.textSub,cursor:"pointer",fontSize:14,lineHeight:1}}>›</button>
         </div>
+        <button onClick={()=>setSidebar(true)} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:8,padding:"7px 10px",color:C.textSub,cursor:"pointer",fontSize:14}}>⚙</button>
       </div>
 
       {/* CONTENT */}
@@ -235,7 +212,32 @@ export default function FlotaTracker({ onBack }) {
 
       {/* MODALS */}
       {modal?.type==="gasto"    && <GastoModal carroId={modal.carroId} carros={cars} onClose={()=>setModal(null)} onAdd={agregarGasto}/>}
-      {modal?.type==="dia"      && <DiaModal   carroId={modal.carroId} onClose={()=>setModal(null)} onAdd={agregarPagoDiario}/>}
+      {modal?.type==="dia"      && <DiaModal   carroId={modal.carroId} onClose={()=>setModal(null)} onAdd={agregarPagoDiario} cars={cars}/>}
+
+      {/* SIDEBAR CONFIGURACIÓN */}
+      {sidebar && <>
+        <div onClick={()=>setSidebar(false)} style={{position:"fixed",inset:0,background:"#0009",zIndex:200}}/>
+        <div style={{position:"fixed",top:0,right:0,bottom:0,width:Math.min(320,window.innerWidth-40),background:C.surface,borderLeft:`1px solid ${C.border}`,zIndex:300,display:"flex",flexDirection:"column",overflowY:"auto"}}>
+          <div style={{padding:"18px 16px",borderBottom:`1px solid ${C.border}`,display:"flex",justifyContent:"space-between",alignItems:"center",flexShrink:0}}>
+            <div style={{fontWeight:800,fontSize:16}}>⚙ Configuración</div>
+            <button onClick={()=>setSidebar(false)} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:6,padding:"4px 8px",color:C.text,cursor:"pointer"}}>✕</button>
+          </div>
+          <div style={{padding:16,display:"grid",gap:14,overflowY:"auto"}}>
+            {/* ESTADO CONEXIÓN */}
+            <div style={{background:C.card,border:`1px solid ${online?C.green+"44":C.red+"44"}`,borderRadius:12,padding:12,display:"flex",alignItems:"center",gap:10}}>
+              <div style={{width:10,height:10,borderRadius:"50%",background:online?C.green:C.red,flexShrink:0}}/>
+              <div>
+                <div style={{fontSize:13,fontWeight:700,color:online?C.green:C.red}}>{online?"Conectado a Supabase":"Sin conexión"}</div>
+                <div style={{fontSize:11,color:C.textMuted}}>Los datos se {online?"guardan en la nube":"guardan localmente"}</div>
+              </div>
+            </div>
+            {/* CONFIG CARROS */}
+            {cars.map(carro=>(
+              <CarroConfig key={carro.id} carro={carro} onSave={(updates)=>{updateCar(carro.id,updates);showToast(`${carro.nombre} actualizado ✓`);}}/>
+            ))}
+          </div>
+        </div>
+      </>}
 
       {toast && <div style={{position:"fixed",bottom:68,left:"50%",transform:"translateX(-50%)",background:toast.t==="err"?C.red:C.green,color:"#fff",padding:"8px 20px",borderRadius:100,fontWeight:700,fontSize:13,zIndex:999,whiteSpace:"nowrap",animation:"su .25s ease"}}>{toast.m}</div>}
     </div>
@@ -580,22 +582,92 @@ function GastoModal({carroId,carros,onClose,onAdd}) {
   );
 }
 
-function DiaModal({carroId,onClose,onAdd}) {
-  const [fecha,setFecha] = useState(td());
+function DiaModal({carroId, onClose, onAdd, cars}) {
+  const [fecha, setFecha] = useState(td());
+  const carro = cars?.find(c=>c.id===carroId);
+  const valor = carro?.valor_diario || CARRO1_DIARIO;
   return (
     <ModalWrap title="Agregar Día de Trabajo" onClose={onClose} color={C.car1}>
       <div style={{background:C.car1Dim,border:`1px solid ${C.car1}33`,borderRadius:12,padding:14,textAlign:"center"}}>
         <div style={{fontSize:11,color:C.textMuted,marginBottom:2}}>VALOR DEL DÍA</div>
-        <div style={{fontSize:28,fontWeight:900,color:C.car1}}>{fmt(CARRO1_DIARIO)}</div>
+        <div style={{fontSize:28,fontWeight:900,color:C.car1}}>{fmt(valor)}</div>
       </div>
       <MF label="Fecha del día trabajado">
         <input type="date" value={fecha} onChange={e=>setFecha(e.target.value)} style={inp}/>
       </MF>
-      <button onClick={()=>onAdd(carroId,fecha)}
-        style={{...btn,background:C.car1,color:"#fff"}}>
+      <button onClick={()=>onAdd(carroId,fecha)} style={{...btn,background:C.car1,color:"#fff"}}>
         Agregar Día
       </button>
     </ModalWrap>
+  );
+}
+
+function CarroConfig({carro, onSave}) {
+  const [form, setForm] = useState({
+    nombre:       carro.nombre       || '',
+    placa:        carro.placa        || '',
+    modelo:       carro.modelo       || '',
+    conductor:    carro.conductor    || '',
+    tipo:         carro.tipo         || 'diario',
+    valor_diario: carro.valor_diario || 70000,
+    valor_mensual:carro.valor_mensual|| 500000,
+  });
+  const [open, setOpen] = useState(false);
+  const set = (k,v) => setForm(f=>({...f,[k]:v}));
+
+  return (
+    <div style={{background:C.card,border:`1px solid ${carro.color}44`,borderRadius:14,overflow:"hidden"}}>
+      <button onClick={()=>setOpen(o=>!o)} style={{width:"100%",background:"none",border:"none",padding:"12px 14px",display:"flex",alignItems:"center",gap:10,cursor:"pointer",color:C.text}}>
+        <span style={{fontSize:22}}>{carro.icon}</span>
+        <div style={{flex:1,textAlign:"left"}}>
+          <div style={{fontSize:14,fontWeight:700}}>{carro.nombre}</div>
+          <div style={{fontSize:11,color:C.textMuted}}>{carro.placa} · {carro.modelo}</div>
+        </div>
+        <span style={{color:carro.color,fontSize:16}}>{open?"▲":"▼"}</span>
+      </button>
+      {open && (
+        <div style={{padding:"0 14px 14px",display:"grid",gap:10,borderTop:`1px solid ${C.border}`}}>
+          <div style={{height:10}}/>
+          {[["Nombre",   "nombre",    "text",   "Ej: Mi Carro"],
+            ["Placa",    "placa",     "text",   "Ej: ABC-123"],
+            ["Modelo",   "modelo",    "text",   "Ej: Chevrolet Aveo 2019"],
+            ["Conductor","conductor", "text",   "Nombre del conductor"],
+          ].map(([label,key,type,ph])=>(
+            <div key={key}>
+              <div style={{fontSize:10,color:C.textMuted,fontWeight:700,marginBottom:4}}>{label.toUpperCase()}</div>
+              <input type={type} value={form[key]} onChange={e=>set(key,e.target.value)} placeholder={ph}
+                style={{width:"100%",background:C.bg,border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 10px",color:C.text,fontSize:13}}/>
+            </div>
+          ))}
+          <div>
+            <div style={{fontSize:10,color:C.textMuted,fontWeight:700,marginBottom:4}}>TIPO DE COBRO</div>
+            <div style={{display:"flex",gap:8}}>
+              {[["diario","Diario (por día)"],["mensual","Mensual (fijo)"]].map(([v,l])=>(
+                <button key={v} onClick={()=>set("tipo",v)} style={{flex:1,padding:"8px",borderRadius:8,border:`1px solid ${form.tipo===v?carro.color:C.border}`,background:form.tipo===v?carro.color+"22":"transparent",color:form.tipo===v?carro.color:C.textSub,cursor:"pointer",fontSize:12,fontWeight:600}}>{l}</button>
+              ))}
+            </div>
+          </div>
+          {form.tipo==="diario" && (
+            <div>
+              <div style={{fontSize:10,color:C.textMuted,fontWeight:700,marginBottom:4}}>VALOR POR DÍA (COP)</div>
+              <input type="number" value={form.valor_diario} onChange={e=>set("valor_diario",parseFloat(e.target.value)||0)}
+                style={{width:"100%",background:C.bg,border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 10px",color:C.text,fontSize:13}}/>
+            </div>
+          )}
+          {form.tipo==="mensual" && (
+            <div>
+              <div style={{fontSize:10,color:C.textMuted,fontWeight:700,marginBottom:4}}>VALOR MENSUAL (COP)</div>
+              <input type="number" value={form.valor_mensual} onChange={e=>set("valor_mensual",parseFloat(e.target.value)||0)}
+                style={{width:"100%",background:C.bg,border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 10px",color:C.text,fontSize:13}}/>
+            </div>
+          )}
+          <button onClick={()=>{onSave(form);setOpen(false);}}
+            style={{background:carro.color,color:"#fff",border:"none",borderRadius:10,padding:10,fontWeight:700,fontSize:13,cursor:"pointer",marginTop:4}}>
+            Guardar cambios
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
 

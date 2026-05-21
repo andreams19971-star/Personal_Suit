@@ -2,19 +2,38 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+  -webkit-tap-highlight-color: transparent;
 }
 
 html, body, #root {
   height: 100%;
+  width: 100%;
   overflow: hidden;
   background: #080C14;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 body {
-  -webkit-font-smoothing: antialiased;
+  /* Safe areas para iPhone con notch */
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
 }
 
 input, select, textarea, button {
   font-family: inherit;
   outline: none;
+  -webkit-appearance: none;
+}
+
+/* Evita el zoom en inputs en iOS */
+input[type="text"],
+input[type="number"],
+input[type="date"],
+input[type="time"],
+select,
+textarea {
+  font-size: 16px !important;
 }
