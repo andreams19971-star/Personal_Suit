@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useFinanzData } from "../hooks/useFinanzData.js";
+import { useNotifications } from "../hooks/useNotifications.js";
 
 // ─── PALETTE ─────────────────────────────────────────────────────────────────
 const C = {
@@ -183,7 +184,7 @@ export default function FinanzApp({ onBack }){
             {view==="movements" && <Movements transactions={transactions} filterMonth={filterMonth} deleteTransaction={deleteTransaction} openAddModal={openAddModal} loans={loans}/>}
             {view==="accounts"  && <AccountsView accounts={computedAccounts} transactions={transactions} selAccount={selAccount} setSelAccount={setSelAccount} filterMonth={filterMonth} showToast={showToast}/>}
             {view==="loans"     && <LoansView loans={loans} transactions={transactions} setShowLoanModal={setShowLoanModal} setShowPayModal={setShowPayModal} accounts={computedAccounts} showToast={showToast}/>}
-            {view==="stats"     && <Stats monthTxs={monthTxs} totalIncome={totalIncome} totalExpense={totalExpense}/>}
+            {view==="stats"     && <Stats monthTxs={monthTxs} totalIncome={totalIncome} totalExpense={totalExpense} transactions={transactions} filterMonth={filterMonth}/>}
           </div>
         </div>
         <Sidebar open={sidebarOpen} onClose={()=>setSidebarOpen(false)} accounts={computedAccounts} updateAccountBalance={updateAccountBalance} settings={settings} setSettings={setSettings} showToast={showToast}/>
@@ -613,8 +614,8 @@ function LoanDetail({loan,transactions,onBack,setShowPayModal,accounts}){
   );
 }
 
-// ─── STATS ────────────────────────────────────────────────────────────────────
-function Stats({monthTxs,totalIncome,totalExpense}){
+// ─── STATS MENSUALES ──────────────────────────────────────────────────────────
+function Stats({monthTxs,totalIncome,totalExpense,transactions,filterMonth}){
   const expByCat={},incByCat={};
   monthTxs.filter(t=>t.type==="expense").forEach(t=>{
     const cat=CATEGORIES.expense.find(c=>c.id===t.category);
@@ -626,27 +627,128 @@ function Stats({monthTxs,totalIncome,totalExpense}){
     const lbl=cat?`${cat.icon} ${cat.label}`:t.category;
     incByCat[lbl]=(incByCat[lbl]||0)+t.amount;
   });
-  const savings=totalIncome-totalExpense;
-  const savRate=totalIncome>0?Math.round((savings/totalIncome)*100):0;
+
+  const savings   = totalIncome - totalExpense;
+  const savRate   = totalIncome > 0 ? Math.round((savings/totalIncome)*100) : 0;
+  const spendRate = totalIncome > 0 ? Math.round((totalExpense/totalIncome)*100) : 0;
+
+  // Últimos 6 meses para comparativa
+  const last6 = Array.from({length:6},(_,i)=>{
+    const d = new Date(filterMonth+'-01');
+    d.setMonth(d.getMonth() - (5-i));
+    const key = d.toISOString().slice(0,7);
+    const mo  = MONTHS[d.getMonth()]
+    const txs = transactions.filter(t=>t.date.startsWith(key));
+    const inc = txs.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
+    const exp = txs.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
+    return { mo, inc, exp, net:inc-exp };
+  });
+  const maxBar = Math.max(...last6.map(m=>Math.max(m.inc,m.exp)),1);
+
+  // Día de mayor gasto del mes
+  const byDay = {};
+  monthTxs.filter(t=>t.type==='expense').forEach(t=>{
+    byDay[t.date]=(byDay[t.date]||0)+t.amount;
+  });
+  const topDay = Object.entries(byDay).sort((a,b)=>b[1]-a[1])[0];
+
+  const MONTHS_SHORT = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+
   return(
-    <div style={{padding:"16px",display:"grid",gap:16}} className="fa-fade-up">
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10}}>
-        <StatCard label="Ingresos"    value={fmtCOP(totalIncome)}  color={C.accentText} icon="↑"/>
-        <StatCard label="Egresos"     value={fmtCOP(totalExpense)} color={C.red}        icon="↓"/>
-        <StatCard label="Tasa ahorro" value={`${savRate}%`}        color={savRate>=20?C.accentText:C.yellow} icon="%"/>
+    <div style={{padding:"16px",display:"grid",gap:14}} className="fa-fade-up">
+
+      {/* KPI CARDS */}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+        <div style={{background:`linear-gradient(135deg,${C.accentDim},${C.card})`,border:`1px solid ${C.accentText}33`,borderRadius:16,padding:14}}>
+          <div style={{fontSize:11,color:C.accentText,fontWeight:700}}>INGRESOS</div>
+          <div style={{fontSize:22,fontWeight:900,marginTop:4}}>{fmtCOP(totalIncome)}</div>
+        </div>
+        <div style={{background:`linear-gradient(135deg,${C.redDim},${C.card})`,border:`1px solid ${C.red}33`,borderRadius:16,padding:14}}>
+          <div style={{fontSize:11,color:C.red,fontWeight:700}}>GASTOS</div>
+          <div style={{fontSize:22,fontWeight:900,marginTop:4}}>{fmtCOP(totalExpense)}</div>
+        </div>
+        <div style={{background:savings>=0?`linear-gradient(135deg,${C.accentDim},${C.card})`:`linear-gradient(135deg,${C.redDim},${C.card})`,border:`1px solid ${savings>=0?C.accentText:C.red}33`,borderRadius:16,padding:14}}>
+          <div style={{fontSize:11,color:savings>=0?C.accentText:C.red,fontWeight:700}}>BALANCE</div>
+          <div style={{fontSize:22,fontWeight:900,marginTop:4,color:savings>=0?C.accentText:C.red}}>{fmtCOP(savings)}</div>
+        </div>
+        <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:16,padding:14}}>
+          <div style={{fontSize:11,color:C.yellow,fontWeight:700}}>TASA AHORRO</div>
+          <div style={{fontSize:22,fontWeight:900,marginTop:4,color:savRate>=20?C.accentText:savRate>=10?C.yellow:C.red}}>{savRate}%</div>
+        </div>
       </div>
+
+      {/* BARRA PROGRESO AHORRO */}
       <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:16,padding:16}}>
         <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
-          <span style={{fontSize:14,fontWeight:700}}>Tasa de Ahorro</span>
-          <span style={{fontSize:14,fontWeight:800,color:savRate>=20?C.accentText:C.yellow}}>{savRate}%</span>
+          <span style={{fontSize:13,fontWeight:700}}>Salud Financiera</span>
+          <span style={{fontSize:12,color:savRate>=20?C.accentText:savRate>=10?C.yellow:C.red,fontWeight:700}}>
+            {savRate>=20?"🟢 Excelente":savRate>=10?"🟡 Regular":"🔴 Atención"}
+          </span>
         </div>
-        <div style={{height:10,borderRadius:5,background:C.border}}>
-          <div style={{height:"100%",borderRadius:5,background:savRate>=20?C.accent:C.yellow,width:`${Math.min(100,savRate)}%`,transition:"width 1s ease"}}/>
+        <div style={{display:"grid",gap:8}}>
+          {[
+            {label:"Ahorro",     pct:Math.min(100,savRate),   color:C.accentText, meta:"Meta: 20%"},
+            {label:"Gasto",      pct:Math.min(100,spendRate), color:spendRate>80?C.red:C.yellow, meta:`del ingreso`},
+          ].map(item=>(
+            <div key={item.label}>
+              <div style={{display:"flex",justifyContent:"space-between",fontSize:12,marginBottom:4}}>
+                <span style={{color:C.textSub}}>{item.label}</span>
+                <span style={{color:item.color,fontWeight:700}}>{item.pct}% <span style={{color:C.textMuted,fontWeight:400}}>{item.meta}</span></span>
+              </div>
+              <div style={{height:8,borderRadius:4,background:C.border}}>
+                <div style={{height:"100%",borderRadius:4,background:item.color,width:`${item.pct}%`,transition:"width 1s ease"}}/>
+              </div>
+            </div>
+          ))}
         </div>
-        <div style={{fontSize:12,color:C.textMuted,marginTop:6}}>{savRate>=20?"¡Excelente! Estás por encima del 20%":savRate>=10?"Bien, intenta llegar al 20%":"Reduce gastos para ahorrar más"}</div>
+        <div style={{fontSize:12,color:C.textMuted,marginTop:10,padding:"8px 12px",background:C.bg,borderRadius:8}}>
+          {savRate>=20?"¡Excelente! Estás ahorrando más del 20% recomendado. Considera invertir el excedente.":
+           savRate>=10?"Vas bien, pero puedes mejorar. Intenta llegar al 20% reduciendo gastos no esenciales.":
+           savings<0?"⚠️ Estás gastando más de lo que ganas. Revisa tus gastos urgente.":
+           "Tu tasa de ahorro es baja. Identifica gastos que puedas reducir."}
+        </div>
       </div>
+
+      {/* GRÁFICO 6 MESES */}
       <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:16,padding:16}}>
-        <div style={{fontSize:14,fontWeight:700,marginBottom:12}}>Desglose de Gastos</div>
+        <div style={{fontSize:14,fontWeight:700,marginBottom:14}}>Evolución últimos 6 meses</div>
+        <div style={{display:"flex",gap:6,alignItems:"flex-end",height:100,marginBottom:8}}>
+          {last6.map((m,i)=>(
+            <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
+              <div style={{width:"100%",display:"flex",gap:2,alignItems:"flex-end",height:80}}>
+                <div style={{flex:1,borderRadius:"3px 3px 0 0",background:C.accentText,height:m.inc?Math.max(4,(m.inc/maxBar)*76):2,transition:"height .8s ease"}}/>
+                <div style={{flex:1,borderRadius:"3px 3px 0 0",background:C.red,height:m.exp?Math.max(4,(m.exp/maxBar)*76):2,transition:"height .8s ease"}}/>
+              </div>
+              <span style={{fontSize:9,color:C.textMuted}}>{m.mo}</span>
+            </div>
+          ))}
+        </div>
+        <div style={{display:"flex",gap:14,justifyContent:"center"}}>
+          <div style={{display:"flex",alignItems:"center",gap:4,fontSize:11,color:C.textSub}}>
+            <div style={{width:10,height:10,borderRadius:2,background:C.accentText}}/> Ingresos
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:4,fontSize:11,color:C.textSub}}>
+            <div style={{width:10,height:10,borderRadius:2,background:C.red}}/> Gastos
+          </div>
+        </div>
+      </div>
+
+      {/* TOP GASTO DEL DÍA */}
+      {topDay && (
+        <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:16,padding:16}}>
+          <div style={{fontSize:13,fontWeight:700,marginBottom:4}}>Día de mayor gasto</div>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <div>
+              <div style={{fontSize:14,color:C.textSub}}>{new Date(topDay[0]+'T12:00').toLocaleDateString('es-CO',{weekday:'long',day:'numeric',month:'short'})}</div>
+            </div>
+            <div style={{fontSize:18,fontWeight:900,color:C.red}}>{fmtCOP(topDay[1])}</div>
+          </div>
+        </div>
+      )}
+
+      {/* DESGLOSE GASTOS */}
+      <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:16,padding:16}}>
+        <div style={{fontSize:14,fontWeight:700,marginBottom:12}}>Gastos por categoría</div>
         {Object.entries(expByCat).sort((a,b)=>b[1]-a[1]).map(([cat,amount])=>{
           const pct=totalExpense>0?Math.round((amount/totalExpense)*100):0;
           return(
@@ -663,8 +765,10 @@ function Stats({monthTxs,totalIncome,totalExpense}){
         })}
         {Object.keys(expByCat).length===0&&<EmptyState label="Sin gastos este mes"/>}
       </div>
+
+      {/* DESGLOSE INGRESOS */}
       <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:16,padding:16}}>
-        <div style={{fontSize:14,fontWeight:700,marginBottom:12}}>Desglose de Ingresos</div>
+        <div style={{fontSize:14,fontWeight:700,marginBottom:12}}>Ingresos por categoría</div>
         {Object.entries(incByCat).sort((a,b)=>b[1]-a[1]).map(([cat,amount])=>{
           const pct=totalIncome>0?Math.round((amount/totalIncome)*100):0;
           return(
@@ -679,6 +783,7 @@ function Stats({monthTxs,totalIncome,totalExpense}){
             </div>
           );
         })}
+        {Object.keys(incByCat).length===0&&<EmptyState label="Sin ingresos registrados"/>}
       </div>
     </div>
   );
@@ -687,6 +792,8 @@ function Stats({monthTxs,totalIncome,totalExpense}){
 // ─── SIDEBAR ──────────────────────────────────────────────────────────────────
 function Sidebar({open,onClose,accounts,updateAccountBalance,settings,setSettings,showToast}){
   const [tab,setTab]=useState("accounts");
+  const { isSupported, permission, requestPermission, sendLocal } = useNotifications();
+
   return(
     <>
       {open&&<div onClick={onClose} style={{position:"fixed",inset:0,background:"#00000088",zIndex:200}}/>}
@@ -696,15 +803,15 @@ function Sidebar({open,onClose,accounts,updateAccountBalance,settings,setSetting
           <button onClick={onClose} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:8,padding:"6px 10px",color:C.text,cursor:"pointer"}}>✕</button>
         </div>
         <div style={{display:"flex",borderBottom:`1px solid ${C.border}`,flexShrink:0}}>
-          {[["accounts","Cuentas"],["budgets","Presupuestos"],["prefs","Preferencias"]].map(([id,l])=>(
-            <button key={id} onClick={()=>setTab(id)} style={{flex:1,padding:"10px 4px",border:"none",background:"transparent",borderBottom:tab===id?`2px solid ${C.accent}`:"2px solid transparent",color:tab===id?C.accent:C.textSub,fontWeight:600,fontSize:12,cursor:"pointer"}}>{l}</button>
+          {[["accounts","Cuentas"],["budgets","Presupuestos"],["notif","Notif"],["prefs","Prefs"]].map(([id,l])=>(
+            <button key={id} onClick={()=>setTab(id)} style={{flex:1,padding:"10px 2px",border:"none",background:"transparent",borderBottom:tab===id?`2px solid ${C.accent}`:"2px solid transparent",color:tab===id?C.accent:C.textSub,fontWeight:600,fontSize:11,cursor:"pointer"}}>{l}</button>
           ))}
         </div>
         <div style={{flex:1,overflowY:"auto",padding:16}}>
           {tab==="accounts"&&(
             <div style={{display:"grid",gap:12}}>
               <div style={{fontSize:12,color:C.textMuted,fontWeight:700}}>SALDOS INICIALES</div>
-              <div style={{fontSize:11,color:C.textMuted,marginTop:-6}}>El saldo inicial es el dinero que tenías antes de empezar a registrar movimientos</div>
+              <div style={{fontSize:11,color:C.textMuted,marginTop:-6}}>El dinero que tenías antes de empezar a registrar</div>
               {accounts.map(acc=>(
                 <div key={acc.id} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:14,padding:"12px 14px"}}>
                   <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
@@ -716,16 +823,11 @@ function Sidebar({open,onClose,accounts,updateAccountBalance,settings,setSetting
                     </div>
                   </div>
                   <div style={{display:"flex",gap:8}}>
-                    <input
-                      type="number"
-                      defaultValue={acc.initialBalance}
-                      id={`bal-${acc.id}`}
-                      placeholder="0"
-                      style={{flex:1,background:C.bg,border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 10px",color:C.text,fontSize:13}}
-                    />
-                    <button onClick={async ()=>{
-                      const v = parseFloat(document.getElementById(`bal-${acc.id}`).value) || 0;
-                      await updateAccountBalance(acc.id, v);
+                    <input type="number" defaultValue={acc.initialBalance} id={`bal-${acc.id}`} placeholder="0"
+                      style={{flex:1,background:C.bg,border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 10px",color:C.text,fontSize:13}}/>
+                    <button onClick={async()=>{
+                      const v=parseFloat(document.getElementById(`bal-${acc.id}`).value)||0;
+                      await updateAccountBalance(acc.id,v);
                       showToast(`${acc.label} actualizado ✓`);
                     }} style={{background:C.accentDim,border:`1px solid ${C.accentText}44`,color:C.accentText,borderRadius:8,padding:"8px 12px",cursor:"pointer",fontSize:12,fontWeight:700}}>
                       Guardar
@@ -733,6 +835,55 @@ function Sidebar({open,onClose,accounts,updateAccountBalance,settings,setSetting
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+          {tab==="notif"&&(
+            <div style={{display:"grid",gap:14}}>
+              <div style={{fontSize:12,color:C.textMuted,fontWeight:700}}>NOTIFICACIONES</div>
+              {/* Estado actual */}
+              <div style={{background:C.card,border:`1px solid ${permission==="granted"?C.accentText+"44":C.border}`,borderRadius:14,padding:14}}>
+                <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
+                  <div style={{width:10,height:10,borderRadius:"50%",background:permission==="granted"?C.accentText:permission==="denied"?C.red:C.yellow,flexShrink:0}}/>
+                  <div style={{fontSize:13,fontWeight:700}}>
+                    {permission==="granted"?"Notificaciones activas":permission==="denied"?"Notificaciones bloqueadas":"Sin configurar"}
+                  </div>
+                </div>
+                {!isSupported&&<div style={{fontSize:12,color:C.textMuted}}>Tu navegador no soporta notificaciones. Instala la app en tu pantalla de inicio.</div>}
+                {isSupported&&permission!=="granted"&&(
+                  <button onClick={async()=>{const r=await requestPermission();showToast(r==="granted"?"Notificaciones activadas ✓":"No se pudo activar","err");}}
+                    style={{width:"100%",background:C.accentDim,border:`1px solid ${C.accentText}44`,color:C.accentText,borderRadius:10,padding:10,fontWeight:700,fontSize:13,cursor:"pointer"}}>
+                    Activar Notificaciones
+                  </button>
+                )}
+                {permission==="granted"&&(
+                  <button onClick={()=>sendLocal("Mi Suite Personal","¡Las notificaciones funcionan correctamente! 🎉")}
+                    style={{width:"100%",background:C.accentDim,border:`1px solid ${C.accentText}44`,color:C.accentText,borderRadius:10,padding:10,fontWeight:700,fontSize:13,cursor:"pointer"}}>
+                    Probar notificación
+                  </button>
+                )}
+              </div>
+              {/* Instrucciones iOS */}
+              <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:14,padding:14}}>
+                <div style={{fontSize:13,fontWeight:700,marginBottom:8}}>📱 Para iOS (iPhone/iPad)</div>
+                <div style={{fontSize:12,color:C.textSub,lineHeight:1.6}}>
+                  1. Abre la app en <b>Safari</b><br/>
+                  2. Toca el botón compartir <b>⎙</b><br/>
+                  3. Selecciona <b>"Agregar a pantalla de inicio"</b><br/>
+                  4. Abre la app desde el ícono instalado<br/>
+                  5. Vuelve aquí y activa notificaciones<br/>
+                  <span style={{color:C.textMuted,fontSize:11}}>Requiere iOS 16.4 o superior</span>
+                </div>
+              </div>
+              {/* Instrucciones Android */}
+              <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:14,padding:14}}>
+                <div style={{fontSize:13,fontWeight:700,marginBottom:8}}>🤖 Para Android</div>
+                <div style={{fontSize:12,color:C.textSub,lineHeight:1.6}}>
+                  1. Abre en <b>Chrome</b><br/>
+                  2. Toca los 3 puntos <b>⋮</b><br/>
+                  3. Selecciona <b>"Instalar app"</b> o <b>"Agregar a inicio"</b><br/>
+                  4. Abre desde el ícono y activa notificaciones
+                </div>
+              </div>
             </div>
           )}
           {tab==="budgets"&&(
