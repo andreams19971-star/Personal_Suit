@@ -55,8 +55,9 @@ export function useFinanzData() {
       setTransactions((txRes.data   || []).map(rowToTx))
       setLoans(       (loanRes.data || []).map(rowToLoan))
       setOnline(true)
+      console.log(`[FinanzData] ✅ Online — ${txRes.data?.length||0} txs, ${loanRes.data?.length||0} loans`)
     } catch (err) {
-      console.warn('[FinanzData] Offline →', err.message)
+      console.warn('[FinanzData] ❌ Offline →', err.message)
       const s = seed()
       setTransactions(s.transactions)
       setLoans(s.loans)
@@ -69,10 +70,17 @@ export function useFinanzData() {
   async function addTransaction(tx) {
     const newTx = { ...tx, id:'tx-'+Date.now() }
     setTransactions(prev => [newTx, ...prev])
-    if (!online) return
+    if (!online) {
+      console.warn('[addTransaction] ⚠️ Sin conexión - guardado solo localmente')
+      return
+    }
+    console.log('[addTransaction] Enviando a Supabase...', txToRow(newTx))
     const { error } = await supabase.from('transactions').insert([txToRow(newTx)])
-    if (error) console.error('[addTransaction]', error.message)
-    else console.log('[addTransaction] ✓ guardado')
+    if (error) {
+      console.error('[addTransaction] ❌ ERROR:', error.message, error.code, error.details)
+    } else {
+      console.log('[addTransaction] ✅ Guardado en Supabase')
+    }
   }
 
   async function deleteTransaction(id) {
