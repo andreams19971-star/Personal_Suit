@@ -1,57 +1,174 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase, isConfigured } from "./supabase.js";
 import FinanzApp from "./apps/FinanzApp.jsx";
 import Planner from "./apps/Planner.jsx";
 import FlotaTracker from "./apps/FlotaTracker.jsx";
 
 const APPS = [
-  { id:"finanz",  label:"FinanzApp",     subtitle:"Presupuesto & Finanzas",  icon:"💰", color:"#00D97E", colorDim:"#0A2A1A", desc:"Ingresos, gastos, cuentas y préstamos" },
-  { id:"planner", label:"Planner",       subtitle:"Tareas, Hábitos & Metas", icon:"📅", color:"#60A5FA", colorDim:"#0A1A2E", desc:"Organiza tu vida día a día"            },
-  { id:"flota",   label:"FlotaTracker",  subtitle:"Gestión de Flota",        icon:"🚗", color:"#A855F7", colorDim:"#1A0A28", desc:"Cobros y gastos de tus dos carros"     },
+  { id:"finanz",  label:"FinanzApp",    subtitle:"Presupuesto & Finanzas",  icon:"💰", color:"#00D97E", colorDim:"#071A10", desc:"Ingresos, gastos, cuentas y préstamos" },
+  { id:"planner", label:"Planner",      subtitle:"Tareas, Hábitos & Metas", icon:"📅", color:"#60A5FA", colorDim:"#061022", desc:"Organiza tu vida día a día"            },
+  { id:"flota",   label:"FlotaTracker", subtitle:"Gestión de Flota",        icon:"🚗", color:"#A855F7", colorDim:"#110722", desc:"Cobros y gastos de tus dos carros"     },
 ];
 
 export default function App() {
   const [activeApp, setActiveApp] = useState(null);
+  const [dbStatus, setDbStatus]   = useState("checking"); // checking | ok | error
+
+  // Verificar conexión a Supabase al iniciar
+  useEffect(() => {
+    if (!isConfigured) {
+      setDbStatus("error");
+      return;
+    }
+    supabase.from("transactions").select("count").limit(1)
+      .then(({ error }) => setDbStatus(error ? "error" : "ok"))
+      .catch(() => setDbStatus("error"));
+  }, []);
+
+  // Controlar body cuando una app está activa
+  useEffect(() => {
+    const html = document.documentElement;
+    const body = document.body;
+    if (activeApp) {
+      html.style.height = "100%";
+      html.style.overflow = "hidden";
+      body.style.height = "100%";
+      body.style.overflow = "hidden";
+      body.style.margin = "0";
+    } else {
+      html.style.height = "";
+      html.style.overflow = "";
+      body.style.height = "";
+      body.style.overflow = "";
+      body.style.margin = "";
+    }
+    return () => {
+      html.style.height = "";
+      html.style.overflow = "";
+      body.style.height = "";
+      body.style.overflow = "";
+      body.style.margin = "";
+    };
+  }, [activeApp]);
 
   if (activeApp === "finanz")  return <FinanzApp    onBack={() => setActiveApp(null)} />;
   if (activeApp === "planner") return <Planner      onBack={() => setActiveApp(null)} />;
   if (activeApp === "flota")   return <FlotaTracker onBack={() => setActiveApp(null)} />;
 
+  const statusColor = dbStatus === "ok" ? "#22C55E" : dbStatus === "error" ? "#EF4444" : "#FBBF24";
+  const statusText  = dbStatus === "ok" ? "Supabase conectado" : dbStatus === "error" ? "Sin conexión a BD" : "Verificando...";
+
   return (
-    <div style={{ fontFamily:"-apple-system,BlinkMacSystemFont,'SF Pro Display',sans-serif", background:"#080C14", minHeight:"100vh", color:"#F0F4FF", display:"flex", flexDirection:"column" }}>
+    <div style={{
+      fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
+      background: "#080C14",
+      minHeight: "100vh",
+      color: "#F0F4FF",
+      display: "flex",
+      flexDirection: "column",
+      boxSizing: "border-box",
+    }}>
       <style>{`
-        *{box-sizing:border-box;margin:0;padding:0}
-        @keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
-        .app-card{transition:all .25s cubic-bezier(.4,0,.2,1);cursor:pointer}
-        .app-card:hover{transform:translateY(-4px) scale(1.01)}
-        .app-card:active{transform:scale(.97)}
+        *, *::before, *::after { box-sizing: border-box; }
+        @keyframes launcher-fadeUp {
+          from { opacity: 0; transform: translateY(20px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        .launcher-card {
+          transition: transform .2s ease;
+          cursor: pointer;
+          border: none;
+          text-align: left;
+          width: 100%;
+        }
+        .launcher-card:hover  { transform: translateY(-3px); }
+        .launcher-card:active { transform: scale(.97); }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
       `}</style>
-      <div style={{ padding:"52px 24px 24px", animation:"fadeUp .5s ease both" }}>
-        <div style={{ fontSize:13, color:"#4A5A75", fontWeight:600, letterSpacing:2, marginBottom:8 }}>MI SUITE PERSONAL</div>
-        <div style={{ fontSize:32, fontWeight:900, letterSpacing:-1.5, lineHeight:1.1 }}>
-          Hola 👋<br/><span style={{ color:"#00D97E" }}>¿Qué vas a hacer hoy?</span>
+
+      {/* HEADER */}
+      <div style={{ padding: "52px 24px 20px", animation: "launcher-fadeUp .5s ease both" }}>
+        <div style={{ fontSize: 12, color: "#3A4A65", fontWeight: 600, letterSpacing: 2, marginBottom: 10 }}>
+          MI SUITE PERSONAL
         </div>
-        <div style={{ fontSize:14, color:"#4A5A75", marginTop:10 }}>
-          {new Date().toLocaleDateString("es-CO",{weekday:"long",day:"numeric",month:"long",year:"numeric"})}
+        <div style={{ fontSize: 30, fontWeight: 800, letterSpacing: -1, lineHeight: 1.15 }}>
+          Hola 👋
+          <br />
+          <span style={{ color: "#00D97E" }}>¿Qué vas a hacer hoy?</span>
+        </div>
+        <div style={{ fontSize: 13, color: "#3A4A65", marginTop: 10 }}>
+          {new Date().toLocaleDateString("es-CO", {
+            weekday: "long", day: "numeric", month: "long", year: "numeric"
+          })}
+        </div>
+
+        {/* ESTADO SUPABASE */}
+        <div style={{
+          marginTop: 14, display: "inline-flex", alignItems: "center", gap: 7,
+          background: "#0F1624", border: `1px solid ${statusColor}33`,
+          borderRadius: 100, padding: "6px 14px",
+        }}>
+          <div style={{
+            width: 7, height: 7, borderRadius: "50%", background: statusColor, flexShrink: 0,
+            animation: dbStatus === "checking" ? "pulse 1.2s ease infinite" : "none",
+          }}/>
+          <span style={{ fontSize: 11, color: statusColor, fontWeight: 600 }}>{statusText}</span>
+          {dbStatus === "error" && (
+            <span style={{ fontSize: 10, color: "#3A4A65", marginLeft: 2 }}>
+              · Configura .env o variables en Render
+            </span>
+          )}
         </div>
       </div>
-      <div style={{ padding:"0 20px", display:"grid", gap:16, flex:1 }}>
+
+      {/* APPS */}
+      <div style={{ padding: "0 20px 40px", display: "grid", gap: 14 }}>
         {APPS.map((app, i) => (
-          <button key={app.id} className="app-card" onClick={() => setActiveApp(app.id)}
-            style={{ background:`linear-gradient(135deg,${app.colorDim},#111827)`, border:`1px solid ${app.color}33`, borderRadius:24, padding:24, textAlign:"left", color:"#F0F4FF", animation:`fadeUp .5s ease ${i*.1+.2}s both`, position:"relative", overflow:"hidden" }}>
-            <div style={{ position:"absolute", top:-30, right:-30, width:130, height:130, borderRadius:"50%", background:`${app.color}0D` }}/>
-            <div style={{ display:"flex", alignItems:"flex-start", gap:16 }}>
-              <div style={{ width:56, height:56, borderRadius:16, background:`${app.color}22`, border:`1px solid ${app.color}44`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:26, flexShrink:0 }}>{app.icon}</div>
-              <div style={{ flex:1 }}>
-                <div style={{ fontSize:20, fontWeight:800, marginBottom:2 }}>{app.label}</div>
-                <div style={{ fontSize:12, color:app.color, fontWeight:600, marginBottom:6 }}>{app.subtitle}</div>
-                <div style={{ fontSize:13, color:"#8899BB", lineHeight:1.4 }}>{app.desc}</div>
+          <button
+            key={app.id}
+            className="launcher-card"
+            onClick={() => setActiveApp(app.id)}
+            style={{
+              background: `linear-gradient(135deg, ${app.colorDim}, #111827)`,
+              border: `1px solid ${app.color}30`,
+              borderRadius: 22,
+              padding: "22px 20px",
+              color: "#F0F4FF",
+              animation: `launcher-fadeUp .5s ease ${i * .12 + .3}s both`,
+              position: "relative",
+              overflow: "hidden",
+            }}
+          >
+            <div style={{
+              position: "absolute", top: -25, right: -25,
+              width: 110, height: 110, borderRadius: "50%",
+              background: `${app.color}0C`, pointerEvents: "none",
+            }}/>
+            <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+              <div style={{
+                width: 54, height: 54, borderRadius: 16, flexShrink: 0,
+                background: `${app.color}20`, border: `1px solid ${app.color}40`,
+                display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26,
+              }}>{app.icon}</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 19, fontWeight: 800, marginBottom: 2 }}>{app.label}</div>
+                <div style={{ fontSize: 12, color: app.color, fontWeight: 600, marginBottom: 5 }}>{app.subtitle}</div>
+                <div style={{ fontSize: 13, color: "#6A7A99", lineHeight: 1.4 }}>{app.desc}</div>
               </div>
-              <div style={{ width:32, height:32, borderRadius:"50%", background:`${app.color}22`, border:`1px solid ${app.color}44`, display:"flex", alignItems:"center", justifyContent:"center", color:app.color, fontSize:16, flexShrink:0 }}>›</div>
+              <div style={{
+                width: 30, height: 30, borderRadius: "50%", flexShrink: 0,
+                background: `${app.color}18`, border: `1px solid ${app.color}35`,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                color: app.color, fontSize: 18,
+              }}>›</div>
             </div>
           </button>
         ))}
       </div>
-      <div style={{ padding:"24px", textAlign:"center", fontSize:11, color:"#2A3550" }}>Mi Suite Personal · v2.0</div>
+
+      <div style={{ textAlign: "center", paddingBottom: 24, fontSize: 11, color: "#1E2A3A" }}>
+        Mi Suite Personal · v2.0
+      </div>
     </div>
   );
 }
