@@ -262,7 +262,7 @@ function DashboardView({rooms,reservations,expenses,totalIncome,totalCollected,t
           <div style={{fontSize:13,fontWeight:700,marginBottom:10}}>📅 Próximas llegadas</div>
           <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:14,overflow:"hidden"}}>
             {upcomingRes.map((res,i)=>{
-              const room=data.rooms.find(r=>r.id===res.roomId);
+              const room=rooms.find(r=>r.id===res.roomId);
               return(
                 <button key={res.id} onClick={()=>setModal({type:"viewReservation",data:res})} className="hr"
                   style={{width:"100%",padding:"11px 14px",borderBottom:i<upcomingRes.length-1?`1px solid ${C.border}`:"none",display:"flex",alignItems:"center",gap:10,background:"transparent",border:"none",cursor:"pointer",color:C.text,textAlign:"left"}}>

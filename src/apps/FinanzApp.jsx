@@ -118,6 +118,7 @@ export default function FinanzApp({ onBack }){
     { id:"C2", name:"Mastercard BBVA",  bank:"BBVA",        last4:"8834", color:"#60A5FA", icon:"💳", limit:8000000, cutDay:15, payDay:5,  balance:0, charges:[] },
   ]);
   const [showPayModal,setShowPayModal]=useState(null);
+  const [showLoanModal,setShowLoanModal]=useState(false);
 
   const showToast=(msg,type="success")=>{setToast({msg,type});setTimeout(()=>setToast(null),2500);};
 
