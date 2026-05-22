@@ -158,10 +158,8 @@ export default function FinanzApp({ onBack }){
     <div style={{
       fontFamily:"'SF Pro Display',-apple-system,BlinkMacSystemFont,sans-serif",
       background:C.bg,
-      height:"100dvh",
-      maxHeight:"100dvh",
-      width:"100%",
-      maxWidth:"100vw",
+      width:"100vw",
+      height:"100vh",
       overflow:"hidden",
       color:C.text,
       display:"flex",

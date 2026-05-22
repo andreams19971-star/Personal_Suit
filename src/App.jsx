@@ -27,13 +27,13 @@ export default function App() {
 
   // Controlar body cuando una app está activa
   useEffect(() => {
-    const root = document.getElementById('root')
-    if (activeApp) {
-      root.style.overflow = 'hidden'
-    } else {
-      root.style.overflow = ''
+    document.body.style.overflow = 'hidden'
+    document.body.style.width = '100vw'
+    return () => {
+      document.body.style.overflow = ''
+      document.body.style.width = ''
     }
-  }, [activeApp]);
+  }, []);
 
   if (activeApp === "finanz")  return <FinanzApp    onBack={() => setActiveApp(null)} />;
   if (activeApp === "planner") return <Planner      onBack={() => setActiveApp(null)} />;
