@@ -82,14 +82,26 @@ export function useFinanzData() {
     }
   }
 
-  async function updateAccountBalance(accountId, newBalance) {
-    setAccountBalances(prev => ({ ...prev, [accountId]: newBalance }))
+  async function updateAccountBalance(accountId, newBalance, meta = {}) {
+    setAccountBalances(prev => ({
+      ...prev,
+      [accountId]: newBalance,
+      [`${accountId}_meta`]: meta
+    }))
     if (!onlineRef.current) return
+    const row = {
+      id: accountId,
+      initial_balance: newBalance,
+      updated_at: new Date().toISOString(),
+      ...(meta.label ? { label: meta.label } : {}),
+      ...(meta.icon  ? { icon:  meta.icon  } : {}),
+      ...(meta.color ? { color: meta.color } : {}),
+    }
     const { error } = await supabase
       .from('account_balances')
-      .upsert({ id: accountId, initial_balance: newBalance, updated_at: new Date().toISOString() })
+      .upsert(row)
     if (error) console.error('[updateAccountBalance]', error.message)
-    else console.log('[updateAccountBalance] ✅', accountId, newBalance)
+    else console.log('[updateAccountBalance] ✅', accountId)
   }
 
   async function addTransaction(tx) {

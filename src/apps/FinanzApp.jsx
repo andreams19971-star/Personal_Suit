@@ -112,7 +112,11 @@ export default function FinanzApp({ onBack }){
   const [filterMonth,setFilterMonth]=useState(today().slice(0,7));
   const [settings,setSettings]=useState({currency:"COP",budgets:{}});
   const [toast,setToast]=useState(null);
-  const [showLoanModal,setShowLoanModal]=useState(false);
+  const [showCardModal, setShowCardModal] = useState(false);
+  const [cards, setCards] = useState([
+    { id:"C1", name:"Visa Bancolombia", bank:"Bancolombia", last4:"4521", color:"#FFD166", icon:"💳", limit:5000000, cutDay:25, payDay:10, balance:0, charges:[] },
+    { id:"C2", name:"Mastercard BBVA",  bank:"BBVA",        last4:"8834", color:"#60A5FA", icon:"💳", limit:8000000, cutDay:15, payDay:5,  balance:0, charges:[] },
+  ]);
   const [showPayModal,setShowPayModal]=useState(null);
 
   const showToast=(msg,type="success")=>{setToast({msg,type});setTimeout(()=>setToast(null),2500);};
@@ -192,6 +196,7 @@ export default function FinanzApp({ onBack }){
             {view==="dashboard" && <Dashboard transactions={transactions} accounts={computedAccounts} loans={loans} totalIncome={totalIncome} totalExpense={totalExpense} netBalance={netBalance} filterMonth={filterMonth} setView={setView} setSelAccount={setSelAccount} monthTxs={monthTxs}/>}
             {view==="movements" && <Movements transactions={transactions} filterMonth={filterMonth} deleteTransaction={deleteTransaction} openAddModal={openAddModal} loans={loans}/>}
             {view==="accounts"  && <AccountsView accounts={computedAccounts} transactions={transactions} selAccount={selAccount} setSelAccount={setSelAccount} filterMonth={filterMonth} showToast={showToast}/>}
+            {view==="cards"     && <CardsView cards={cards} setCards={setCards} filterMonth={filterMonth} showToast={showToast}/>}
             {view==="loans"     && <LoansView loans={loans} transactions={transactions} setShowLoanModal={setShowLoanModal} setShowPayModal={setShowPayModal} accounts={computedAccounts} showToast={showToast}/>}
             {view==="stats"     && <Stats monthTxs={monthTxs} totalIncome={totalIncome} totalExpense={totalExpense} transactions={transactions} filterMonth={filterMonth}/>}
           </div>
@@ -215,6 +220,7 @@ function DesktopNav({view,setView,setSidebarOpen,loans}){
     {id:"dashboard",icon:"⬡",label:"Inicio"},
     {id:"movements",icon:"↕",label:"Movimientos"},
     {id:"accounts", icon:"◈",label:"Cuentas"},
+    {id:"cards",    icon:"💳",label:"Tarjetas"},
     {id:"loans",    icon:"🤝",label:"Por Cobrar",badge},
     {id:"stats",    icon:"◉",label:"Estadísticas"},
   ];
@@ -243,16 +249,28 @@ function TopBar({view,filterMonth,setFilterMonth,setSidebarOpen,openAddModal,onB
   const next=()=>{const d=new Date(filterMonth+"-01");d.setMonth(d.getMonth()+1);if(d<=new Date())setFilterMonth(d.toISOString().slice(0,7));};
   const [y,m]=filterMonth.split("-");
   return(
-    <div style={{background:C.surface,borderBottom:`1px solid ${C.border}`,padding:"14px 20px",display:"flex",alignItems:"center",gap:12,flexShrink:0}}>
-      {onBack&&<button onClick={onBack} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:8,padding:"6px 12px",color:C.textSub,cursor:"pointer",fontSize:13,fontWeight:600}}>← Suite</button>}
-      <div style={{fontSize:18,fontWeight:800,flex:1}}>{titles[view]||""}</div>
-      <div style={{display:"flex",alignItems:"center",gap:4,background:C.card,borderRadius:10,padding:"6px 12px",border:`1px solid ${C.border}`}}>
-        <button onClick={prev} style={{background:"none",border:"none",color:C.textSub,cursor:"pointer",fontSize:16,padding:"0 4px"}}>‹</button>
-        <span style={{fontSize:13,fontWeight:600,minWidth:70,textAlign:"center"}}>{MONTHS[parseInt(m)-1]} {y}</span>
-        <button onClick={next} style={{background:"none",border:"none",color:C.textSub,cursor:"pointer",fontSize:16,padding:"0 4px"}}>›</button>
+    <div style={{
+      background:C.surface,
+      borderBottom:`1px solid ${C.border}`,
+      paddingTop:`max(14px, calc(env(safe-area-inset-top) + 8px))`,
+      paddingBottom:"14px",
+      paddingLeft:"16px",
+      paddingRight:"16px",
+      display:"flex",
+      alignItems:"center",
+      gap:10,
+      flexShrink:0,
+      width:"100%",
+    }}>
+      {onBack&&<button onClick={onBack} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:8,padding:"6px 10px",color:C.textSub,cursor:"pointer",fontSize:12,fontWeight:600,flexShrink:0}}>← Suite</button>}
+      <div style={{fontSize:16,fontWeight:800,flex:1,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{titles[view]||""}</div>
+      <div style={{display:"flex",alignItems:"center",gap:4,background:C.card,borderRadius:8,padding:"5px 8px",border:`1px solid ${C.border}`,flexShrink:0}}>
+        <button onClick={prev} style={{background:"none",border:"none",color:C.textSub,cursor:"pointer",fontSize:15,padding:"0 3px",lineHeight:1}}>‹</button>
+        <span style={{fontSize:12,fontWeight:600,minWidth:62,textAlign:"center"}}>{MONTHS[parseInt(m)-1]} {y}</span>
+        <button onClick={next} style={{background:"none",border:"none",color:C.textSub,cursor:"pointer",fontSize:15,padding:"0 3px",lineHeight:1}}>›</button>
       </div>
-      <button onClick={()=>openAddModal()} className="fa-btn fa-desktop" style={{background:C.accent,color:"#000",border:"none",borderRadius:10,padding:"8px 16px",fontWeight:700,fontSize:13,cursor:"pointer"}}>+ Agregar</button>
-      <button onClick={()=>setSidebarOpen(true)} className="fa-btn" style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:10,padding:"8px 12px",color:C.textSub,cursor:"pointer",fontSize:16}}>⚙</button>
+      <button onClick={()=>openAddModal()} className="fa-btn fa-desktop" style={{background:C.accent,color:"#000",border:"none",borderRadius:8,padding:"7px 12px",fontWeight:700,fontSize:12,cursor:"pointer",flexShrink:0}}>+ Agregar</button>
+      <button onClick={()=>setSidebarOpen(true)} className="fa-btn" style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:8,padding:"7px 10px",color:C.textSub,cursor:"pointer",fontSize:14,flexShrink:0}}>⚙</button>
     </div>
   );
 }
@@ -263,12 +281,17 @@ function MobileNav({view,setView,openAddModal,loans}){
   const items=[
     {id:"dashboard",icon:"⬡",label:"Inicio"},
     {id:"movements",icon:"↕",label:"Movimientos"},
-    {id:"accounts", icon:"◈",label:"Cuentas"},
+    {id:"cards",    icon:"💳",label:"Tarjetas"},
     {id:"loans",    icon:"🤝",label:"Cobrar",badge},
     {id:"stats",    icon:"◉",label:"Stats"},
   ];
   return(
-    <div className="fa-mobile" style={{position:"fixed",bottom:0,left:0,right:0,zIndex:90,background:C.surface,borderTop:`1px solid ${C.border}`,display:"flex",paddingBottom:"env(safe-area-inset-bottom,6px)"}}>
+    <div className="fa-mobile" style={{
+      position:"fixed",bottom:0,left:0,right:0,zIndex:90,
+      background:C.surface,borderTop:`1px solid ${C.border}`,
+      display:"flex",
+      paddingBottom:"max(env(safe-area-inset-bottom), 6px)",
+    }}>
       {items.map(item=>(
         <button key={item.id} onClick={()=>setView(item.id)} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:2,padding:"9px 0",border:"none",background:"transparent",color:view===item.id?C.accent:C.textMuted,cursor:"pointer",fontSize:10,fontWeight:600,position:"relative"}}>
           <span style={{fontSize:19}}>{item.icon}</span>{item.label}
@@ -623,6 +646,289 @@ function LoanDetail({loan,transactions,onBack,setShowPayModal,accounts}){
   );
 }
 
+// ─── TARJETAS DE CRÉDITO ──────────────────────────────────────────────────────
+function CardsView({ cards, setCards, filterMonth, showToast }) {
+  const [selCard, setSelCard] = useState(cards[0]?.id || null);
+  const [showAddCharge, setShowAddCharge] = useState(false);
+  const [showEditCard, setShowEditCard] = useState(null);
+
+  const card = cards.find(c => c.id === selCard) || cards[0];
+
+  const addCharge = (charge) => {
+    setCards(prev => prev.map(c => c.id !== selCard ? c : {
+      ...c,
+      charges: [{ ...charge, id: "ch-"+Date.now() }, ...(c.charges || [])],
+      balance: (c.balance || 0) + charge.amount,
+    }));
+    showToast("Gasto registrado ✓");
+    setShowAddCharge(false);
+  };
+
+  const deleteCharge = (cardId, chargeId) => {
+    setCards(prev => prev.map(c => {
+      if (c.id !== cardId) return c;
+      const ch = c.charges.find(x => x.id === chargeId);
+      return { ...c, charges: c.charges.filter(x => x.id !== chargeId), balance: Math.max(0, (c.balance||0) - (ch?.amount||0)) };
+    }));
+    showToast("Gasto eliminado", "error");
+  };
+
+  const markPaid = (cardId) => {
+    setCards(prev => prev.map(c => c.id !== cardId ? c : { ...c, balance: 0, charges: [] }));
+    showToast("💳 Tarjeta marcada como pagada ✓");
+  };
+
+  const saveCard = (cardId, updates) => {
+    setCards(prev => prev.map(c => c.id !== cardId ? c : { ...c, ...updates }));
+    showToast("Tarjeta actualizada ✓");
+    setShowEditCard(null);
+  };
+
+  const addNewCard = (data) => {
+    setCards(prev => [...prev, { ...data, id: "card-"+Date.now(), charges: [], balance: 0 }]);
+    showToast("Tarjeta agregada ✓");
+    setShowEditCard(null);
+  };
+
+  const totalDebt = cards.reduce((s, c) => s + (c.balance || 0), 0);
+  const totalLimit = cards.reduce((s, c) => s + (c.limit || 0), 0);
+
+  const CHARGE_CATS = ["Supermercado","Restaurante","Gasolina","Ropa","Entretenimiento","Salud","Viajes","Tecnología","Servicios","Otro"];
+
+  const monthCharges = (card?.charges || []).filter(ch => ch.date?.startsWith(filterMonth));
+
+  return (
+    <div style={{padding:"16px",display:"grid",gap:14,boxSizing:"border-box",overflowX:"hidden"}} className="fa-fade-up">
+
+      {/* RESUMEN GLOBAL */}
+      <div style={{background:`linear-gradient(135deg,${C.redDim},${C.card})`,border:`1px solid ${C.red}44`,borderRadius:18,padding:18,position:"relative",overflow:"hidden"}}>
+        <div style={{position:"absolute",top:-20,right:-20,width:90,height:90,borderRadius:"50%",background:`${C.red}0D`,pointerEvents:"none"}}/>
+        <div style={{fontSize:11,color:C.red,fontWeight:700,marginBottom:3}}>DEUDA TOTAL TARJETAS</div>
+        <div style={{fontSize:28,fontWeight:900}}>{fmtCOP(totalDebt)}</div>
+        <div style={{fontSize:12,color:C.textMuted,marginTop:4}}>Límite total disponible: {fmtCOP(totalLimit - totalDebt)}</div>
+        <div style={{height:6,borderRadius:3,background:C.border,marginTop:10}}>
+          <div style={{height:"100%",borderRadius:3,background:C.red,width:`${Math.min(100,Math.round((totalDebt/Math.max(totalLimit,1))*100))}%`,transition:"width 1s ease"}}/>
+        </div>
+        <div style={{fontSize:11,color:C.textMuted,marginTop:4}}>{Math.round((totalDebt/Math.max(totalLimit,1))*100)}% del límite usado</div>
+      </div>
+
+      {/* SELECTOR DE TARJETA */}
+      <div style={{display:"flex",gap:10,overflowX:"auto",paddingBottom:2}}>
+        {cards.map(c => (
+          <button key={c.id} onClick={()=>setSelCard(c.id)} style={{
+            padding:"10px 14px",borderRadius:12,flexShrink:0,cursor:"pointer",fontWeight:700,fontSize:12,
+            background:selCard===c.id?c.color+"33":C.card,
+            border:`1px solid ${selCard===c.id?c.color:C.border}`,
+            color:selCard===c.id?c.color:C.textSub,
+            display:"flex",alignItems:"center",gap:6,
+          }}>
+            <span>💳</span>{c.name}
+          </button>
+        ))}
+        <button onClick={()=>setShowEditCard("new")} style={{padding:"10px 14px",borderRadius:12,flexShrink:0,cursor:"pointer",fontSize:12,fontWeight:700,background:C.card,border:`1px solid ${C.border}`,color:C.textMuted}}>+ Nueva</button>
+      </div>
+
+      {/* TARJETA ACTIVA */}
+      {card && (
+        <div style={{background:`linear-gradient(135deg, ${card.color}22, ${C.card})`,border:`1px solid ${card.color}44`,borderRadius:20,padding:18}}>
+          <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:14}}>
+            <div>
+              <div style={{fontSize:16,fontWeight:800}}>{card.name}</div>
+              <div style={{fontSize:12,color:C.textMuted}}>{card.bank} •••• {card.last4}</div>
+            </div>
+            <button onClick={()=>setShowEditCard(card.id)} style={{background:card.color+"22",border:`1px solid ${card.color}44`,color:card.color,borderRadius:8,padding:"5px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>✏️ Editar</button>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
+            {[
+              {l:"Saldo actual",    v:fmtCOP(card.balance||0),   c:card.color},
+              {l:"Límite",          v:fmtCOP(card.limit||0),     c:C.textSub},
+              {l:"Disponible",      v:fmtCOP((card.limit||0)-(card.balance||0)), c:(card.limit||0)-(card.balance||0)>0?C.green:C.red},
+              {l:"Día de corte",    v:`Día ${card.cutDay||"-"}`,  c:C.yellow},
+            ].map(item=>(
+              <div key={item.l} style={{background:C.bg,borderRadius:10,padding:"10px 12px"}}>
+                <div style={{fontSize:10,color:C.textMuted,marginBottom:2}}>{item.l.toUpperCase()}</div>
+                <div style={{fontSize:14,fontWeight:800,color:item.c}}>{item.v}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{height:8,borderRadius:4,background:C.border,marginBottom:8}}>
+            <div style={{height:"100%",borderRadius:4,background:card.color,width:`${Math.min(100,Math.round(((card.balance||0)/Math.max(card.limit||1,1))*100))}%`,transition:"width 1s ease"}}/>
+          </div>
+          <div style={{display:"flex",gap:8}}>
+            <button onClick={()=>setShowAddCharge(true)} style={{flex:1,background:card.color,color:"#000",border:"none",borderRadius:10,padding:"10px",fontWeight:800,fontSize:13,cursor:"pointer"}}>+ Registrar gasto</button>
+            <button onClick={()=>markPaid(card.id)} style={{background:C.greenDim,border:`1px solid ${C.green}44`,color:C.green,borderRadius:10,padding:"10px 14px",fontWeight:700,fontSize:12,cursor:"pointer"}}>✓ Pagar</button>
+          </div>
+        </div>
+      )}
+
+      {/* GASTOS DEL MES */}
+      <div>
+        <div style={{fontSize:12,fontWeight:700,color:C.textMuted,marginBottom:8}}>
+          GASTOS DEL MES ({monthCharges.length}) · {fmtCOP(monthCharges.reduce((s,c)=>s+c.amount,0))}
+        </div>
+        {monthCharges.length === 0 && (
+          <div style={{textAlign:"center",padding:20,color:C.textMuted,fontSize:13,background:C.card,borderRadius:14,border:`1px solid ${C.border}`}}>
+            📭 Sin gastos este mes
+          </div>
+        )}
+        <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:14,overflow:"hidden"}}>
+          {monthCharges.map((ch,i)=>(
+            <div key={ch.id} className="fa-tx-row" style={{padding:"11px 14px",borderBottom:i<monthCharges.length-1?`1px solid ${C.border}`:"none",display:"flex",alignItems:"center",gap:10}}>
+              <div style={{width:36,height:36,borderRadius:9,background:C.redDim,display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,flexShrink:0}}>💳</div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:13,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{ch.note||ch.category}</div>
+                <div style={{fontSize:10,color:C.textMuted}}>{ch.category} · {ch.date}</div>
+              </div>
+              <div style={{textAlign:"right",flexShrink:0}}>
+                <div style={{fontSize:13,fontWeight:800,color:C.red}}>-{fmtCOP(ch.amount)}</div>
+              </div>
+              <button onClick={()=>deleteCharge(card.id, ch.id)} style={{background:"none",border:"none",color:C.textMuted,cursor:"pointer",fontSize:13,opacity:.5,flexShrink:0}}>🗑</button>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* MODAL NUEVO GASTO */}
+      {showAddCharge && (
+        <ChargeModal card={card} onClose={()=>setShowAddCharge(false)} onAdd={addCharge} cats={CHARGE_CATS}/>
+      )}
+
+      {/* MODAL EDITAR/NUEVA TARJETA */}
+      {showEditCard && (
+        <CardEditModal
+          card={showEditCard==="new" ? null : cards.find(c=>c.id===showEditCard)}
+          onClose={()=>setShowEditCard(null)}
+          onSave={showEditCard==="new" ? addNewCard : (updates)=>saveCard(showEditCard, updates)}
+        />
+      )}
+    </div>
+  );
+}
+
+function ChargeModal({ card, onClose, onAdd, cats }) {
+  const [form, setForm] = useState({ date:today(), amount:"", category:"Supermercado", note:"", installments:1 });
+  const set = (k,v) => setForm(f=>({...f,[k]:v}));
+  return (
+    <div style={{position:"fixed",inset:0,background:"#000000BB",zIndex:500,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:C.surface,borderRadius:"22px 22px 0 0",width:"100%",maxWidth:480,padding:"18px 18px 36px",maxHeight:"90vh",overflowY:"auto",borderTop:`1px solid ${card.color}55`,animation:"fa-slideUp .3s ease"}}>
+        <div style={{width:32,height:3,background:C.border,borderRadius:2,margin:"0 auto 16px"}}/>
+        <div style={{display:"flex",justifyContent:"space-between",marginBottom:14}}>
+          <div style={{fontSize:16,fontWeight:800}}>💳 Gasto en {card.name}</div>
+          <button onClick={onClose} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:6,padding:"4px 8px",color:C.text,cursor:"pointer"}}>✕</button>
+        </div>
+        <div style={{background:C.redDim,border:`1px solid ${C.red}33`,borderRadius:14,padding:14,marginBottom:12}}>
+          <div style={{fontSize:11,color:C.textMuted,marginBottom:3}}>MONTO</div>
+          <div style={{display:"flex",alignItems:"center",gap:6}}>
+            <span style={{fontSize:20,color:C.textMuted}}>$</span>
+            <input type="number" value={form.amount} onChange={e=>set("amount",e.target.value)} placeholder="0"
+              style={{flex:1,background:"transparent",border:"none",fontSize:24,fontWeight:900,color:C.red}}/>
+          </div>
+        </div>
+        <div style={{display:"grid",gap:10}}>
+          {[["Categoría","select"],["Fecha","date"],["Descripción","text"]].map(([label,type])=>{
+            const key = label==="Categoría"?"category":label==="Fecha"?"date":"note";
+            return (
+              <div key={key}>
+                <div style={{fontSize:10,color:C.textMuted,fontWeight:700,marginBottom:4}}>{label.toUpperCase()}</div>
+                {type==="select"
+                  ? <select value={form[key]} onChange={e=>set(key,e.target.value)} style={{width:"100%",background:C.card,border:`1px solid ${C.border}`,borderRadius:9,padding:"9px 11px",color:C.text,fontSize:13}}>
+                      {cats.map(c=><option key={c}>{c}</option>)}
+                    </select>
+                  : <input type={type} value={form[key]} onChange={e=>set(key,e.target.value)} placeholder={label==="Descripción"?"Ej: Mercado Éxito":""}
+                      style={{width:"100%",background:C.card,border:`1px solid ${C.border}`,borderRadius:9,padding:"9px 11px",color:C.text,fontSize:13}}/>
+                }
+              </div>
+            );
+          })}
+          <div>
+            <div style={{fontSize:10,color:C.textMuted,fontWeight:700,marginBottom:4}}>CUOTAS</div>
+            <div style={{display:"flex",gap:6}}>
+              {[1,3,6,12,24,36].map(n=>(
+                <button key={n} onClick={()=>set("installments",n)} style={{flex:1,padding:"8px 4px",borderRadius:8,border:`1px solid ${form.installments===n?card.color:C.border}`,background:form.installments===n?card.color+"22":"transparent",color:form.installments===n?card.color:C.textSub,cursor:"pointer",fontSize:12,fontWeight:600}}>
+                  {n===1?"Cont.":n+"x"}
+                </button>
+              ))}
+            </div>
+          </div>
+          {form.installments > 1 && form.amount && (
+            <div style={{background:C.card,borderRadius:9,padding:"8px 12px",fontSize:12,color:C.textSub}}>
+              Cuota mensual: <strong style={{color:card.color}}>{fmtCOP(parseFloat(form.amount)/form.installments)}</strong> × {form.installments} meses
+            </div>
+          )}
+        </div>
+        <button onClick={()=>form.amount&&onAdd({...form,amount:parseFloat(form.amount)})}
+          style={{width:"100%",marginTop:16,padding:13,borderRadius:12,border:"none",background:form.amount?card.color:C.border,color:form.amount?"#000":C.textMuted,fontWeight:800,fontSize:15,cursor:"pointer"}}>
+          Registrar Gasto
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function CardEditModal({ card, onClose, onSave }) {
+  const [form, setForm] = useState({
+    name:    card?.name    || "",
+    bank:    card?.bank    || "",
+    last4:   card?.last4   || "",
+    limit:   card?.limit   || 5000000,
+    cutDay:  card?.cutDay  || 25,
+    payDay:  card?.payDay  || 10,
+    color:   card?.color   || "#60A5FA",
+  });
+  const set = (k,v) => setForm(f=>({...f,[k]:v}));
+  const COLORS = ["#60A5FA","#FFD166","#FB923C","#A78BFA","#F472B6","#34D399","#F87171","#00D97E"];
+  return (
+    <div style={{position:"fixed",inset:0,background:"#000000BB",zIndex:500,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:C.surface,borderRadius:"22px 22px 0 0",width:"100%",maxWidth:480,padding:"18px 18px 36px",maxHeight:"90vh",overflowY:"auto",borderTop:`1px solid ${C.border}`,animation:"fa-slideUp .3s ease"}}>
+        <div style={{width:32,height:3,background:C.border,borderRadius:2,margin:"0 auto 16px"}}/>
+        <div style={{display:"flex",justifyContent:"space-between",marginBottom:14}}>
+          <div style={{fontSize:16,fontWeight:800}}>{card?"Editar tarjeta":"Nueva tarjeta"}</div>
+          <button onClick={onClose} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:6,padding:"4px 8px",color:C.text,cursor:"pointer"}}>✕</button>
+        </div>
+        <div style={{display:"grid",gap:10}}>
+          {[["Nombre",form.name,"name","Ej: Visa Bancolombia"],["Banco",form.bank,"bank","Ej: Bancolombia"],["Últimos 4 dígitos",form.last4,"last4","0000"]].map(([label,val,key,ph])=>(
+            <div key={key}>
+              <div style={{fontSize:10,color:C.textMuted,fontWeight:700,marginBottom:4}}>{label.toUpperCase()}</div>
+              <input value={val} onChange={e=>set(key,e.target.value)} placeholder={ph}
+                style={{width:"100%",background:C.card,border:`1px solid ${C.border}`,borderRadius:9,padding:"9px 11px",color:C.text,fontSize:13}}/>
+            </div>
+          ))}
+          <div>
+            <div style={{fontSize:10,color:C.textMuted,fontWeight:700,marginBottom:4}}>LÍMITE DE CRÉDITO</div>
+            <input type="number" value={form.limit} onChange={e=>set("limit",parseFloat(e.target.value)||0)}
+              style={{width:"100%",background:C.card,border:`1px solid ${C.border}`,borderRadius:9,padding:"9px 11px",color:C.text,fontSize:13}}/>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+            <div>
+              <div style={{fontSize:10,color:C.textMuted,fontWeight:700,marginBottom:4}}>DÍA DE CORTE</div>
+              <input type="number" value={form.cutDay} onChange={e=>set("cutDay",parseInt(e.target.value)||1)} min="1" max="31"
+                style={{width:"100%",background:C.card,border:`1px solid ${C.border}`,borderRadius:9,padding:"9px 11px",color:C.text,fontSize:13}}/>
+            </div>
+            <div>
+              <div style={{fontSize:10,color:C.textMuted,fontWeight:700,marginBottom:4}}>DÍA DE PAGO</div>
+              <input type="number" value={form.payDay} onChange={e=>set("payDay",parseInt(e.target.value)||1)} min="1" max="31"
+                style={{width:"100%",background:C.card,border:`1px solid ${C.border}`,borderRadius:9,padding:"9px 11px",color:C.text,fontSize:13}}/>
+            </div>
+          </div>
+          <div>
+            <div style={{fontSize:10,color:C.textMuted,fontWeight:700,marginBottom:8}}>COLOR DE TARJETA</div>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+              {COLORS.map(col=>(
+                <button key={col} onClick={()=>set("color",col)}
+                  style={{width:32,height:32,borderRadius:"50%",background:col,border:form.color===col?"3px solid #fff":"2px solid transparent",cursor:"pointer"}}/>
+              ))}
+            </div>
+          </div>
+        </div>
+        <button onClick={()=>form.name&&onSave(form)}
+          style={{width:"100%",marginTop:16,padding:13,borderRadius:12,border:"none",background:form.name?form.color:C.border,color:form.name?"#000":C.textMuted,fontWeight:800,fontSize:15,cursor:"pointer"}}>
+          {card?"Guardar cambios":"Agregar tarjeta"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ─── STATS MENSUALES ──────────────────────────────────────────────────────────
 function Stats({monthTxs,totalIncome,totalExpense,transactions,filterMonth}){
   const expByCat={},incByCat={};
@@ -798,6 +1104,147 @@ function Stats({monthTxs,totalIncome,totalExpense,transactions,filterMonth}){
   );
 }
 
+// ─── ACCOUNTS MANAGER ────────────────────────────────────────────────────────
+const ACCOUNT_ICONS = ["💵","💳","🏦","💜","🔵","🟡","🔴","🟢","⚫","🟠","💰","🏧"];
+const ACCOUNT_COLORS = ["#00D97E","#A78BFA","#4D9EFF","#FFD166","#FF4D6A","#FB923C","#34D399","#F472B6","#60A5FA","#FBBF24"];
+
+function AccountsManager({accounts, updateAccountBalance, showToast}) {
+  const [editId, setEditId] = useState(null);
+  const [newAcc, setNewAcc] = useState(null);
+  const [editForm, setEditForm] = useState({});
+
+  const startEdit = (acc) => {
+    setEditId(acc.id);
+    setEditForm({ label: acc.label, icon: acc.icon, initialBalance: acc.initialBalance });
+  };
+
+  const saveEdit = async () => {
+    if (!editForm.label) return;
+    await updateAccountBalance(editId, parseFloat(editForm.initialBalance) || 0, editForm);
+    showToast("Cuenta actualizada ✓");
+    setEditId(null);
+  };
+
+  return (
+    <div style={{display:"grid",gap:12}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <div style={{fontSize:12,color:C.textMuted,fontWeight:700}}>MIS CUENTAS</div>
+        <button onClick={()=>setNewAcc({label:"",icon:"💵",color:C.accentText,initialBalance:0})}
+          style={{background:C.accentDim,border:`1px solid ${C.accentText}44`,color:C.accentText,borderRadius:8,padding:"5px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>
+          + Nueva cuenta
+        </button>
+      </div>
+      <div style={{fontSize:11,color:C.textMuted,marginTop:-6}}>Configura nombre, ícono y saldo inicial de cada cuenta</div>
+
+      {/* Nueva cuenta form */}
+      {newAcc && (
+        <div style={{background:C.card,border:`1px solid ${C.accentText}44`,borderRadius:14,padding:14}}>
+          <div style={{fontSize:12,fontWeight:700,color:C.accentText,marginBottom:10}}>+ NUEVA CUENTA</div>
+          <div style={{display:"grid",gap:8}}>
+            <div>
+              <div style={{fontSize:10,color:C.textMuted,marginBottom:4}}>NOMBRE</div>
+              <input value={newAcc.label} onChange={e=>setNewAcc(a=>({...a,label:e.target.value}))} placeholder="Ej: Efectivo, Nequi..."
+                style={{width:"100%",background:C.bg,border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 10px",color:C.text,fontSize:13}}/>
+            </div>
+            <div>
+              <div style={{fontSize:10,color:C.textMuted,marginBottom:6}}>ÍCONO</div>
+              <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                {ACCOUNT_ICONS.map(ic=>(
+                  <button key={ic} onClick={()=>setNewAcc(a=>({...a,icon:ic}))}
+                    style={{width:34,height:34,borderRadius:8,border:`1px solid ${newAcc.icon===ic?C.accent:C.border}`,background:newAcc.icon===ic?C.accentDim:"transparent",cursor:"pointer",fontSize:16}}>
+                    {ic}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <div style={{fontSize:10,color:C.textMuted,marginBottom:6}}>COLOR</div>
+              <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                {ACCOUNT_COLORS.map(col=>(
+                  <button key={col} onClick={()=>setNewAcc(a=>({...a,color:col}))}
+                    style={{width:28,height:28,borderRadius:"50%",background:col,border:newAcc.color===col?"3px solid #fff":"2px solid transparent",cursor:"pointer"}}>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <div style={{fontSize:10,color:C.textMuted,marginBottom:4}}>SALDO INICIAL</div>
+              <input type="number" value={newAcc.initialBalance} onChange={e=>setNewAcc(a=>({...a,initialBalance:parseFloat(e.target.value)||0}))} placeholder="0"
+                style={{width:"100%",background:C.bg,border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 10px",color:C.text,fontSize:13}}/>
+            </div>
+            <div style={{display:"flex",gap:8}}>
+              <button onClick={async()=>{
+                if(!newAcc.label)return;
+                const id=newAcc.label.toLowerCase().replace(/\s+/g,"-")+"-"+Date.now();
+                await updateAccountBalance(id, newAcc.initialBalance, {label:newAcc.label,icon:newAcc.icon,color:newAcc.color,isNew:true});
+                showToast(`${newAcc.label} creada ✓`);
+                setNewAcc(null);
+              }} style={{flex:1,background:C.accent,border:"none",borderRadius:8,padding:"9px",color:"#000",fontWeight:700,fontSize:13,cursor:"pointer"}}>
+                Crear cuenta
+              </button>
+              <button onClick={()=>setNewAcc(null)}
+                style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:8,padding:"9px 12px",color:C.textSub,cursor:"pointer",fontSize:13}}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cuentas existentes */}
+      {accounts.map(acc=>(
+        <div key={acc.id} style={{background:C.card,border:`1px solid ${editId===acc.id?acc.color+"66":C.border}`,borderRadius:14,overflow:"hidden"}}>
+          {editId===acc.id ? (
+            <div style={{padding:14}}>
+              <div style={{fontSize:12,fontWeight:700,color:acc.color,marginBottom:10}}>EDITANDO: {acc.label}</div>
+              <div style={{display:"grid",gap:8}}>
+                <div>
+                  <div style={{fontSize:10,color:C.textMuted,marginBottom:4}}>NOMBRE</div>
+                  <input value={editForm.label} onChange={e=>setEditForm(f=>({...f,label:e.target.value}))}
+                    style={{width:"100%",background:C.bg,border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 10px",color:C.text,fontSize:13}}/>
+                </div>
+                <div>
+                  <div style={{fontSize:10,color:C.textMuted,marginBottom:6}}>ÍCONO</div>
+                  <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                    {ACCOUNT_ICONS.map(ic=>(
+                      <button key={ic} onClick={()=>setEditForm(f=>({...f,icon:ic}))}
+                        style={{width:32,height:32,borderRadius:8,border:`1px solid ${editForm.icon===ic?C.accent:C.border}`,background:editForm.icon===ic?C.accentDim:"transparent",cursor:"pointer",fontSize:15}}>
+                        {ic}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <div style={{fontSize:10,color:C.textMuted,marginBottom:4}}>SALDO INICIAL</div>
+                  <input type="number" value={editForm.initialBalance} onChange={e=>setEditForm(f=>({...f,initialBalance:e.target.value}))}
+                    style={{width:"100%",background:C.bg,border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 10px",color:C.text,fontSize:13}}/>
+                </div>
+                <div style={{display:"flex",gap:8}}>
+                  <button onClick={saveEdit} style={{flex:1,background:C.accent,border:"none",borderRadius:8,padding:"9px",color:"#000",fontWeight:700,fontSize:13,cursor:"pointer"}}>Guardar</button>
+                  <button onClick={()=>setEditId(null)} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:8,padding:"9px 12px",color:C.textSub,cursor:"pointer",fontSize:13}}>Cancelar</button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div style={{padding:"12px 14px",display:"flex",alignItems:"center",gap:10}}>
+              <span style={{fontSize:20,flexShrink:0}}>{acc.icon}</span>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontWeight:700,fontSize:14}}>{acc.label}</div>
+                <div style={{fontSize:11,color:C.accentText}}>Saldo actual: {fmtCOP(acc.balance)}</div>
+                <div style={{fontSize:11,color:C.textMuted}}>Inicial: {fmtCOP(acc.initialBalance)}</div>
+              </div>
+              <button onClick={()=>startEdit(acc)}
+                style={{background:C.accentDim,border:`1px solid ${C.accentText}33`,color:C.accentText,borderRadius:8,padding:"6px 10px",fontSize:11,fontWeight:700,cursor:"pointer",flexShrink:0}}>
+                ✏️ Editar
+              </button>
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ─── SIDEBAR ──────────────────────────────────────────────────────────────────
 function Sidebar({open,onClose,accounts,updateAccountBalance,settings,setSettings,showToast}){
   const [tab,setTab]=useState("accounts");
@@ -818,33 +1265,7 @@ function Sidebar({open,onClose,accounts,updateAccountBalance,settings,setSetting
         </div>
         <div style={{flex:1,overflowY:"auto",padding:16}}>
           {tab==="accounts"&&(
-            <div style={{display:"grid",gap:12}}>
-              <div style={{fontSize:12,color:C.textMuted,fontWeight:700}}>SALDOS INICIALES</div>
-              <div style={{fontSize:11,color:C.textMuted,marginTop:-6}}>El dinero que tenías antes de empezar a registrar</div>
-              {accounts.map(acc=>(
-                <div key={acc.id} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:14,padding:"12px 14px"}}>
-                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
-                    <span style={{fontSize:18}}>{acc.icon}</span>
-                    <div>
-                      <div style={{fontWeight:700,fontSize:14}}>{acc.label}</div>
-                      <div style={{fontSize:12,color:C.accentText}}>Saldo actual: {fmtCOP(acc.balance)}</div>
-                      <div style={{fontSize:11,color:C.textMuted}}>Saldo inicial: {fmtCOP(acc.initialBalance)}</div>
-                    </div>
-                  </div>
-                  <div style={{display:"flex",gap:8}}>
-                    <input type="number" defaultValue={acc.initialBalance} id={`bal-${acc.id}`} placeholder="0"
-                      style={{flex:1,background:C.bg,border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 10px",color:C.text,fontSize:13}}/>
-                    <button onClick={async()=>{
-                      const v=parseFloat(document.getElementById(`bal-${acc.id}`).value)||0;
-                      await updateAccountBalance(acc.id,v);
-                      showToast(`${acc.label} actualizado ✓`);
-                    }} style={{background:C.accentDim,border:`1px solid ${C.accentText}44`,color:C.accentText,borderRadius:8,padding:"8px 12px",cursor:"pointer",fontSize:12,fontWeight:700}}>
-                      Guardar
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <AccountsManager accounts={accounts} updateAccountBalance={updateAccountBalance} showToast={showToast}/>
           )}
           {tab==="notif"&&(
             <div style={{display:"grid",gap:14}}>

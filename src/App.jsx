@@ -3,11 +3,13 @@ import { supabase, isConfigured } from "./supabase.js";
 import FinanzApp from "./apps/FinanzApp.jsx";
 import Planner from "./apps/Planner.jsx";
 import FlotaTracker from "./apps/FlotaTracker.jsx";
+import ApartamentoApp from "./apps/ApartamentoApp.jsx";
 
 const APPS = [
-  { id:"finanz",  label:"FinanzApp",    subtitle:"Presupuesto & Finanzas",  icon:"💰", color:"#00D97E", colorDim:"#071A10", desc:"Ingresos, gastos, cuentas y préstamos" },
-  { id:"planner", label:"Planner",      subtitle:"Tareas, Hábitos & Metas", icon:"📅", color:"#60A5FA", colorDim:"#061022", desc:"Organiza tu vida día a día"            },
-  { id:"flota",   label:"FlotaTracker", subtitle:"Gestión de Flota",        icon:"🚗", color:"#A855F7", colorDim:"#110722", desc:"Cobros y gastos de tus dos carros"     },
+  { id:"finanz",      label:"FinanzApp",    subtitle:"Presupuesto & Finanzas",   icon:"💰", color:"#00D97E", colorDim:"#071A10", desc:"Ingresos, gastos, tarjetas y préstamos" },
+  { id:"planner",     label:"Planner",      subtitle:"Tareas, Hábitos & Metas",  icon:"📅", color:"#60A5FA", colorDim:"#061022", desc:"Organiza tu vida día a día"             },
+  { id:"flota",       label:"FlotaTracker", subtitle:"Gestión de Flota",         icon:"🚗", color:"#A855F7", colorDim:"#110722", desc:"Cobros y gastos de tus dos carros"      },
+  { id:"apartamento", label:"Apartamento",  subtitle:"Reservas & Disponibilidad",icon:"🏠", color:"#818CF8", colorDim:"#0F1235", desc:"Gestiona las 3 habitaciones"            },
 ];
 
 export default function App() {
@@ -35,9 +37,10 @@ export default function App() {
     }
   }, []);
 
-  if (activeApp === "finanz")  return <FinanzApp    onBack={() => setActiveApp(null)} />;
-  if (activeApp === "planner") return <Planner      onBack={() => setActiveApp(null)} />;
-  if (activeApp === "flota")   return <FlotaTracker onBack={() => setActiveApp(null)} />;
+  if (activeApp === "finanz")      return <FinanzApp       onBack={() => setActiveApp(null)} />;
+  if (activeApp === "planner")     return <Planner         onBack={() => setActiveApp(null)} />;
+  if (activeApp === "flota")       return <FlotaTracker    onBack={() => setActiveApp(null)} />;
+  if (activeApp === "apartamento") return <ApartamentoApp  onBack={() => setActiveApp(null)} />;
 
   const statusColor = dbStatus === "ok" ? "#22C55E" : dbStatus === "error" ? "#EF4444" : "#FBBF24";
   const statusText  = dbStatus === "ok" ? "Supabase conectado" : dbStatus === "error" ? "Sin conexión a BD" : "Verificando...";
