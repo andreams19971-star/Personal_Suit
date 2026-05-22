@@ -102,7 +102,7 @@ export default function Planner({ onBack }) {
   ];
 
   return (
-    <div style={{ fontFamily: "-apple-system, BlinkMacSystemFont, sans-serif", background: C.bg, height: "100dvh", maxHeight: "100dvh", color: C.text, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+    <div style={{ fontFamily: "-apple-system, BlinkMacSystemFont, sans-serif", background: C.bg, height: "100dvh", maxHeight: "100dvh", width: "100%", maxWidth: "100vw", color: C.text, overflow: "hidden", display: "flex", flexDirection: "column" }}>
       <style>{`
         *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
         input,select,textarea{outline:none;font-family:inherit}

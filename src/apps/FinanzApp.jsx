@@ -158,12 +158,14 @@ export default function FinanzApp({ onBack }){
     <div style={{
       fontFamily:"'SF Pro Display',-apple-system,BlinkMacSystemFont,sans-serif",
       background:C.bg,
-      height:"100dvh",  /* modern browsers */
+      height:"100dvh",
       maxHeight:"100dvh",
+      width:"100%",
+      maxWidth:"100vw",
+      overflow:"hidden",
       color:C.text,
       display:"flex",
       flexDirection:"column",
-      overflow:"hidden",
       position:"relative",
     }}>
       <style>{`
@@ -188,7 +190,7 @@ export default function FinanzApp({ onBack }){
         <DesktopNav view={view} setView={setView} setSidebarOpen={setSidebarOpen} loans={loans}/>
         <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden",minWidth:0}}>
           <TopBar view={view} filterMonth={filterMonth} setFilterMonth={setFilterMonth} setSidebarOpen={setSidebarOpen} openAddModal={openAddModal} onBack={onBack}/>
-          <div className="fa-scroll" style={{flex:1,overflowY:"auto",paddingBottom:80,minHeight:0}}>
+          <div className="fa-scroll" style={{flex:1,overflowY:"auto",overflowX:"hidden",paddingBottom:80,minHeight:0,width:"100%"}}>
             {view==="dashboard" && <Dashboard transactions={transactions} accounts={computedAccounts} loans={loans} totalIncome={totalIncome} totalExpense={totalExpense} netBalance={netBalance} filterMonth={filterMonth} setView={setView} setSelAccount={setSelAccount} monthTxs={monthTxs}/>}
             {view==="movements" && <Movements transactions={transactions} filterMonth={filterMonth} deleteTransaction={deleteTransaction} openAddModal={openAddModal} loans={loans}/>}
             {view==="accounts"  && <AccountsView accounts={computedAccounts} transactions={transactions} selAccount={selAccount} setSelAccount={setSelAccount} filterMonth={filterMonth} showToast={showToast}/>}
@@ -293,27 +295,27 @@ function Dashboard({transactions,accounts,loans,totalIncome,totalExpense,netBala
   });
   const maxDay=Math.max(...last7.map(d=>d.total),1);
   return(
-    <div style={{padding:"20px 16px",display:"grid",gap:16}} className="fa-fade-up">
-      <div style={{background:`linear-gradient(135deg,${C.accentDim},${C.card})`,border:`1px solid ${C.accentText}33`,borderRadius:20,padding:24,position:"relative",overflow:"hidden"}}>
-        <div style={{position:"absolute",top:-30,right:-30,width:120,height:120,borderRadius:"50%",background:`${C.accent}11`}}/>
+    <div style={{padding:"16px",display:"grid",gap:14,width:"100%",boxSizing:"border-box",overflowX:"hidden"}} className="fa-fade-up">
+      <div style={{background:`linear-gradient(135deg,${C.accentDim},${C.card})`,border:`1px solid ${C.accentText}33`,borderRadius:20,padding:20,position:"relative",overflow:"hidden",width:"100%"}}>
+        <div style={{position:"absolute",top:-30,right:-30,width:120,height:120,borderRadius:"50%",background:`${C.accent}11`,pointerEvents:"none"}}/>
         <div style={{fontSize:12,color:C.accentText,fontWeight:700,marginBottom:4}}>PATRIMONIO TOTAL</div>
-        <div style={{fontSize:32,fontWeight:900,letterSpacing:-2}}>{fmtCOP(totalAssets)}</div>
-        <div style={{display:"flex",gap:12,marginTop:16,flexWrap:"wrap"}}>
+        <div style={{fontSize:30,fontWeight:900,letterSpacing:-1}}>{fmtCOP(totalAssets)}</div>
+        <div style={{display:"flex",gap:10,marginTop:14,flexWrap:"wrap"}}>
           <Pill color={C.accentText} label="Ingresos"   value={fmtCOP(totalIncome)}  icon="↑"/>
           <Pill color={C.red}        label="Egresos"    value={fmtCOP(totalExpense)} icon="↓"/>
           <Pill color={netBalance>=0?C.accentText:C.red} label="Balance" value={fmtCOP(netBalance)} icon="="/>
           {totalPending>0&&<Pill color={C.orange} label="Por cobrar" value={fmtCOP(totalPending)} icon="🤝"/>}
         </div>
       </div>
-      <div>
+      <div style={{width:"100%",overflow:"hidden"}}>
         <SectionHeader title="Mis Cuentas" action="Ver todas" onAction={()=>setView("accounts")}/>
-        <div style={{display:"flex",gap:12,overflowX:"auto",paddingBottom:4}}>
+        <div style={{display:"flex",gap:10,overflowX:"auto",paddingBottom:4,marginLeft:-16,marginRight:-16,paddingLeft:16,paddingRight:16,width:"calc(100% + 32px)"}}>
           {accounts.map(acc=>(
             <button key={acc.id} onClick={()=>{setSelAccount(acc.id);setView("accounts");}} className="fa-btn"
-              style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:16,padding:"14px 16px",minWidth:130,flexShrink:0,cursor:"pointer",textAlign:"left"}}>
-              <div style={{fontSize:22,marginBottom:6}}>{acc.icon}</div>
-              <div style={{fontSize:11,color:C.textSub,fontWeight:600}}>{acc.label}</div>
-              <div style={{fontSize:16,fontWeight:800,color:acc.balance>=0?C.text:C.red,marginTop:2}}>{fmtCOP(acc.balance)}</div>
+              style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:14,padding:"12px 14px",minWidth:120,flexShrink:0,cursor:"pointer",textAlign:"left"}}>
+              <div style={{fontSize:20,marginBottom:4}}>{acc.icon}</div>
+              <div style={{fontSize:10,color:C.textSub,fontWeight:600}}>{acc.label}</div>
+              <div style={{fontSize:14,fontWeight:800,color:acc.balance>=0?C.text:C.red,marginTop:2}}>{fmtCOP(acc.balance)}</div>
             </button>
           ))}
         </div>
