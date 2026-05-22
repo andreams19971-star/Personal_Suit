@@ -27,28 +27,12 @@ export default function App() {
 
   // Controlar body cuando una app está activa
   useEffect(() => {
-    const html = document.documentElement;
-    const body = document.body;
+    const root = document.getElementById('root')
     if (activeApp) {
-      html.style.height = "100%";
-      html.style.overflow = "hidden";
-      body.style.height = "100%";
-      body.style.overflow = "hidden";
-      body.style.margin = "0";
+      root.style.overflow = 'hidden'
     } else {
-      html.style.height = "";
-      html.style.overflow = "";
-      body.style.height = "";
-      body.style.overflow = "";
-      body.style.margin = "";
+      root.style.overflow = ''
     }
-    return () => {
-      html.style.height = "";
-      html.style.overflow = "";
-      body.style.height = "";
-      body.style.overflow = "";
-      body.style.margin = "";
-    };
   }, [activeApp]);
 
   if (activeApp === "finanz")  return <FinanzApp    onBack={() => setActiveApp(null)} />;

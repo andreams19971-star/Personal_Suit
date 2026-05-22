@@ -7,36 +7,37 @@
 }
 
 html {
-  /* Bloquea zoom completamente */
   touch-action: manipulation;
-  -ms-touch-action: manipulation;
+  height: -webkit-fill-available; /* iOS Safari */
+  height: 100%;
 }
 
-html, body, #root {
+body {
+  height: -webkit-fill-available; /* iOS Safari */
   height: 100%;
-  width: 100%;
-  max-width: 100vw;
   overflow: hidden;
   background: #080C14;
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  /* Evita selección accidental de texto */
-  -webkit-user-select: none;
-  user-select: none;
 }
 
-/* Permitir selección solo en inputs */
+#root {
+  height: 100%;
+  height: -webkit-fill-available;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Permitir selección en inputs */
 input, textarea {
   -webkit-user-select: text;
   user-select: text;
 }
 
+/* Evita selección accidental */
 body {
-  /* Safe areas para iPhone con notch y Dynamic Island */
-  padding-top: env(safe-area-inset-top, 0px);
-  padding-bottom: env(safe-area-inset-bottom, 0px);
-  padding-left: env(safe-area-inset-left, 0px);
-  padding-right: env(safe-area-inset-right, 0px);
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 input, select, textarea, button {
@@ -44,19 +45,16 @@ input, select, textarea, button {
   outline: none;
   -webkit-appearance: none;
   appearance: none;
+  /* CRÍTICO: evita zoom en iOS */
+  font-size: 16px;
 }
 
-/* CRÍTICO: Evita el zoom automático en inputs en iOS */
-input, select, textarea {
-  font-size: 16px !important;
-}
-
-/* Scrolling nativo suave en iOS */
-.fa-scroll, [data-scroll] {
+/* Scrolling nativo iOS */
+.fa-scroll, .pl-scroll, .ft-scroll {
   -webkit-overflow-scrolling: touch;
   overflow-y: auto;
 }
 
-/* Ocultar scrollbar en mobile pero mantener funcionalidad */
-::-webkit-scrollbar { width: 0; height: 0; }
+/* Ocultar scrollbars */
+::-webkit-scrollbar { display: none; }
 * { scrollbar-width: none; }

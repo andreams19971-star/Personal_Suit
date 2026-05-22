@@ -155,10 +155,19 @@ export default function FinanzApp({ onBack }){
   const openAddModal=opts=>{setAddModalOpts(opts||{});setShowAddModal(true);};
 
   return(
-    <div style={{fontFamily:"'SF Pro Display',-apple-system,BlinkMacSystemFont,sans-serif",background:C.bg,height:"100%",color:C.text,display:"flex",flexDirection:"column",overflow:"hidden"}}>
+    <div style={{
+      fontFamily:"'SF Pro Display',-apple-system,BlinkMacSystemFont,sans-serif",
+      background:C.bg,
+      height:"100dvh",  /* modern browsers */
+      maxHeight:"100dvh",
+      color:C.text,
+      display:"flex",
+      flexDirection:"column",
+      overflow:"hidden",
+      position:"relative",
+    }}>
       <style>{`
-        .fa-scroll::-webkit-scrollbar{width:4px}
-        .fa-scroll::-webkit-scrollbar-thumb{background:${C.border};border-radius:2px}
+        .fa-scroll::-webkit-scrollbar{display:none}
         @keyframes fa-slideUp{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}
         @keyframes fa-fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
         @keyframes fa-toastIn{from{transform:translateY(60px);opacity:0}to{transform:translateY(0);opacity:1}}

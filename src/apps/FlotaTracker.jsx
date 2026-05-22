@@ -162,7 +162,7 @@ export default function FlotaTracker({ onBack }) {
   const [yStr, mStr] = filterMonth.split("-");
 
   return (
-    <div style={{fontFamily:"-apple-system,BlinkMacSystemFont,sans-serif",background:C.bg,height:"100%",color:C.text,display:"flex",flexDirection:"column",overflow:"hidden"}}>
+    <div style={{fontFamily:"-apple-system,BlinkMacSystemFont,sans-serif",background:C.bg,height:"100dvh",maxHeight:"100dvh",color:C.text,display:"flex",flexDirection:"column",overflow:"hidden"}}>
       <style>{`
         *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
         input,select,textarea{outline:none;font-family:inherit}
