@@ -300,11 +300,11 @@ function Dashboard({transactions,accounts,loans,totalIncome,totalExpense,netBala
         <div style={{position:"absolute",top:-30,right:-30,width:120,height:120,borderRadius:"50%",background:`${C.accent}11`,pointerEvents:"none"}}/>
         <div style={{fontSize:12,color:C.accentText,fontWeight:700,marginBottom:4}}>PATRIMONIO TOTAL</div>
         <div style={{fontSize:30,fontWeight:900,letterSpacing:-1}}>{fmtCOP(totalAssets)}</div>
-        <div style={{display:"flex",gap:10,marginTop:14,flexWrap:"wrap"}}>
+        <div style={{display:"flex",gap:8,marginTop:14,width:"100%",overflow:"hidden"}}>
           <Pill color={C.accentText} label="Ingresos"   value={fmtCOP(totalIncome)}  icon="↑"/>
           <Pill color={C.red}        label="Egresos"    value={fmtCOP(totalExpense)} icon="↓"/>
           <Pill color={netBalance>=0?C.accentText:C.red} label="Balance" value={fmtCOP(netBalance)} icon="="/>
-          {totalPending>0&&<Pill color={C.orange} label="Por cobrar" value={fmtCOP(totalPending)} icon="🤝"/>}
+          {totalPending>0&&<Pill color={C.orange} label="Cobrar" value={fmtCOP(totalPending)} icon="🤝"/>}
         </div>
       </div>
       <div style={{width:"100%",overflow:"hidden"}}>
@@ -325,17 +325,17 @@ function Dashboard({transactions,accounts,loans,totalIncome,totalExpense,netBala
           <SectionHeader title="🤝 Préstamos Pendientes" action="Ver todos" onAction={()=>setView("loans")}/>
           <div style={{display:"grid",gap:10,marginTop:8}}>
             {loans.filter(l=>l.status==="active").slice(0,3).map(loan=>(
-              <div key={loan.id} style={{display:"flex",alignItems:"center",gap:12}}>
-                <div style={{width:36,height:36,borderRadius:10,background:C.orangeDim,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>👤</div>
-                <div style={{flex:1}}>
-                  <div style={{fontSize:13,fontWeight:700}}>{loan.debtor}</div>
-                  <div style={{height:4,borderRadius:2,background:C.border,marginTop:4}}>
+              <div key={loan.id} style={{display:"flex",alignItems:"center",gap:10,width:"100%",overflow:"hidden"}}>
+                <div style={{width:32,height:32,borderRadius:8,background:C.orangeDim,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,flexShrink:0}}>👤</div>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:13,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{loan.debtor}</div>
+                  <div style={{height:3,borderRadius:2,background:C.border,marginTop:4}}>
                     <div style={{height:"100%",borderRadius:2,background:C.orange,width:`${Math.round((1-loan.balance/loan.amount)*100)}%`,transition:"width .8s ease"}}/>
                   </div>
                 </div>
-                <div style={{textAlign:"right",flexShrink:0}}>
-                  <div style={{fontSize:13,fontWeight:800,color:C.orange}}>{fmtCOP(loan.balance)}</div>
-                  <div style={{fontSize:10,color:C.textMuted}}>pendiente</div>
+                <div style={{textAlign:"right",flexShrink:0,minWidth:80}}>
+                  <div style={{fontSize:12,fontWeight:800,color:C.orange}}>{fmtCOP(loan.balance)}</div>
+                  <div style={{fontSize:9,color:C.textMuted}}>pendiente</div>
                 </div>
               </div>
             ))}
@@ -1119,7 +1119,7 @@ function TxRow({tx,onDelete,showDivider=false,compact=false}){
   );
 }
 
-function Pill({color,label,value,icon}){return(<div style={{flex:1}}><div style={{fontSize:10,color,fontWeight:700,marginBottom:2}}>{icon} {label.toUpperCase()}</div><div style={{fontSize:14,fontWeight:800}}>{value}</div></div>);}
+function Pill({color,label,value,icon}){return(<div style={{flex:"1 1 0",minWidth:0,overflow:"hidden"}}><div style={{fontSize:9,color,fontWeight:700,marginBottom:2,whiteSpace:"nowrap"}}>{icon} {label.toUpperCase()}</div><div style={{fontSize:13,fontWeight:800,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{value}</div></div>);}
 function SectionHeader({title,action,onAction}){return(<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10,width:"100%",overflow:"hidden"}}><div style={{fontSize:14,fontWeight:700,flex:1,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{title}</div>{action&&<button onClick={onAction} style={{fontSize:12,color:C.accentText,background:"none",border:"none",cursor:"pointer",fontWeight:600,flexShrink:0,marginLeft:8,whiteSpace:"nowrap"}}>{action} →</button>}</div>);}
 function StatCard({label,value,color,icon}){return(<div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:14,padding:"12px 10px",textAlign:"center"}}><div style={{fontSize:18,color,marginBottom:4}}>{icon}</div><div style={{fontSize:12,color:C.textMuted,marginBottom:4}}>{label}</div><div style={{fontSize:15,fontWeight:800,color}}>{value}</div></div>);}
 function MF({label,children}){return(<div><div style={{fontSize:11,color:C.textMuted,fontWeight:700,marginBottom:4,paddingLeft:2}}>{label.toUpperCase()}</div>{children}</div>);}
