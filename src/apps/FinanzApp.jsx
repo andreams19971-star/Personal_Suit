@@ -309,13 +309,13 @@ function Dashboard({transactions,accounts,loans,totalIncome,totalExpense,netBala
       </div>
       <div style={{width:"100%",overflow:"hidden"}}>
         <SectionHeader title="Mis Cuentas" action="Ver todas" onAction={()=>setView("accounts")}/>
-        <div style={{display:"flex",gap:10,overflowX:"auto",paddingBottom:4,marginLeft:-16,marginRight:-16,paddingLeft:16,paddingRight:16,width:"calc(100% + 32px)"}}>
+        <div style={{display:"flex",gap:10,overflowX:"auto",paddingBottom:4,paddingRight:4}}>
           {accounts.map(acc=>(
             <button key={acc.id} onClick={()=>{setSelAccount(acc.id);setView("accounts");}} className="fa-btn"
-              style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:14,padding:"12px 14px",minWidth:120,flexShrink:0,cursor:"pointer",textAlign:"left"}}>
+              style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:14,padding:"12px 14px",minWidth:110,maxWidth:140,flexShrink:0,cursor:"pointer",textAlign:"left"}}>
               <div style={{fontSize:20,marginBottom:4}}>{acc.icon}</div>
-              <div style={{fontSize:10,color:C.textSub,fontWeight:600}}>{acc.label}</div>
-              <div style={{fontSize:14,fontWeight:800,color:acc.balance>=0?C.text:C.red,marginTop:2}}>{fmtCOP(acc.balance)}</div>
+              <div style={{fontSize:10,color:C.textSub,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{acc.label}</div>
+              <div style={{fontSize:13,fontWeight:800,color:acc.balance>=0?C.text:C.red,marginTop:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{fmtCOP(acc.balance)}</div>
             </button>
           ))}
         </div>
@@ -1120,7 +1120,7 @@ function TxRow({tx,onDelete,showDivider=false,compact=false}){
 }
 
 function Pill({color,label,value,icon}){return(<div style={{flex:1}}><div style={{fontSize:10,color,fontWeight:700,marginBottom:2}}>{icon} {label.toUpperCase()}</div><div style={{fontSize:14,fontWeight:800}}>{value}</div></div>);}
-function SectionHeader({title,action,onAction}){return(<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}><div style={{fontSize:14,fontWeight:700}}>{title}</div>{action&&<button onClick={onAction} style={{fontSize:12,color:C.accentText,background:"none",border:"none",cursor:"pointer",fontWeight:600}}>{action} →</button>}</div>);}
+function SectionHeader({title,action,onAction}){return(<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10,width:"100%",overflow:"hidden"}}><div style={{fontSize:14,fontWeight:700,flex:1,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{title}</div>{action&&<button onClick={onAction} style={{fontSize:12,color:C.accentText,background:"none",border:"none",cursor:"pointer",fontWeight:600,flexShrink:0,marginLeft:8,whiteSpace:"nowrap"}}>{action} →</button>}</div>);}
 function StatCard({label,value,color,icon}){return(<div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:14,padding:"12px 10px",textAlign:"center"}}><div style={{fontSize:18,color,marginBottom:4}}>{icon}</div><div style={{fontSize:12,color:C.textMuted,marginBottom:4}}>{label}</div><div style={{fontSize:15,fontWeight:800,color}}>{value}</div></div>);}
 function MF({label,children}){return(<div><div style={{fontSize:11,color:C.textMuted,fontWeight:700,marginBottom:4,paddingLeft:2}}>{label.toUpperCase()}</div>{children}</div>);}
 function EmptyState({label}){return(<div style={{textAlign:"center",padding:"24px 16px",color:C.textMuted,fontSize:13}}><div style={{fontSize:28,marginBottom:8}}>📭</div>{label}</div>);}
