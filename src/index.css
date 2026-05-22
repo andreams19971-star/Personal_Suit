@@ -4,27 +4,28 @@
   padding: 0;
   -webkit-tap-highlight-color: transparent;
   -webkit-touch-callout: none;
-  /* Crítico: previene overflow horizontal en TODOS los elementos */
-  max-width: 100%;
 }
 
 html {
   touch-action: manipulation;
-  height: -webkit-fill-available;
   height: 100%;
   overflow: hidden;
+  /* Fix iOS Safari */
+  height: -webkit-fill-available;
 }
 
 body {
-  height: -webkit-fill-available;
   height: 100%;
+  height: -webkit-fill-available;
   overflow: hidden;
-  /* Bloquea cualquier scroll horizontal */
-  overflow-x: hidden !important;
+  overflow-x: hidden;
   background: #080C14;
   -webkit-font-smoothing: antialiased;
   -webkit-user-select: none;
   user-select: none;
+  /* Clave: bloquea cualquier overflow horizontal */
+  position: fixed;
+  width: 100%;
 }
 
 #root {
@@ -35,14 +36,13 @@ body {
   display: flex;
   flex-direction: column;
   width: 100%;
-  max-width: 100vw;
+  /* Contiene cualquier overflow de hijos */
+  contain: layout;
 }
 
-/* Permitir selección en inputs */
 input, textarea {
   -webkit-user-select: text;
   user-select: text;
-  max-width: 100%;
 }
 
 input, select, textarea, button {
@@ -50,21 +50,12 @@ input, select, textarea, button {
   outline: none;
   -webkit-appearance: none;
   appearance: none;
-  font-size: 16px; /* evita zoom iOS */
+  font-size: 16px;
 }
 
-/* Scrolling nativo iOS */
-.fa-scroll, .pl-scroll, .ft-scroll {
-  -webkit-overflow-scrolling: touch;
-  overflow-y: auto;
-  overflow-x: hidden;
-}
-
-/* Ocultar scrollbars */
 ::-webkit-scrollbar { display: none; }
 * { scrollbar-width: none; }
 
-/* Fix específico iOS Safari - viewport dinámico */
 @supports (height: 100dvh) {
   html, body, #root { height: 100dvh; }
 }
