@@ -136,9 +136,12 @@ export default function FlotaTracker({ onBack }) {
       const pendiente     = pagosMes.filter(p=>!p.pagado).reduce((s,p)=>s+p.monto,0);
       return { esperadoMes, cobrado, pendiente, diasPagados:pagosMes.filter(p=>p.pagado).length, diasPendientes:pagosMes.filter(p=>!p.pagado).length, workDaysTotal };
     } else {
+      const val = carro.valor_mensual || CARRO2_MENSUAL;
+      // Si no hay registro del mes, asumir pendiente
       const pagoMes = pagosMes[0];
-      const val     = carro.valor_mensual || CARRO2_MENSUAL;
-      return { esperadoMes:val, cobrado:pagoMes?.pagado?val:0, pendiente:pagoMes?.pagado?0:val, pagado:!!pagoMes?.pagado };
+      const pagado = pagoMes?.pagado ? val : 0;
+      const pendiente = pagoMes?.pagado ? 0 : val;
+      return { esperadoMes:val, cobrado:pagado, pendiente, pagado:!!pagoMes?.pagado, tienePago:!!pagoMes, pagoId:pagoMes?.id };
     }
   };
 

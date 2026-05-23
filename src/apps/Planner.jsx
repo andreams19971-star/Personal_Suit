@@ -182,40 +182,81 @@ export default function Planner({ onBack }) {
 
 // ─── TODAY VIEW ───────────────────────────────────────────────────────────────
 function TodayView({ tasks, allTasks, selDate, toggleTask, deleteTask, taskCats }) {
-  const todayTasks = tasks; // already filtered
+  const todayTasks = tasks;
   const done = todayTasks.filter(t=>t.done).length;
-  const pending = allTasks.filter(t=>t.date>selDate&&!t.done);
+  const total = todayTasks.length;
+  const pct = total > 0 ? Math.round((done/total)*100) : 0;
+  const upcoming = allTasks.filter(t=>t.date>selDate&&!t.done).slice(0,3);
+  const overdue  = allTasks.filter(t=>t.date<selDate&&!t.done).slice(0,3);
+
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "¡Buenos días! ☀️" : hour < 18 ? "¡Buenas tardes! 🌤" : "¡Buenas noches! 🌙";
 
   return (
-    <div style={{padding:"14px",display:"grid",gap:14,boxSizing:"border-box"}} className="fu">
-      {/* PROGRESS */}
-      {todayTasks.length>0&&(
-        <div style={{background:`linear-gradient(135deg,${C.accentDim},${C.card})`,border:`1px solid ${C.accent}33`,borderRadius:16,padding:16}}>
-          <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
-            <span style={{fontSize:13,fontWeight:700}}>{done===todayTasks.length&&todayTasks.length>0?"🎉 ¡Todo listo!":"Progreso de hoy"}</span>
-            <span style={{fontSize:13,fontWeight:800,color:C.accent}}>{done}/{todayTasks.length}</span>
+    <div style={{padding:"14px",display:"grid",gap:12,boxSizing:"border-box"}} className="fu">
+
+      {/* GREETING CARD */}
+      <div style={{background:"linear-gradient(135deg,"+C.accentDim+","+C.card+")",border:"1px solid "+C.accent+"33",borderRadius:18,padding:16}}>
+        <div style={{fontSize:13,color:C.accentText,fontWeight:700,marginBottom:2}}>{greeting}</div>
+        {total === 0 ? (
+          <div>
+            <div style={{fontSize:22,fontWeight:900,marginBottom:4}}>Día libre 🎉</div>
+            <div style={{fontSize:12,color:C.textMuted}}>No tienes tareas pendientes para hoy</div>
           </div>
-          <div style={{height:6,borderRadius:3,background:C.border}}>
-            <div style={{height:"100%",borderRadius:3,background:C.accent,width:(todayTasks.length>0?(done/todayTasks.length)*100:0)+"%",transition:"width .8s ease"}}/>
+        ) : done === total ? (
+          <div>
+            <div style={{fontSize:22,fontWeight:900,marginBottom:4}}>¡Todo listo! 🏆</div>
+            <div style={{fontSize:12,color:C.accentText}}>Completaste {total} tareas hoy</div>
+          </div>
+        ) : (
+          <div>
+            <div style={{fontSize:22,fontWeight:900,marginBottom:8}}>{done}/{total} completadas</div>
+            <div style={{height:8,borderRadius:4,background:C.border}}>
+              <div style={{height:"100%",borderRadius:4,background:C.accent,width:pct+"%",transition:"width .8s ease"}}/>
+            </div>
+            <div style={{fontSize:11,color:C.textMuted,marginTop:4}}>{pct}% del día completado</div>
+          </div>
+        )}
+      </div>
+
+      {/* TAREAS DE HOY */}
+      {total === 0 ? (
+        <div style={{textAlign:"center",padding:"28px 16px",color:C.textMuted,background:C.card,borderRadius:16,border:"1px solid "+C.border}}>
+          <div style={{fontSize:36,marginBottom:8}}>📋</div>
+          <div style={{fontSize:14,fontWeight:700,marginBottom:4,color:C.text}}>Sin tareas para hoy</div>
+          <div style={{fontSize:12}}>Toca <strong style={{color:C.accentText}}>+ Agregar</strong> para crear una</div>
+        </div>
+      ) : (
+        <div>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+            <div style={{fontSize:12,fontWeight:700,color:C.textMuted}}>HOY · {total} TAREAS</div>
+            {done>0&&<div style={{fontSize:11,color:C.accentText,fontWeight:600}}>{done} completadas ✓</div>}
+          </div>
+          <div style={{display:"grid",gap:6}}>
+            {/* Pendientes primero */}
+            {todayTasks.filter(t=>!t.done).map(t=><TaskRow key={t.id} task={t} onToggle={toggleTask} onDelete={deleteTask} taskCats={taskCats}/>)}
+            {/* Completadas al final */}
+            {todayTasks.filter(t=>t.done).map(t=><TaskRow key={t.id} task={t} onToggle={toggleTask} onDelete={deleteTask} taskCats={taskCats}/>)}
           </div>
         </div>
       )}
 
-      {/* TAREAS DE HOY */}
-      <div>
-        <div style={{fontSize:12,fontWeight:700,color:C.textMuted,marginBottom:8}}>TAREAS DE HOY ({todayTasks.length})</div>
-        {todayTasks.length===0&&<EmptyPlanner msg="Sin tareas hoy 🎉" sub="Toca + Agregar para crear una"/>}
-        <div style={{display:"grid",gap:6}}>
-          {todayTasks.map(t=><TaskRow key={t.id} task={t} onToggle={toggleTask} onDelete={deleteTask} taskCats={taskCats}/>)}
+      {/* VENCIDAS */}
+      {overdue.length>0&&(
+        <div>
+          <div style={{fontSize:12,fontWeight:700,color:C.red,marginBottom:8}}>⚠️ VENCIDAS ({overdue.length})</div>
+          <div style={{display:"grid",gap:6}}>
+            {overdue.map(t=><TaskRow key={t.id} task={t} onToggle={toggleTask} onDelete={deleteTask} taskCats={taskCats} accent={C.red}/>)}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* PRÓXIMAS */}
-      {pending.slice(0,5).length>0&&(
+      {upcoming.length>0&&(
         <div>
-          <div style={{fontSize:12,fontWeight:700,color:C.textMuted,marginBottom:8}}>PRÓXIMAS ({pending.length})</div>
+          <div style={{fontSize:12,fontWeight:700,color:C.textMuted,marginBottom:8}}>PRÓXIMAS ({allTasks.filter(t=>t.date>selDate&&!t.done).length})</div>
           <div style={{display:"grid",gap:6}}>
-            {pending.slice(0,5).map(t=><TaskRow key={t.id} task={t} onToggle={toggleTask} onDelete={deleteTask} taskCats={taskCats} muted/>)}
+            {upcoming.map(t=><TaskRow key={t.id} task={t} onToggle={toggleTask} onDelete={deleteTask} taskCats={taskCats} muted/>)}
           </div>
         </div>
       )}
@@ -223,21 +264,25 @@ function TodayView({ tasks, allTasks, selDate, toggleTask, deleteTask, taskCats 
   );
 }
 
-function TaskRow({ task, onToggle, onDelete, taskCats, muted }) {
+function TaskRow({ task, onToggle, onDelete, taskCats, muted, accent }) {
   const cat = taskCats?.find(c=>c.id===task.category)||{icon:"📦",label:task.category};
   const pr  = PRIORITIES.find(p=>p.id===task.priority)||PRIORITIES[1];
+  const color = accent || pr.color;
   return (
-    <div className="hr" style={{background:C.card,border:"1px solid "+(task.done?C.border:pr.color+"33"),borderRadius:12,padding:"10px 12px",display:"flex",alignItems:"center",gap:10,opacity:muted?0.6:1}}>
-      <button onClick={()=>onToggle(task.id)} style={{width:22,height:22,borderRadius:"50%",border:"2px solid "+(task.done?C.accent:pr.color),background:task.done?C.accent:"transparent",cursor:"pointer",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,color:"#000"}}>
+    <div className="hr" style={{background:C.card,border:"1px solid "+(task.done?C.border:color+"33"),borderRadius:12,padding:"10px 12px",display:"flex",alignItems:"center",gap:10,opacity:muted?0.55:1,transition:"opacity .2s"}}>
+      <button onClick={()=>onToggle(task.id)} style={{width:22,height:22,borderRadius:"50%",border:"2px solid "+(task.done?C.accent:color),background:task.done?C.accent:"transparent",cursor:"pointer",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,color:"#000",fontWeight:800}}>
         {task.done&&"✓"}
       </button>
       <span style={{fontSize:16,flexShrink:0}}>{cat.icon}</span>
       <div style={{flex:1,minWidth:0}}>
         <div style={{fontSize:13,fontWeight:600,textDecoration:task.done?"line-through":"none",color:task.done?C.textMuted:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{task.title}</div>
-        <div style={{fontSize:10,color:C.textMuted}}>{cat.label}{task.subcategory?` · ${task.subcategory}`:""}</div>
+        <div style={{fontSize:10,color:C.textMuted,marginTop:1}}>
+          {cat.label}{task.subcategory?" · "+task.subcategory:""}
+          {task.date!==new Date().toISOString().slice(0,10)&&" · "+task.date}
+        </div>
       </div>
-      <div style={{width:6,height:6,borderRadius:"50%",background:pr.color,flexShrink:0}}/>
-      <button onClick={()=>onDelete(task.id)} style={{background:"none",border:"none",color:C.textMuted,cursor:"pointer",fontSize:13,opacity:.5,flexShrink:0}}>🗑</button>
+      <div style={{width:7,height:7,borderRadius:"50%",background:color,flexShrink:0}}/>
+      <button onClick={()=>onDelete(task.id)} style={{background:"none",border:"none",color:C.textMuted,cursor:"pointer",fontSize:13,opacity:.4,flexShrink:0,padding:"2px"}}>✕</button>
     </div>
   );
 }
