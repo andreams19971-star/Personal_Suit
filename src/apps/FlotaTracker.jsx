@@ -113,7 +113,7 @@ function seedData() {
 export default function FlotaTracker({ onBack }) {
   const {
     cars, loading, online,
-    togglePayment, addWorkDay, addExpense, updateCar,
+    togglePayment, deletePayment, addWorkDay, addExpense, updateCar,
   } = useFlotaData();
 
   const [view,        setView]        = useState("dashboard");
@@ -220,8 +220,8 @@ export default function FlotaTracker({ onBack }) {
           </div>
         )}
         {!loading && view==="dashboard" && <Dashboard carros={cars} getStats={getStats} totalEsperado={totalEsperado} totalCobrado={totalCobrado} totalPendiente={totalPendiente} totalGastos={totalGastos} totalNeto={totalNeto} filterMonth={filterMonth} setView={setView} />}
-        {!loading && view==="carro1"    && cars[0] && <CarroView carro={cars[0]} stats={getStats(cars[0])} pagos={cars[0]?.pagos||[]} filterMonth={filterMonth} marcarPagado={marcarPagado} setModal={setModal} />}
-        {!loading && view==="carro2"    && cars[1] && <CarroView carro={cars[1]} stats={getStats(cars[1])} pagos={cars[1]?.pagos||[]} filterMonth={filterMonth} marcarPagado={marcarPagado} setModal={setModal} />}
+        {!loading && view==="carro1"    && cars[0] && <CarroView carro={cars[0]} stats={getStats(cars[0])} pagos={cars[0]?.pagos||[]} filterMonth={filterMonth} marcarPagado={marcarPagado} eliminarPago={(carId,pagoId)=>{deletePayment(carId,pagoId);showToast("Registro eliminado","err");}} setModal={setModal} />}
+        {!loading && view==="carro2"    && cars[1] && <CarroView carro={cars[1]} stats={getStats(cars[1])} pagos={cars[1]?.pagos||[]} filterMonth={filterMonth} marcarPagado={marcarPagado} eliminarPago={(carId,pagoId)=>{deletePayment(carId,pagoId);showToast("Registro eliminado","err");}} setModal={setModal} />}
         {!loading && view==="gastos"    && <GastosView carros={cars} filterMonth={filterMonth} setModal={setModal} totalGastos={totalGastos} />}
       </div>
 
@@ -395,7 +395,7 @@ function Dashboard({carros,getStats,totalEsperado,totalCobrado,totalPendiente,to
 }
 
 // ─── VISTA POR CARRO ──────────────────────────────────────────────────────────
-function CarroView({carro,stats,pagos,filterMonth,marcarPagado,setModal}) {
+function CarroView({carro,stats,pagos,filterMonth,marcarPagado,eliminarPago,setModal}) {
   const pagosMes = pagos.filter(p=>p.fecha.startsWith(filterMonth));
   const pagosOrdenados = [...pagosMes].sort((a,b)=>b.fecha.localeCompare(a.fecha));
 
@@ -491,6 +491,11 @@ function CarroView({carro,stats,pagos,filterMonth,marcarPagado,setModal}) {
                 <button onClick={()=>marcarPagado(carro.id,pago.id)} className="bp"
                   style={{padding:"6px 14px",borderRadius:100,border:"1px solid "+(pago.pagado?carro.color:C.yellow),background:pago.pagado?carro.color+"22":C.yellow+"15",color:pago.pagado?carro.color:C.yellow,fontWeight:700,fontSize:11,cursor:"pointer",whiteSpace:"nowrap"}}>
                   {pago.pagado?"✓ Pagado":"⏳ Pendiente"}
+                </button>
+                {/* ELIMINAR */}
+                <button onClick={()=>eliminarPago&&eliminarPago(carro.id,pago.id)} className="bp"
+                  style={{background:C.redDim,border:"1px solid "+C.red+"33",color:C.red,borderRadius:8,padding:"6px 8px",cursor:"pointer",fontSize:12,flexShrink:0}}>
+                  🗑
                 </button>
               </div>
             );
