@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useFinanzData } from "../hooks/useFinanzData.js";
 import { useNotifications } from "../hooks/useNotifications.js";
 
@@ -11,12 +11,13 @@ const C = {
   text:"#F0F4FF",textSub:"#8899BB",textMuted:"#4A5A75",
 };
 
-const CATEGORIES = {
+const DEFAULT_CATEGORIES = {
   income:[
     {id:"salary",    label:"Sueldo",        icon:"💼",subs:["Empresa","Freelance","Bonificación","Horas extra"]},
     {id:"business",  label:"Negocio",        icon:"🏪",subs:["Ventas","Servicios","Comisiones"]},
     {id:"investment",label:"Inversión",      icon:"📈",subs:["Dividendos","Intereses","Cripto","CDT"]},
-    {id:"loan_pay",  label:"Cobro Préstamo", icon:"🤝",subs:["Abono","Pago total","Intereses cobrados"]},
+    {id:"loan_pay",  label:"Cobro Préstamo", icon:"🤝",subs:["Abono","Pago total"]},
+    {id:"flota_inc", label:"Ingresos Flota", icon:"🚗",subs:["Carro 1","Carro 2"]},
     {id:"other_in",  label:"Otros Ingresos", icon:"💰",subs:["Regalo","Reembolso","Varios"]},
   ],
   expense:[
@@ -111,7 +112,25 @@ export default function FinanzApp({ onBack }){
   const [selAccount,setSelAccount]=useState(null);
   const [filterMonth,setFilterMonth]=useState(today().slice(0,7));
   const [settings,setSettings]=useState({currency:"COP",budgets:{}});
+  const [categories,setCategories]=useState(()=>{
+    try { const s=localStorage.getItem("fa_categories"); return s?JSON.parse(s):DEFAULT_CATEGORIES; } catch { return DEFAULT_CATEGORIES; }
+  });
+  const saveCategories = (cats) => {
+    setCategories(cats);
+    try { localStorage.setItem("fa_categories",JSON.stringify(cats)); } catch {}
+  };
   const [toast,setToast]=useState(null);
+
+  // Recoger transacciones pendientes de FlotaTracker
+  useEffect(()=>{
+    try {
+      const pending = JSON.parse(localStorage.getItem("fa_pending_transactions")||"[]");
+      if (pending.length>0) {
+        pending.forEach(tx => dbAddTx(tx));
+        localStorage.removeItem("fa_pending_transactions");
+      }
+    } catch {}
+  },[]);
   const [showCardModal, setShowCardModal] = useState(false);
   const [cards, setCards] = useState([
     { id:"C1", name:"Visa Bancolombia", bank:"Bancolombia", last4:"4521", color:"#FFD166", icon:"💳", limit:5000000, cutDay:25, payDay:10, balance:0, charges:[] },
@@ -194,19 +213,19 @@ export default function FinanzApp({ onBack }){
         <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden",minWidth:0}}>
           <TopBar view={view} filterMonth={filterMonth} setFilterMonth={setFilterMonth} setSidebarOpen={setSidebarOpen} openAddModal={openAddModal} onBack={onBack}/>
           <div className="fa-scroll" style={{flex:1,overflowY:"auto",overflowX:"hidden",paddingBottom:80,minHeight:0,width:"100%",maxWidth:"100%",position:"relative"}}>
-            {view==="dashboard" && <Dashboard transactions={transactions} accounts={computedAccounts} loans={loans} totalIncome={totalIncome} totalExpense={totalExpense} netBalance={netBalance} filterMonth={filterMonth} setView={setView} setSelAccount={setSelAccount} monthTxs={monthTxs}/>}
-            {view==="movements" && <Movements transactions={transactions} filterMonth={filterMonth} deleteTransaction={deleteTransaction} openAddModal={openAddModal} loans={loans}/>}
-            {view==="accounts"  && <AccountsView accounts={computedAccounts} transactions={transactions} selAccount={selAccount} setSelAccount={setSelAccount} filterMonth={filterMonth} showToast={showToast}/>}
+            {view==="dashboard" && <Dashboard transactions={transactions} accounts={computedAccounts} loans={loans} totalIncome={totalIncome} totalExpense={totalExpense} netBalance={netBalance} filterMonth={filterMonth} setView={setView} setSelAccount={setSelAccount} monthTxs={monthTxs} categories={categories}/>}
+            {view==="movements" && <Movements transactions={transactions} filterMonth={filterMonth} deleteTransaction={deleteTransaction} openAddModal={openAddModal} loans={loans} categories={categories}/>}
+            {view==="accounts"  && <AccountsView accounts={computedAccounts} transactions={transactions} selAccount={selAccount} setSelAccount={setSelAccount} filterMonth={filterMonth} showToast={showToast} categories={categories}/>}
             {view==="cards"     && <CardsView cards={cards} setCards={setCards} filterMonth={filterMonth} showToast={showToast}/>}
-            {view==="loans"     && <LoansView loans={loans} transactions={transactions} setShowLoanModal={setShowLoanModal} setShowPayModal={setShowPayModal} accounts={computedAccounts} showToast={showToast}/>}
-            {view==="stats"     && <Stats monthTxs={monthTxs} totalIncome={totalIncome} totalExpense={totalExpense} transactions={transactions} filterMonth={filterMonth}/>}
+            {view==="loans"     && <LoansView loans={loans} transactions={transactions} setShowLoanModal={setShowLoanModal} setShowPayModal={setShowPayModal} accounts={computedAccounts} showToast={showToast} categories={categories}/>}
+            {view==="stats"     && <Stats monthTxs={monthTxs} totalIncome={totalIncome} totalExpense={totalExpense} transactions={transactions} filterMonth={filterMonth} categories={categories}/>}
           </div>
         </div>
-        <Sidebar open={sidebarOpen} onClose={()=>setSidebarOpen(false)} accounts={computedAccounts} updateAccountBalance={updateAccountBalance} settings={settings} setSettings={setSettings} showToast={showToast}/>
+        <Sidebar open={sidebarOpen} onClose={()=>setSidebarOpen(false)} accounts={computedAccounts} updateAccountBalance={updateAccountBalance} settings={settings} setSettings={setSettings} showToast={showToast} categories={categories} saveCategories={saveCategories}/>
       </div>
       <MobileNav view={view} setView={setView} openAddModal={openAddModal} loans={loans}/>
       <button onClick={()=>openAddModal()} className="fa-btn fa-mobile" style={{position:"fixed",bottom:82,right:20,width:54,height:54,borderRadius:"50%",background:C.accent,border:"none",cursor:"pointer",fontSize:24,boxShadow:`0 8px 24px ${C.accent}66`,zIndex:100,display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
-      {showAddModal  && <AddModal  onClose={()=>{ setShowAddModal(false); setAddModalOpts({}); }} onAdd={addTransaction} accounts={accounts} opts={addModalOpts}/>}
+      {showAddModal  && <AddModal  onClose={()=>{ setShowAddModal(false); setAddModalOpts({}); }} onAdd={addTransaction} accounts={accounts} opts={addModalOpts} categories={categories}/>}
       {showLoanModal && <LoanModal onClose={()=>setShowLoanModal(false)} onAdd={addLoan} accounts={accounts}/>}
       {showPayModal  && <PayModal  onClose={()=>setShowPayModal(null)} loan={showPayModal} onPay={addPayment} accounts={accounts}/>}
       {toast && <div style={{position:"fixed",bottom:96,left:"50%",transform:"translateX(-50%)",background:toast.type==="error"?C.red:C.accent,color:toast.type==="error"?"#fff":"#000",padding:"10px 20px",borderRadius:100,fontWeight:700,fontSize:14,zIndex:9999,animation:"fa-toastIn .3s ease",whiteSpace:"nowrap",boxShadow:"0 8px 24px #0006"}}>{toast.msg}</div>}
@@ -304,7 +323,7 @@ function MobileNav({view,setView,openAddModal,loans}){
 }
 
 // ─── DASHBOARD ────────────────────────────────────────────────────────────────
-function Dashboard({transactions,accounts,loans,totalIncome,totalExpense,netBalance,filterMonth,setView,setSelAccount,monthTxs}){
+function Dashboard({transactions,accounts,loans,totalIncome,totalExpense,netBalance,filterMonth,setView,setSelAccount,monthTxs,categories=DEFAULT_CATEGORIES}){
   const totalAssets=accounts.reduce((s,a)=>s+a.balance,0);
   const totalPending=loans.filter(l=>l.status==="active").reduce((s,l)=>s+l.balance,0);
   const expByCat={};
@@ -381,7 +400,7 @@ function Dashboard({transactions,accounts,loans,totalIncome,totalExpense,netBala
         <SectionHeader title="Top Gastos por Categoría" action="Ver stats" onAction={()=>setView("stats")}/>
         <div style={{display:"grid",gap:10,marginTop:12}}>
           {topCats.map(([catId,amount])=>{
-            const cat=CATEGORIES.expense.find(c=>c.id===catId)||{label:catId,icon:"📦"};
+            const cat=categories.expense.find(c=>c.id===catId)||{label:catId,icon:"📦"};
             const pct=Math.min(100,Math.round((amount/totalExpense)*100));
             return(
               <div key={catId}>
@@ -410,7 +429,7 @@ function Dashboard({transactions,accounts,loans,totalIncome,totalExpense,netBala
 }
 
 // ─── MOVEMENTS ────────────────────────────────────────────────────────────────
-function Movements({transactions,filterMonth,deleteTransaction,openAddModal,loans}){
+function Movements({transactions,filterMonth,deleteTransaction,openAddModal,loans,categories=DEFAULT_CATEGORIES}){
   const [filter,setFilter]=useState("all");
   const [search,setSearch]=useState("");
   const filtered=transactions
@@ -450,7 +469,7 @@ function Movements({transactions,filterMonth,deleteTransaction,openAddModal,loan
 }
 
 // ─── ACCOUNTS ─────────────────────────────────────────────────────────────────
-function AccountsView({accounts,transactions,selAccount,setSelAccount,filterMonth,showToast}){
+function AccountsView({accounts,transactions,selAccount,setSelAccount,filterMonth,showToast,categories=DEFAULT_CATEGORIES}){
   const active=selAccount||accounts[0]?.id;
   const acc=accounts.find(a=>a.id===active)||accounts[0];
   const accTxs=transactions.filter(t=>t.account===active&&t.date.startsWith(filterMonth));
@@ -494,7 +513,7 @@ function AccountsView({accounts,transactions,selAccount,setSelAccount,filterMont
 }
 
 // ─── LOANS VIEW ───────────────────────────────────────────────────────────────
-function LoansView({loans,transactions,setShowLoanModal,setShowPayModal,accounts,showToast}){
+function LoansView({loans,transactions,setShowLoanModal,setShowPayModal,accounts,showToast,categories=DEFAULT_CATEGORIES}){
   const [filter,setFilter]=useState("active");
   const [selLoan,setSelLoan]=useState(null);
   const filtered=loans.filter(l=>filter==="all"||l.status===filter);
@@ -931,15 +950,15 @@ function CardEditModal({ card, onClose, onSave }) {
 }
 
 // ─── STATS MENSUALES ──────────────────────────────────────────────────────────
-function Stats({monthTxs,totalIncome,totalExpense,transactions,filterMonth}){
+function Stats({monthTxs,totalIncome,totalExpense,transactions,filterMonth,categories=DEFAULT_CATEGORIES}){
   const expByCat={},incByCat={};
   monthTxs.filter(t=>t.type==="expense").forEach(t=>{
-    const cat=CATEGORIES.expense.find(c=>c.id===t.category);
+    const cat=categories.expense.find(c=>c.id===t.category);
     const lbl=cat?`${cat.icon} ${cat.label}`:t.category;
     expByCat[lbl]=(expByCat[lbl]||0)+t.amount;
   });
   monthTxs.filter(t=>t.type==="income").forEach(t=>{
-    const cat=CATEGORIES.income.find(c=>c.id===t.category);
+    const cat=categories.income.find(c=>c.id===t.category);
     const lbl=cat?`${cat.icon} ${cat.label}`:t.category;
     incByCat[lbl]=(incByCat[lbl]||0)+t.amount;
   });
@@ -1246,8 +1265,130 @@ function AccountsManager({accounts, updateAccountBalance, showToast}) {
   );
 }
 
+// ─── CATEGORIES MANAGER ───────────────────────────────────────────────────────
+const CAT_ICONS = ["💼","🏪","📈","🤝","💰","🏠","🍽️","🚗","🏥","📚","🎮","👗","🏦","💳","📦","✈️","🐾","🎵","🌿","⚡"];
+
+function CategoriesManager({ categories, saveCategories, showToast }) {
+  const [type, setType]   = useState("income");
+  const [editCat, setEditCat] = useState(null); // {idx, ...cat} or "new"
+  const [editSub, setEditSub] = useState(null); // {catIdx, subIdx} or null
+
+  const cats = categories[type];
+
+  const addCategory = (cat) => {
+    const updated = { ...categories, [type]: [...cats, { ...cat, id: "cat_"+Date.now(), subs: [] }] };
+    saveCategories(updated);
+    setEditCat(null);
+    showToast("Categoría creada ✓");
+  };
+
+  const updateCategory = (idx, updates) => {
+    const list = cats.map((c,i) => i===idx ? {...c,...updates} : c);
+    saveCategories({ ...categories, [type]: list });
+    setEditCat(null);
+    showToast("Categoría actualizada ✓");
+  };
+
+  const deleteCategory = (idx) => {
+    saveCategories({ ...categories, [type]: cats.filter((_,i)=>i!==idx) });
+    showToast("Categoría eliminada","err");
+  };
+
+  const addSub = (catIdx, sub) => {
+    const list = cats.map((c,i) => i!==catIdx ? c : {...c, subs:[...(c.subs||[]), sub]});
+    saveCategories({ ...categories, [type]: list });
+    setEditSub(null);
+  };
+
+  const deleteSub = (catIdx, subIdx) => {
+    const list = cats.map((c,i) => i!==catIdx ? c : {...c, subs:c.subs.filter((_,j)=>j!==subIdx)});
+    saveCategories({ ...categories, [type]: list });
+  };
+
+  return (
+    <div style={{display:"grid",gap:12}}>
+      <div style={{display:"flex",gap:6}}>
+        {[["income","Ingresos"],["expense","Gastos"]].map(([t,l])=>(
+          <button key={t} onClick={()=>setType(t)} style={{flex:1,padding:"8px",borderRadius:9,border:`1px solid ${type===t?C.accent:C.border}`,background:type===t?C.accentDim:"transparent",color:type===t?C.accent:C.textSub,cursor:"pointer",fontWeight:700,fontSize:12}}>{l}</button>
+        ))}
+      </div>
+
+      <button onClick={()=>setEditCat("new")} style={{background:C.accentDim,border:`1px solid ${C.accentText}44`,color:C.accentText,borderRadius:9,padding:"9px",fontWeight:700,fontSize:12,cursor:"pointer"}}>+ Nueva categoría</button>
+
+      {editCat==="new" && (
+        <CatForm onSave={addCategory} onCancel={()=>setEditCat(null)}/>
+      )}
+
+      {cats.map((cat,idx)=>(
+        <div key={cat.id||idx} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:14,overflow:"hidden"}}>
+          <div style={{padding:"10px 12px",display:"flex",alignItems:"center",gap:8}}>
+            <span style={{fontSize:20,flexShrink:0}}>{cat.icon}</span>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontSize:13,fontWeight:700}}>{cat.label}</div>
+              <div style={{fontSize:10,color:C.textMuted}}>{(cat.subs||[]).length} subcategorías</div>
+            </div>
+            <button onClick={()=>setEditCat(editCat===idx?null:idx)} style={{background:C.accentDim,color:C.accentText,border:`1px solid ${C.accentText}33`,borderRadius:6,padding:"4px 8px",fontSize:10,fontWeight:700,cursor:"pointer",flexShrink:0}}>✏️</button>
+            <button onClick={()=>deleteCategory(idx)} style={{background:C.redDim,color:C.red,border:`1px solid ${C.red}33`,borderRadius:6,padding:"4px 8px",fontSize:10,fontWeight:700,cursor:"pointer",flexShrink:0}}>🗑</button>
+          </div>
+          {editCat===idx && (
+            <div style={{padding:"0 12px 12px",borderTop:`1px solid ${C.border}`}}>
+              <CatForm initial={cat} onSave={(u)=>updateCategory(idx,u)} onCancel={()=>setEditCat(null)}/>
+            </div>
+          )}
+          {/* Subcategorías */}
+          <div style={{padding:"0 12px 10px"}}>
+            <div style={{display:"flex",flexWrap:"wrap",gap:4,marginBottom:6}}>
+              {(cat.subs||[]).map((sub,si)=>(
+                <div key={si} style={{display:"flex",alignItems:"center",gap:3,background:C.bg,border:`1px solid ${C.border}`,borderRadius:100,padding:"3px 8px"}}>
+                  <span style={{fontSize:11,color:C.textSub}}>{sub}</span>
+                  <button onClick={()=>deleteSub(idx,si)} style={{background:"none",border:"none",color:C.textMuted,cursor:"pointer",fontSize:11,lineHeight:1,padding:"0 1px"}}>✕</button>
+                </div>
+              ))}
+              <button onClick={()=>setEditSub(editSub?.catIdx===idx?null:{catIdx:idx,val:""})}
+                style={{background:"transparent",border:`1px dashed ${C.border}`,borderRadius:100,padding:"3px 8px",fontSize:11,color:C.textMuted,cursor:"pointer"}}>+ sub</button>
+            </div>
+            {editSub?.catIdx===idx && (
+              <div style={{display:"flex",gap:6}}>
+                <input value={editSub.val} onChange={e=>setEditSub(s=>({...s,val:e.target.value}))} placeholder="Nueva subcategoría..."
+                  onKeyDown={e=>{if(e.key==="Enter"&&editSub.val){addSub(idx,editSub.val);setEditSub(null);}}}
+                  style={{flex:1,background:C.bg,border:`1px solid ${C.border}`,borderRadius:7,padding:"5px 8px",color:C.text,fontSize:12}}/>
+                <button onClick={()=>{if(editSub.val)addSub(idx,editSub.val);setEditSub(null);}}
+                  style={{background:C.accent,color:"#000",border:"none",borderRadius:7,padding:"5px 10px",fontWeight:700,fontSize:12,cursor:"pointer"}}>OK</button>
+              </div>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function CatForm({ initial, onSave, onCancel }) {
+  const [form, setForm] = useState({ label: initial?.label||"", icon: initial?.icon||"📦" });
+  return (
+    <div style={{display:"grid",gap:8,paddingTop:10}}>
+      <input value={form.label} onChange={e=>setForm(f=>({...f,label:e.target.value}))} placeholder="Nombre de la categoría"
+        style={{width:"100%",background:C.bg,border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 10px",color:C.text,fontSize:13}}/>
+      <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+        {CAT_ICONS.map(ic=>(
+          <button key={ic} onClick={()=>setForm(f=>({...f,icon:ic}))}
+            style={{width:32,height:32,borderRadius:7,border:`1px solid ${form.icon===ic?C.accent:C.border}`,background:form.icon===ic?C.accentDim:"transparent",cursor:"pointer",fontSize:16}}>
+            {ic}
+          </button>
+        ))}
+      </div>
+      <div style={{display:"flex",gap:6}}>
+        <button onClick={()=>form.label&&onSave(form)} style={{flex:1,background:C.accent,border:"none",borderRadius:8,padding:"8px",color:"#000",fontWeight:700,fontSize:12,cursor:"pointer"}}>
+          {initial?"Guardar":"Crear"}
+        </button>
+        <button onClick={onCancel} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 10px",color:C.textSub,cursor:"pointer",fontSize:12}}>Cancelar</button>
+      </div>
+    </div>
+  );
+}
+
 // ─── SIDEBAR ──────────────────────────────────────────────────────────────────
-function Sidebar({open,onClose,accounts,updateAccountBalance,settings,setSettings,showToast}){
+function Sidebar({open,onClose,accounts,updateAccountBalance,settings,setSettings,showToast,categories=DEFAULT_CATEGORIES,saveCategories}){
   const [tab,setTab]=useState("accounts");
   const { isSupported, permission, requestPermission, sendLocal } = useNotifications();
 
@@ -1259,14 +1400,17 @@ function Sidebar({open,onClose,accounts,updateAccountBalance,settings,setSetting
           <div style={{fontSize:18,fontWeight:800}}>⚙ Configuración</div>
           <button onClick={onClose} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:8,padding:"6px 10px",color:C.text,cursor:"pointer"}}>✕</button>
         </div>
-        <div style={{display:"flex",borderBottom:`1px solid ${C.border}`,flexShrink:0}}>
-          {[["accounts","Cuentas"],["budgets","Presupuestos"],["notif","Notif"],["prefs","Prefs"]].map(([id,l])=>(
-            <button key={id} onClick={()=>setTab(id)} style={{flex:1,padding:"10px 2px",border:"none",background:"transparent",borderBottom:tab===id?`2px solid ${C.accent}`:"2px solid transparent",color:tab===id?C.accent:C.textSub,fontWeight:600,fontSize:11,cursor:"pointer"}}>{l}</button>
+        <div style={{display:"flex",borderBottom:`1px solid ${C.border}`,flexShrink:0,overflowX:"auto"}}>
+          {[["accounts","Cuentas"],["cats","Categorías"],["notif","Notif"],["prefs","Prefs"]].map(([id,l])=>(
+            <button key={id} onClick={()=>setTab(id)} style={{flex:"0 0 auto",padding:"10px 10px",border:"none",background:"transparent",borderBottom:tab===id?`2px solid ${C.accent}`:"2px solid transparent",color:tab===id?C.accent:C.textSub,fontWeight:600,fontSize:11,cursor:"pointer",whiteSpace:"nowrap"}}>{l}</button>
           ))}
         </div>
         <div style={{flex:1,overflowY:"auto",padding:16}}>
           {tab==="accounts"&&(
             <AccountsManager accounts={accounts} updateAccountBalance={updateAccountBalance} showToast={showToast}/>
+          )}
+          {tab==="cats"&&saveCategories&&(
+            <CategoriesManager categories={categories} saveCategories={saveCategories} showToast={showToast}/>
           )}
           {tab==="notif"&&(
             <div style={{display:"grid",gap:14}}>
@@ -1320,7 +1464,7 @@ function Sidebar({open,onClose,accounts,updateAccountBalance,settings,setSetting
           {tab==="budgets"&&(
             <div style={{display:"grid",gap:12}}>
               <div style={{fontSize:12,color:C.textMuted,fontWeight:700}}>PRESUPUESTO MENSUAL</div>
-              {CATEGORIES.expense.map(cat=>(
+              {categories.expense.map(cat=>(
                 <div key={cat.id} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:14,padding:"12px 14px",display:"flex",alignItems:"center",gap:10}}>
                   <span style={{fontSize:20,flexShrink:0}}>{cat.icon}</span>
                   <div style={{flex:1}}>
@@ -1352,10 +1496,10 @@ function Sidebar({open,onClose,accounts,updateAccountBalance,settings,setSetting
 }
 
 // ─── ADD MODAL ────────────────────────────────────────────────────────────────
-function AddModal({onClose,onAdd,accounts,opts}){
+function AddModal({onClose,onAdd,accounts,opts,categories=DEFAULT_CATEGORIES}){
   const [type,setType]=useState(opts.type||"expense");
   const [form,setForm]=useState({date:today(),category:opts.category||"",subcategory:"",account:accounts[0]?.id||"",amount:"",note:opts.note||""});
-  const cats=CATEGORIES[type];
+  const cats=categories[type];
   const selCat=cats.find(c=>c.id===form.category);
   const set=(k,v)=>setForm(f=>({...f,[k]:v,...(k==="category"?{subcategory:""}:{})}));
   const submit=()=>{
@@ -1516,7 +1660,7 @@ function PayModal({onClose,loan,onPay,accounts}){
 
 // ─── MICRO COMPONENTS ─────────────────────────────────────────────────────────
 function TxRow({tx,onDelete,showDivider=false,compact=false}){
-  const allCats=[...CATEGORIES.income,...CATEGORIES.expense];
+  const allCats=[...categories.income,...categories.expense];
   const cat=allCats.find(c=>c.id===tx.category)||{icon:"📦",label:tx.category};
   const acc=ACCOUNTS_DEF.find(a=>a.id===tx.account)||{icon:"💰",label:tx.account};
   const isLoan=tx.category==="loans_out"||tx.category==="loan_pay";

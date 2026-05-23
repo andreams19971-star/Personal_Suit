@@ -58,54 +58,77 @@ function seedData() {
   };
 }
 
+const DEFAULT_TASK_CATS = [
+  { id:"work",     label:"Trabajo",    icon:"💼", subs:["Reunión","Entrega","Revisión","Llamada"] },
+  { id:"personal", label:"Personal",   icon:"🧍", subs:["Familia","Amigos","Hogar","Trámite"] },
+  { id:"health",   label:"Salud",      icon:"🏥", subs:["Médico","Ejercicio","Farmacia","Control"] },
+  { id:"finance",  label:"Finanzas",   icon:"💰", subs:["Pago","Ahorro","Presupuesto","Inversión"] },
+  { id:"errands",  label:"Diligencias",icon:"📋", subs:["Banco","Mercado","Oficina","Envío"] },
+  { id:"other",    label:"Otro",       icon:"📦", subs:[] },
+];
+
 export default function Planner({ onBack }) {
   const {
-    tasks, habits, goals, notes, loading,
+    tasks, goals, notes, loading,
     addTask: dbAddTask, toggleTask: dbToggleTask, deleteTask: dbDeleteTask,
-    addHabit: dbAddHabit, toggleHabit: dbToggleHabit, deleteHabit: dbDeleteHabit,
     addGoal: dbAddGoal, updateGoalProgress: dbUpdateGoal, deleteGoal: dbDeleteGoal,
     addNote: dbAddNote, deleteNote: dbDeleteNote,
   } = usePlannerData();
 
-  const [view, setView] = useState("today");
-  const [calDate, setCalDate] = useState(new Date());
-  const [selDate, setSelDate] = useState(td());
-  const [showTaskModal, setShowTaskModal] = useState(false);
-  const [showHabitModal, setShowHabitModal] = useState(false);
-  const [showGoalModal, setShowGoalModal] = useState(false);
-  const [showNoteModal, setShowNoteModal] = useState(false);
-  const [editGoal, setEditGoal] = useState(null);
-  const [toast, setToast] = useState(null);
+  const [taskCats, setTaskCats] = useState(() => {
+    try { const s = localStorage.getItem("pl_task_cats"); return s ? JSON.parse(s) : DEFAULT_TASK_CATS; } catch { return DEFAULT_TASK_CATS; }
+  });
+  const saveTaskCats = (cats) => {
+    setTaskCats(cats);
+    try { localStorage.setItem("pl_task_cats", JSON.stringify(cats)); } catch {}
+  };
+
+  const [view, setView]           = useState("today");
+  const [calDate, setCalDate]     = useState(new Date());
+  const [selDate, setSelDate]     = useState(td());
+  const [showTaskModal, setShowTaskModal]   = useState(false);
+  const [showGoalModal, setShowGoalModal]   = useState(false);
+  const [showNoteModal, setShowNoteModal]   = useState(false);
+  const [showCatManager, setShowCatManager] = useState(false);
+  const [editGoal, setEditGoal]   = useState(null);
+  const [toast, setToast]         = useState(null);
 
   const showToast = (m, t = "ok") => { setToast({ m, t }); setTimeout(() => setToast(null), 2200); };
 
-  const toggleTask        = (id)        => dbToggleTask(id);
-  const deleteTask        = (id)        => { dbDeleteTask(id); showToast("Tarea eliminada", "err"); };
-  const addTask           = (task)      => { dbAddTask(task); showToast("Tarea creada ✓"); setShowTaskModal(false); };
-  const toggleHabit       = (hId, date) => dbToggleHabit(hId, date);
-  const addHabit          = (habit)     => { dbAddHabit(habit); showToast("Hábito creado ✓"); setShowHabitModal(false); };
-  const deleteHabit       = (id)        => dbDeleteHabit(id);
-  const addGoal           = (goal)      => { dbAddGoal(goal); showToast("Meta creada ✓"); setShowGoalModal(false); };
-  const updateGoalProgress= (id, val)   => dbUpdateGoal(id, val);
-  const deleteGoal        = (id)        => { dbDeleteGoal(id); showToast("Meta eliminada", "err"); };
-  const addNote           = (note)      => { dbAddNote(note); showToast("Nota guardada ✓"); setShowNoteModal(false); };
-  const deleteNote        = (id)        => dbDeleteNote(id);
+  const addTask           = (task) => { dbAddTask(task); showToast("Tarea creada ✓"); setShowTaskModal(false); };
+  const toggleTask        = (id)   => dbToggleTask(id);
+  const deleteTask        = (id)   => { dbDeleteTask(id); showToast("Eliminada","err"); };
+  const addGoal           = (goal) => { dbAddGoal(goal); showToast("Meta creada ✓"); setShowGoalModal(false); };
+  const updateGoalProgress= (id,v) => dbUpdateGoal(id,v);
+  const deleteGoal        = (id)   => { dbDeleteGoal(id); showToast("Meta eliminada","err"); };
+  const addNote           = (note) => { dbAddNote(note); showToast("Nota guardada ✓"); setShowNoteModal(false); };
+  const deleteNote        = (id)   => dbDeleteNote(id);
+
+  // Reservas de apartamento desde localStorage
+  const aptReservations = (() => {
+    try { return JSON.parse(localStorage.getItem("apt_reservations") || "[]"); } catch { return []; }
+  })();
 
   const todayTasks = tasks.filter(t => t.date === selDate);
-  const doneTodayCount = todayTasks.filter(t => t.done).length;
   const nav = [
-    { id: "today",    icon: "☀️", label: "Hoy" },
-    { id: "calendar", icon: "📅", label: "Calendario" },
-    { id: "habits",   icon: "🔁", label: "Hábitos" },
-    { id: "goals",    icon: "🎯", label: "Metas" },
-    { id: "notes",    icon: "📝", label: "Notas" },
+    { id:"today",    icon:"☀️", label:"Hoy"       },
+    { id:"calendar", icon:"📅", label:"Calendario" },
+    { id:"goals",    icon:"🎯", label:"Metas"      },
+    { id:"notes",    icon:"📝", label:"Notas"      },
   ];
 
+  const viewTitle = {
+    today:    `☀️ ${new Date(selDate+"T12:00").toLocaleDateString("es-CO",{weekday:"long",day:"numeric",month:"short"})}`,
+    calendar: "📅 Calendario",
+    goals:    "🎯 Metas",
+    notes:    "📝 Notas",
+  };
+
   return (
-    <div style={{ fontFamily: "-apple-system, BlinkMacSystemFont, sans-serif", background: C.bg, width: "100vw", height: "100vh", overflow: "hidden", color: C.text, display: "flex", flexDirection: "column" }}>
+    <div style={{ fontFamily:"-apple-system,BlinkMacSystemFont,sans-serif", background:C.bg, width:"100vw", height:"100vh", overflow:"hidden", color:C.text, display:"flex", flexDirection:"column" }}>
       <style>{`
         *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-        input,select,textarea{outline:none;font-family:inherit}
+        input,select,textarea{outline:none;font-family:inherit;font-size:16px}
         ::-webkit-scrollbar{width:0}
         @keyframes su{from{transform:translateY(50px);opacity:0}to{transform:translateY(0);opacity:1}}
         @keyframes fu{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
@@ -121,136 +144,131 @@ export default function Planner({ onBack }) {
       )}
 
       {/* TOP BAR */}
-      <div style={{ background: C.surface, borderBottom: `1px solid ${C.border}`, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
-        <button onClick={onBack} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, padding: "6px 12px", color: C.textSub, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>← Suite</button>
-        <div style={{ fontSize: 17, fontWeight: 800, flex: 1 }}>
-          {view === "today" ? `📅 ${new Date(selDate + "T12:00").toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "short" })}` :
-           view === "calendar" ? "📅 Calendario" :
-           view === "habits" ? "🔁 Hábitos" :
-           view === "goals" ? "🎯 Metas" : "📝 Notas"}
-        </div>
-        <button
-          onClick={() => { if(view==="today"||view==="calendar") setShowTaskModal(true); else if(view==="habits") setShowHabitModal(true); else if(view==="goals") setShowGoalModal(true); else setShowNoteModal(true); }}
-          style={{ background: C.accent, color: "#000", border: "none", borderRadius: 8, padding: "7px 14px", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>+ Agregar</button>
+      <div style={{background:C.surface,borderBottom:`1px solid ${C.border}`,paddingTop:`max(14px,calc(env(safe-area-inset-top)+8px))`,paddingBottom:"14px",paddingLeft:"16px",paddingRight:"16px",display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
+        <button onClick={onBack} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:8,padding:"6px 10px",color:C.textSub,cursor:"pointer",fontSize:12,fontWeight:600,flexShrink:0}}>← Suite</button>
+        <div style={{fontSize:15,fontWeight:800,flex:1,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{viewTitle[view]||""}</div>
+        {(view==="today"||view==="calendar") && (
+          <button onClick={()=>setShowCatManager(true)} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:8,padding:"6px 8px",color:C.textMuted,cursor:"pointer",fontSize:12,flexShrink:0}}>⚙</button>
+        )}
+        <button onClick={()=>{ if(view==="today"||view==="calendar") setShowTaskModal(true); else if(view==="goals") setShowGoalModal(true); else setShowNoteModal(true); }}
+          style={{background:C.accent,color:"#000",border:"none",borderRadius:8,padding:"7px 12px",fontWeight:700,fontSize:12,cursor:"pointer",flexShrink:0}}>+ Agregar</button>
       </div>
 
       {/* CONTENT */}
-      <div style={{ flex: 1, overflowY: "auto", paddingBottom: 60, minHeight: 0 }}>
-        {view === "today"    && <TodayView tasks={todayTasks} allTasks={tasks} habits={habits} selDate={selDate} toggleTask={toggleTask} deleteTask={deleteTask} toggleHabit={toggleHabit} doneTodayCount={doneTodayCount} />}
-        {view === "calendar" && <CalendarView tasks={tasks} calDate={calDate} setCalDate={setCalDate} selDate={selDate} setSelDate={setSelDate} toggleTask={toggleTask} deleteTask={deleteTask} setShowTaskModal={setShowTaskModal} />}
-        {view === "habits"   && <HabitsView habits={habits} toggleHabit={toggleHabit} deleteHabit={deleteHabit} />}
-        {view === "goals"    && <GoalsView goals={goals} updateGoalProgress={updateGoalProgress} deleteGoal={deleteGoal} setEditGoal={setEditGoal} />}
-        {view === "notes"    && <NotesView notes={notes} deleteNote={deleteNote} />}
+      <div style={{flex:1,overflowY:"auto",paddingBottom:60,minHeight:0,overflowX:"hidden"}}>
+        {view==="today"    && <TodayView tasks={todayTasks} allTasks={tasks} selDate={selDate} toggleTask={toggleTask} deleteTask={deleteTask} taskCats={taskCats} />}
+        {view==="calendar" && <CalendarView tasks={tasks} aptReservations={aptReservations} calDate={calDate} setCalDate={setCalDate} selDate={selDate} setSelDate={setSelDate} toggleTask={toggleTask} deleteTask={deleteTask} setShowTaskModal={setShowTaskModal} taskCats={taskCats}/>}
+        {view==="goals"    && <GoalsView goals={goals} updateGoalProgress={updateGoalProgress} deleteGoal={deleteGoal} setEditGoal={setEditGoal} />}
+        {view==="notes"    && <NotesView notes={notes} deleteNote={deleteNote} />}
       </div>
 
       {/* BOTTOM NAV */}
-      <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: C.surface, borderTop: `1px solid ${C.border}`, display: "flex", zIndex: 50, paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
-        {nav.map(n => (
-          <button key={n.id} onClick={() => setView(n.id)} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 2, padding: "8px 0", border: "none", background: "transparent", color: view === n.id ? C.accent : C.textMuted, cursor: "pointer", fontSize: 9, fontWeight: 600 }}>
-            <span style={{ fontSize: 17 }}>{n.icon}</span>{n.label}
+      <div style={{position:"fixed",bottom:0,left:0,right:0,background:C.surface,borderTop:`1px solid ${C.border}`,display:"flex",zIndex:50,paddingBottom:"max(env(safe-area-inset-bottom),6px)"}}>
+        {nav.map(n=>(
+          <button key={n.id} onClick={()=>setView(n.id)} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:2,padding:"9px 0",border:"none",background:"transparent",color:view===n.id?C.accent:C.textMuted,cursor:"pointer",fontSize:9,fontWeight:600}}>
+            <span style={{fontSize:18}}>{n.icon}</span>{n.label}
           </button>
         ))}
       </div>
 
-      {showTaskModal && <TaskModal onClose={() => setShowTaskModal(false)} onAdd={addTask} defaultDate={selDate} />}
-      {showHabitModal && <HabitModal onClose={() => setShowHabitModal(false)} onAdd={addHabit} />}
-      {showGoalModal && <GoalModal onClose={() => setShowGoalModal(false)} onAdd={addGoal} />}
-      {showNoteModal && <NoteModal onClose={() => setShowNoteModal(false)} onAdd={addNote} />}
-      {toast && <div style={{ position: "fixed", bottom: 70, left: "50%", transform: "translateX(-50%)", background: toast.t === "err" ? C.red : C.accent, color: toast.t === "err" ? "#fff" : "#000", padding: "8px 18px", borderRadius: 100, fontWeight: 700, fontSize: 13, zIndex: 999, whiteSpace: "nowrap" }}>{toast.m}</div>}
+      {showTaskModal   && <TaskModal   onClose={()=>setShowTaskModal(false)}   onAdd={addTask}  defaultDate={selDate} taskCats={taskCats}/>}
+      {showGoalModal   && <GoalModal   onClose={()=>setShowGoalModal(false)}   onAdd={addGoal} />}
+      {showNoteModal   && <NoteModal   onClose={()=>setShowNoteModal(false)}   onAdd={addNote} />}
+      {showCatManager  && <TaskCatManager taskCats={taskCats} saveTaskCats={saveTaskCats} onClose={()=>setShowCatManager(false)} />}
+      {toast && <div style={{position:"fixed",bottom:70,left:"50%",transform:"translateX(-50%)",background:toast.t==="err"?C.red:C.accent,color:toast.t==="err"?"#fff":"#000",padding:"8px 18px",borderRadius:100,fontWeight:700,fontSize:13,zIndex:999,whiteSpace:"nowrap"}}>{toast.m}</div>}
     </div>
   );
 }
 
 // ─── TODAY VIEW ───────────────────────────────────────────────────────────────
-function TodayView({ tasks, allTasks, habits, selDate, toggleTask, deleteTask, toggleHabit, doneTodayCount }) {
-  const total = tasks.length;
-  const pct = total > 0 ? Math.round((doneTodayCount / total) * 100) : 0;
-  const pending = tasks.filter(t => !t.done);
-  const done = tasks.filter(t => t.done);
+function TodayView({ tasks, allTasks, selDate, toggleTask, deleteTask, taskCats }) {
+  const todayTasks = tasks; // already filtered
+  const done = todayTasks.filter(t=>t.done).length;
+  const pending = allTasks.filter(t=>t.date>selDate&&!t.done);
 
   return (
-    <div style={{ padding: 14, display: "grid", gap: 14 }} className="fu">
+    <div style={{padding:"14px",display:"grid",gap:14,boxSizing:"border-box"}} className="fu">
       {/* PROGRESS */}
-      <div style={{ background: `linear-gradient(135deg, ${C.accentDim}, ${C.card})`, border: `1px solid ${C.accent}33`, borderRadius: 18, padding: 20 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-          <div><div style={{ fontSize: 11, color: C.accentText, fontWeight: 700 }}>PROGRESO DEL DÍA</div><div style={{ fontSize: 22, fontWeight: 900, marginTop: 2 }}>{doneTodayCount}/{total} tareas</div></div>
-          <div style={{ width: 56, height: 56, borderRadius: "50%", background: C.accentDim, border: `3px solid ${C.accent}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 900, color: C.accent }}>{pct}%</div>
-        </div>
-        <div style={{ height: 6, borderRadius: 3, background: C.border }}>
-          <div style={{ height: "100%", borderRadius: 3, background: C.accent, width: `${pct}%`, transition: "width .8s ease" }} />
-        </div>
-        <div style={{ fontSize: 12, color: C.textMuted, marginTop: 6 }}>
-          {pct === 100 ? "🎉 ¡Día completado! Excelente trabajo" : pct >= 50 ? "💪 Vas muy bien, sigue así" : "🚀 ¡Vamos, tú puedes!"}
-        </div>
-      </div>
-
-      {/* HABITS QUICK */}
-      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 14 }}>
-        <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10 }}>Hábitos de hoy</div>
-        <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 2 }}>
-          {habits.map(h => {
-            const done = h.completions[selDate];
-            return (
-              <button key={h.id} onClick={() => toggleHabit(h.id, selDate)} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, padding: "10px 12px", borderRadius: 12, border: `1px solid ${done ? h.color + "66" : C.border}`, background: done ? h.color + "22" : "transparent", cursor: "pointer", flexShrink: 0, minWidth: 70 }}>
-                <span style={{ fontSize: 22 }}>{h.icon}</span>
-                <span style={{ fontSize: 10, fontWeight: 600, color: done ? h.color : C.textMuted }}>{h.name}</span>
-                <div style={{ width: 20, height: 20, borderRadius: "50%", background: done ? h.color : "transparent", border: `2px solid ${done ? h.color : C.border}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10 }}>{done ? "✓" : ""}</div>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* PENDING TASKS */}
-      {pending.length > 0 && (
-        <div>
-          <div style={{ fontSize: 12, fontWeight: 700, color: C.textMuted, marginBottom: 8 }}>PENDIENTES ({pending.length})</div>
-          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, overflow: "hidden" }}>
-            {pending.map((t, i) => <TaskRow key={t.id} task={t} onToggle={() => toggleTask(t.id)} onDelete={() => deleteTask(t.id)} showDiv={i < pending.length - 1} />)}
+      {todayTasks.length>0&&(
+        <div style={{background:`linear-gradient(135deg,${C.accentDim},${C.card})`,border:`1px solid ${C.accent}33`,borderRadius:16,padding:16}}>
+          <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
+            <span style={{fontSize:13,fontWeight:700}}>{done===todayTasks.length&&todayTasks.length>0?"🎉 ¡Todo listo!":"Progreso de hoy"}</span>
+            <span style={{fontSize:13,fontWeight:800,color:C.accent}}>{done}/{todayTasks.length}</span>
+          </div>
+          <div style={{height:6,borderRadius:3,background:C.border}}>
+            <div style={{height:"100%",borderRadius:3,background:C.accent,width:`${todayTasks.length>0?(done/todayTasks.length)*100:0}%`,transition:"width .8s ease"}}/>
           </div>
         </div>
       )}
 
-      {/* DONE TASKS */}
-      {done.length > 0 && (
-        <div>
-          <div style={{ fontSize: 12, fontWeight: 700, color: C.textMuted, marginBottom: 8 }}>COMPLETADAS ({done.length})</div>
-          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, overflow: "hidden", opacity: .7 }}>
-            {done.map((t, i) => <TaskRow key={t.id} task={t} onToggle={() => toggleTask(t.id)} onDelete={() => deleteTask(t.id)} showDiv={i < done.length - 1} />)}
-          </div>
+      {/* TAREAS DE HOY */}
+      <div>
+        <div style={{fontSize:12,fontWeight:700,color:C.textMuted,marginBottom:8}}>TAREAS DE HOY ({todayTasks.length})</div>
+        {todayTasks.length===0&&<EmptyPlanner msg="Sin tareas hoy 🎉" sub="Toca + Agregar para crear una"/>}
+        <div style={{display:"grid",gap:6}}>
+          {todayTasks.map(t=><TaskRow key={t.id} task={t} onToggle={toggleTask} onDelete={deleteTask} taskCats={taskCats}/>)}
         </div>
-      )}
+      </div>
 
-      {tasks.length === 0 && (
-        <div style={{ textAlign: "center", padding: "32px 16px", color: C.textMuted }}>
-          <div style={{ fontSize: 36, marginBottom: 10 }}>🌟</div>
-          <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>Día libre</div>
-          <div style={{ fontSize: 13 }}>No tienes tareas para hoy</div>
+      {/* PRÓXIMAS */}
+      {pending.slice(0,5).length>0&&(
+        <div>
+          <div style={{fontSize:12,fontWeight:700,color:C.textMuted,marginBottom:8}}>PRÓXIMAS ({pending.length})</div>
+          <div style={{display:"grid",gap:6}}>
+            {pending.slice(0,5).map(t=><TaskRow key={t.id} task={t} onToggle={toggleTask} onDelete={deleteTask} taskCats={taskCats} muted/>)}
+          </div>
         </div>
       )}
     </div>
   );
 }
 
+function TaskRow({ task, onToggle, onDelete, taskCats, muted }) {
+  const cat = taskCats?.find(c=>c.id===task.category)||{icon:"📦",label:task.category};
+  const pr  = PRIORITIES.find(p=>p.id===task.priority)||PRIORITIES[1];
+  return (
+    <div className="hr" style={{background:C.card,border:`1px solid ${task.done?C.border:pr.color+"33"}`,borderRadius:12,padding:"10px 12px",display:"flex",alignItems:"center",gap:10,opacity:muted?0.6:1}}>
+      <button onClick={()=>onToggle(task.id)} style={{width:22,height:22,borderRadius:"50%",border:`2px solid ${task.done?C.accent:pr.color}`,background:task.done?C.accent:"transparent",cursor:"pointer",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,color:"#000"}}>
+        {task.done&&"✓"}
+      </button>
+      <span style={{fontSize:16,flexShrink:0}}>{cat.icon}</span>
+      <div style={{flex:1,minWidth:0}}>
+        <div style={{fontSize:13,fontWeight:600,textDecoration:task.done?"line-through":"none",color:task.done?C.textMuted:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{task.title}</div>
+        <div style={{fontSize:10,color:C.textMuted}}>{cat.label}{task.subcategory?` · ${task.subcategory}`:""}</div>
+      </div>
+      <div style={{width:6,height:6,borderRadius:"50%",background:pr.color,flexShrink:0}}/>
+      <button onClick={()=>onDelete(task.id)} style={{background:"none",border:"none",color:C.textMuted,cursor:"pointer",fontSize:13,opacity:.5,flexShrink:0}}>🗑</button>
+    </div>
+  );
+}
+
+function EmptyPlanner({msg,sub}) {
+  return (
+    <div style={{textAlign:"center",padding:"20px 16px",color:C.textMuted,background:C.card,borderRadius:12,border:`1px solid ${C.border}`}}>
+      <div style={{fontSize:14,marginBottom:4}}>{msg}</div>
+      {sub&&<div style={{fontSize:11}}>{sub}</div>}
+    </div>
+  );
+}
+
 // ─── CALENDAR VIEW ────────────────────────────────────────────────────────────
-function CalendarView({ tasks, calDate, setCalDate, selDate, setSelDate, toggleTask, deleteTask }) {
+function CalendarView({ tasks, aptReservations=[], calDate, setCalDate, selDate, setSelDate, toggleTask, deleteTask, taskCats }) {
   const year = calDate.getFullYear();
   const month = calDate.getMonth();
   const firstDay = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const cells = Array.from({ length: firstDay }, () => null).concat(Array.from({ length: daysInMonth }, (_, i) => i + 1));
   const dayTasks = tasks.filter(t => t.date === selDate);
+  const dayApt   = aptReservations.filter(r => r.checkIn <= selDate && r.checkOut > selDate);
 
   return (
-    <div style={{ padding: 14, display: "grid", gap: 14 }} className="fu">
-      {/* MONTH NAV */}
+    <div style={{ padding: 14, display: "grid", gap: 14, boxSizing:"border-box" }} className="fu">
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: "12px 16px" }}>
         <button onClick={() => setCalDate(new Date(year, month - 1))} style={{ background: "none", border: "none", color: C.textSub, cursor: "pointer", fontSize: 20 }}>‹</button>
         <span style={{ fontWeight: 800, fontSize: 16 }}>{MONTHS[month]} {year}</span>
         <button onClick={() => setCalDate(new Date(year, month + 1))} style={{ background: "none", border: "none", color: C.textSub, cursor: "pointer", fontSize: 20 }}>›</button>
       </div>
 
-      {/* CALENDAR GRID */}
       <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: 12 }}>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 4, marginBottom: 8 }}>
           {DAYS.map(d => <div key={d} style={{ textAlign: "center", fontSize: 10, fontWeight: 700, color: C.textMuted }}>{d}</div>)}
@@ -259,29 +277,49 @@ function CalendarView({ tasks, calDate, setCalDate, selDate, setSelDate, toggleT
           {cells.map((day, i) => {
             if (!day) return <div key={i} />;
             const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-            const dayTaskCount = tasks.filter(t => t.date === dateStr).length;
+            const count = tasks.filter(t => t.date === dateStr).length;
+            const hasApt = aptReservations.some(r => r.checkIn <= dateStr && r.checkOut > dateStr);
             const isToday = dateStr === td();
             const isSel = dateStr === selDate;
             return (
-              <button key={i} onClick={() => setSelDate(dateStr)} style={{ aspectRatio: "1", borderRadius: 8, border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 2, background: isSel ? C.accent : isToday ? C.accentDim : "transparent", color: isSel ? "#000" : isToday ? C.accent : C.text, fontWeight: isSel || isToday ? 700 : 400, fontSize: 13 }}>
+              <button key={i} onClick={() => setSelDate(dateStr)} style={{ aspectRatio:"1", borderRadius: 8, border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 1, background: isSel ? C.accent : isToday ? C.accentDim : "transparent", color: isSel ? "#000" : isToday ? C.accent : C.text, fontWeight: isSel||isToday ? 700 : 400, fontSize: 13 }}>
                 {day}
-                {dayTaskCount > 0 && <div style={{ width: 5, height: 5, borderRadius: "50%", background: isSel ? "#000" : C.accent }} />}
+                <div style={{display:"flex",gap:2}}>
+                  {count>0 && <div style={{ width:4, height:4, borderRadius:"50%", background: isSel?"#000":C.accent }}/>}
+                  {hasApt  && <div style={{ width:4, height:4, borderRadius:"50%", background: isSel?"#000":"#818CF8"}}/>}
+                </div>
               </button>
             );
           })}
         </div>
       </div>
 
-      {/* SELECTED DAY TASKS */}
+      {/* SELECTED DAY */}
       <div>
         <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>
-          {new Date(selDate + "T12:00").toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long" })} · {dayTasks.length} tarea{dayTasks.length !== 1 ? "s" : ""}
+          {new Date(selDate+"T12:00").toLocaleDateString("es-CO",{weekday:"long",day:"numeric",month:"long"})}
         </div>
-        {dayTasks.length === 0 ? (
-          <div style={{ textAlign: "center", padding: 20, color: C.textMuted, fontSize: 13, background: C.card, borderRadius: 14, border: `1px solid ${C.border}` }}>Sin tareas este día</div>
-        ) : (
-          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, overflow: "hidden" }}>
-            {dayTasks.map((t, i) => <TaskRow key={t.id} task={t} onToggle={() => toggleTask(t.id)} onDelete={() => deleteTask(t.id)} showDiv={i < dayTasks.length - 1} />)}
+
+        {/* Hospedajes del apartamento */}
+        {dayApt.length>0&&(
+          <div style={{marginBottom:10}}>
+            <div style={{fontSize:11,color:"#818CF8",fontWeight:700,marginBottom:6}}>🏠 HOSPEDAJES ACTIVOS</div>
+            <div style={{display:"grid",gap:6}}>
+              {dayApt.map((r,i)=>(
+                <div key={i} style={{background:C.card,border:"1px solid #818CF844",borderRadius:10,padding:"8px 12px",fontSize:12}}>
+                  <div style={{fontWeight:700,color:"#818CF8"}}>{r.roomName||r.roomId}</div>
+                  <div style={{color:C.textMuted}}>{r.guest} · Hasta el {r.checkOut}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Tareas */}
+        {dayTasks.length===0&&dayApt.length===0&&<EmptyPlanner msg="Sin actividad este día" sub="Toca + Agregar para crear una tarea"/>}
+        {dayTasks.length>0&&(
+          <div style={{display:"grid",gap:6}}>
+            {dayTasks.map(t=><TaskRow key={t.id} task={t} onToggle={toggleTask} onDelete={deleteTask} taskCats={taskCats}/>)}
           </div>
         )}
       </div>
@@ -404,47 +442,161 @@ function NotesView({ notes, deleteNote }) {
   );
 }
 
-// ─── TASK ROW ─────────────────────────────────────────────────────────────────
-function TaskRow({ task, onToggle, onDelete, showDiv }) {
-  const pr = PRIORITIES.find(p => p.id === task.priority) || PRIORITIES[1];
-  const cat = TASK_CATS.find(c => c.id === task.category) || TASK_CATS[5];
+// ─── MODALS ───────────────────────────────────────────────────────────────────
+function TaskModal({ onClose, onAdd, defaultDate, taskCats=DEFAULT_TASK_CATS }) {
+  const [form, setForm] = useState({ title:"", category: taskCats[0]?.id||"other", subcategory:"", priority:"medium", date: defaultDate||td(), note:"" });
+  const set = (k,v) => setForm(f=>({...f,[k]:v,...(k==="category"?{subcategory:""}:{})}));
+  const cat = taskCats.find(c=>c.id===form.category)||taskCats[0];
   return (
-    <div className="hr" style={{ padding: "12px 14px", borderBottom: showDiv ? `1px solid ${C.border}` : "none", display: "flex", alignItems: "center", gap: 10 }}>
-      <button onClick={onToggle} style={{ width: 24, height: 24, borderRadius: 6, border: `2px solid ${task.done ? C.green : pr.color}`, background: task.done ? C.green : "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, flexShrink: 0, color: "#000" }}>
-        {task.done ? "✓" : ""}
-      </button>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, textDecoration: task.done ? "line-through" : "none", color: task.done ? C.textMuted : C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{task.title}</div>
-        <div style={{ fontSize: 10, color: C.textMuted }}>{cat.icon} {cat.label} · <span style={{ color: pr.color }}>● {pr.label}</span>{task.note ? ` · ${task.note}` : ""}</div>
+    <div style={{position:"fixed",inset:0,background:"#000000BB",zIndex:500,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:C.surface,borderRadius:"22px 22px 0 0",width:"100%",maxWidth:480,padding:"16px 16px 36px",maxHeight:"90vh",overflowY:"auto",borderTop:`1px solid ${C.accent}55`,animation:"su .3s ease"}}>
+        <div style={{width:32,height:3,background:C.border,borderRadius:2,margin:"0 auto 14px"}}/>
+        <div style={{display:"flex",justifyContent:"space-between",marginBottom:14}}>
+          <div style={{fontSize:16,fontWeight:800}}>Nueva Tarea</div>
+          <button onClick={onClose} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:6,padding:"4px 8px",color:C.text,cursor:"pointer"}}>✕</button>
+        </div>
+        <div style={{display:"grid",gap:10}}>
+          <div>
+            <div style={lbl2}>TÍTULO</div>
+            <input value={form.title} onChange={e=>set("title",e.target.value)} placeholder="¿Qué hay que hacer?"
+              style={{width:"100%",background:C.card,border:`1px solid ${C.border}`,borderRadius:9,padding:"9px 11px",color:C.text,fontSize:13}}/>
+          </div>
+          <div>
+            <div style={lbl2}>CATEGORÍA</div>
+            <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+              {taskCats.map(c=>(
+                <button key={c.id} onClick={()=>set("category",c.id)}
+                  style={{padding:"6px 10px",borderRadius:9,border:`1px solid ${form.category===c.id?C.accent:C.border}`,background:form.category===c.id?C.accentDim:"transparent",color:form.category===c.id?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:600,display:"flex",alignItems:"center",gap:4}}>
+                  {c.icon} {c.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          {cat?.subs?.length>0&&(
+            <div>
+              <div style={lbl2}>SUBCATEGORÍA</div>
+              <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                <button onClick={()=>set("subcategory","")} style={{padding:"5px 10px",borderRadius:8,border:`1px solid ${!form.subcategory?C.accent:C.border}`,background:!form.subcategory?C.accentDim:"transparent",color:!form.subcategory?C.accent:C.textSub,cursor:"pointer",fontSize:11}}>Ninguna</button>
+                {cat.subs.map(s=>(
+                  <button key={s} onClick={()=>set("subcategory",s)}
+                    style={{padding:"5px 10px",borderRadius:8,border:`1px solid ${form.subcategory===s?C.accent:C.border}`,background:form.subcategory===s?C.accentDim:"transparent",color:form.subcategory===s?C.accent:C.textSub,cursor:"pointer",fontSize:11}}>
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          <div>
+            <div style={lbl2}>PRIORIDAD</div>
+            <div style={{display:"flex",gap:6}}>
+              {PRIORITIES.map(p=>(
+                <button key={p.id} onClick={()=>set("priority",p.id)}
+                  style={{flex:1,padding:"7px",borderRadius:8,border:`1px solid ${form.priority===p.id?p.color:C.border}`,background:form.priority===p.id?p.color+"22":"transparent",color:form.priority===p.id?p.color:C.textSub,cursor:"pointer",fontSize:12,fontWeight:600}}>
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <div style={lbl2}>FECHA</div>
+            <input type="date" value={form.date} onChange={e=>set("date",e.target.value)}
+              style={{width:"100%",background:C.card,border:`1px solid ${C.border}`,borderRadius:9,padding:"9px 11px",color:C.text,fontSize:13}}/>
+          </div>
+          <div>
+            <div style={lbl2}>NOTA</div>
+            <input value={form.note} onChange={e=>set("note",e.target.value)} placeholder="Opcional..."
+              style={{width:"100%",background:C.card,border:`1px solid ${C.border}`,borderRadius:9,padding:"9px 11px",color:C.text,fontSize:13}}/>
+          </div>
+        </div>
+        <button onClick={()=>form.title&&onAdd(form)}
+          style={{width:"100%",marginTop:14,padding:13,borderRadius:12,border:"none",background:form.title?C.accent:C.border,color:form.title?"#000":C.textMuted,fontWeight:800,fontSize:15,cursor:"pointer"}}>
+          Crear Tarea
+        </button>
       </div>
-      <button onClick={onDelete} style={{ background: "none", border: "none", color: C.textMuted, cursor: "pointer", fontSize: 14, opacity: .5 }}>🗑</button>
     </div>
   );
 }
 
-// ─── MODALS ───────────────────────────────────────────────────────────────────
-function TaskModal({ onClose, onAdd, defaultDate }) {
-  const [form, setForm] = useState({ title: "", category: "personal", priority: "medium", date: defaultDate || td(), note: "" });
-  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+function TaskCatManager({ taskCats, saveTaskCats, onClose }) {
+  const [editIdx, setEditIdx] = useState(null);
+  const [newCat,  setNewCat]  = useState(null);
+  const [editSub, setEditSub] = useState(null);
+  const icons = ["💼","🧍","🏥","💰","📋","📦","🎯","🚗","📚","🎮","🏠","✈️","🌿","⚡","🎵"];
+
+  const addCat = (cat) => { saveTaskCats([...taskCats,{...cat,id:"tc"+Date.now(),subs:[]}]); setNewCat(null); };
+  const updateCat = (idx,u) => { saveTaskCats(taskCats.map((c,i)=>i===idx?{...c,...u}:c)); setEditIdx(null); };
+  const deleteCat = (idx) => saveTaskCats(taskCats.filter((_,i)=>i!==idx));
+  const addSub = (idx,sub) => { saveTaskCats(taskCats.map((c,i)=>i!==idx?c:{...c,subs:[...(c.subs||[]),sub]})); setEditSub(null); };
+  const delSub = (idx,si)  => saveTaskCats(taskCats.map((c,i)=>i!==idx?c:{...c,subs:c.subs.filter((_,j)=>j!==si)}));
+
   return (
-    <Modal title="Nueva Tarea" onClose={onClose} accent={C.accent}>
-      <MF label="Título"><input value={form.title} onChange={e => set("title", e.target.value)} placeholder="¿Qué necesitas hacer?" style={inp} /></MF>
-      <MF label="Categoría">
-        <select value={form.category} onChange={e => set("category", e.target.value)} style={inp}>
-          {TASK_CATS.map(c => <option key={c.id} value={c.id}>{c.icon} {c.label}</option>)}
-        </select>
-      </MF>
-      <MF label="Prioridad">
-        <div style={{ display: "flex", gap: 8 }}>
-          {PRIORITIES.map(p => <button key={p.id} onClick={() => set("priority", p.id)} style={{ flex: 1, padding: "8px", borderRadius: 8, border: `1px solid ${form.priority === p.id ? p.color : C.border}`, background: form.priority === p.id ? p.color + "22" : "transparent", color: form.priority === p.id ? p.color : C.textSub, cursor: "pointer", fontSize: 12, fontWeight: 600 }}>{p.label}</button>)}
+    <div style={{position:"fixed",inset:0,background:"#0009",zIndex:500,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:C.surface,borderRadius:"22px 22px 0 0",width:"100%",maxWidth:480,padding:"16px 16px 36px",maxHeight:"90vh",overflowY:"auto",borderTop:`1px solid ${C.accent}55`,animation:"su .3s ease"}}>
+        <div style={{width:32,height:3,background:C.border,borderRadius:2,margin:"0 auto 14px"}}/>
+        <div style={{display:"flex",justifyContent:"space-between",marginBottom:14}}>
+          <div style={{fontSize:16,fontWeight:800}}>⚙ Categorías de tareas</div>
+          <button onClick={onClose} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:6,padding:"4px 8px",color:C.text,cursor:"pointer"}}>✕</button>
         </div>
-      </MF>
-      <MF label="Fecha"><input type="date" value={form.date} onChange={e => set("date", e.target.value)} style={inp} /></MF>
-      <MF label="Nota (opcional)"><input value={form.note} onChange={e => set("note", e.target.value)} placeholder="Detalles..." style={inp} /></MF>
-      <button onClick={() => form.title && onAdd(form)} style={{ ...btn, background: form.title ? C.accent : C.border, color: form.title ? "#000" : C.textMuted }}>Crear Tarea</button>
-    </Modal>
+        <button onClick={()=>setNewCat({label:"",icon:"📦"})} style={{width:"100%",background:C.accentDim,border:`1px solid ${C.accent}44`,color:C.accent,borderRadius:9,padding:9,fontWeight:700,fontSize:12,cursor:"pointer",marginBottom:10}}>+ Nueva categoría</button>
+        {newCat&&(
+          <div style={{background:C.card,border:`1px solid ${C.accent}44`,borderRadius:12,padding:12,marginBottom:10,display:"grid",gap:8}}>
+            <input value={newCat.label} onChange={e=>setNewCat(n=>({...n,label:e.target.value}))} placeholder="Nombre"
+              style={{width:"100%",background:C.bg,border:`1px solid ${C.border}`,borderRadius:8,padding:"7px 10px",color:C.text,fontSize:13}}/>
+            <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+              {icons.map(ic=><button key={ic} onClick={()=>setNewCat(n=>({...n,icon:ic}))} style={{width:30,height:30,borderRadius:7,border:`1px solid ${newCat.icon===ic?C.accent:C.border}`,background:newCat.icon===ic?C.accentDim:"transparent",cursor:"pointer",fontSize:15}}>{ic}</button>)}
+            </div>
+            <div style={{display:"flex",gap:6}}>
+              <button onClick={()=>newCat.label&&addCat(newCat)} style={{flex:1,background:C.accent,border:"none",borderRadius:8,padding:"7px",color:"#000",fontWeight:700,fontSize:12,cursor:"pointer"}}>Crear</button>
+              <button onClick={()=>setNewCat(null)} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:8,padding:"7px 10px",color:C.textSub,cursor:"pointer",fontSize:12}}>Cancelar</button>
+            </div>
+          </div>
+        )}
+        <div style={{display:"grid",gap:8}}>
+          {taskCats.map((cat,idx)=>(
+            <div key={cat.id||idx} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:12,overflow:"hidden"}}>
+              <div style={{padding:"10px 12px",display:"flex",alignItems:"center",gap:8}}>
+                <span style={{fontSize:18,flexShrink:0}}>{cat.icon}</span>
+                <span style={{flex:1,fontWeight:700,fontSize:13}}>{cat.label}</span>
+                <button onClick={()=>setEditIdx(editIdx===idx?null:idx)} style={{background:C.accentDim,color:C.accent,border:`1px solid ${C.accent}33`,borderRadius:6,padding:"3px 7px",fontSize:10,fontWeight:700,cursor:"pointer"}}>✏️</button>
+                <button onClick={()=>deleteCat(idx)} style={{background:C.redDim,color:C.red,border:`1px solid ${C.red}33`,borderRadius:6,padding:"3px 7px",fontSize:10,fontWeight:700,cursor:"pointer"}}>🗑</button>
+              </div>
+              {editIdx===idx&&(
+                <div style={{padding:"0 12px 10px",borderTop:`1px solid ${C.border}`,display:"grid",gap:6}}>
+                  <input defaultValue={cat.label} onBlur={e=>updateCat(idx,{label:e.target.value})} style={{width:"100%",background:C.bg,border:`1px solid ${C.border}`,borderRadius:7,padding:"6px 9px",color:C.text,fontSize:12,marginTop:8}}/>
+                  <div style={{display:"flex",gap:3,flexWrap:"wrap"}}>
+                    {icons.map(ic=><button key={ic} onClick={()=>updateCat(idx,{icon:ic})} style={{width:27,height:27,borderRadius:6,border:`1px solid ${cat.icon===ic?C.accent:C.border}`,background:cat.icon===ic?C.accentDim:"transparent",cursor:"pointer",fontSize:13}}>{ic}</button>)}
+                  </div>
+                </div>
+              )}
+              <div style={{padding:"0 12px 10px"}}>
+                <div style={{display:"flex",flexWrap:"wrap",gap:4,marginBottom:4}}>
+                  {(cat.subs||[]).map((s,si)=>(
+                    <div key={si} style={{display:"flex",alignItems:"center",gap:2,background:C.bg,border:`1px solid ${C.border}`,borderRadius:100,padding:"2px 7px"}}>
+                      <span style={{fontSize:10,color:C.textSub}}>{s}</span>
+                      <button onClick={()=>delSub(idx,si)} style={{background:"none",border:"none",color:C.textMuted,cursor:"pointer",fontSize:10,padding:"0 1px"}}>✕</button>
+                    </div>
+                  ))}
+                  <button onClick={()=>setEditSub(editSub?.idx===idx?null:{idx,val:""})}
+                    style={{background:"transparent",border:`1px dashed ${C.border}`,borderRadius:100,padding:"2px 7px",fontSize:10,color:C.textMuted,cursor:"pointer"}}>+ sub</button>
+                </div>
+                {editSub?.idx===idx&&(
+                  <div style={{display:"flex",gap:5}}>
+                    <input value={editSub.val} onChange={e=>setEditSub(s=>({...s,val:e.target.value}))} placeholder="Nueva subcategoría..."
+                      onKeyDown={e=>{if(e.key==="Enter"&&editSub.val)addSub(idx,editSub.val);}}
+                      style={{flex:1,background:C.bg,border:`1px solid ${C.border}`,borderRadius:7,padding:"4px 8px",color:C.text,fontSize:11}}/>
+                    <button onClick={()=>{if(editSub.val)addSub(idx,editSub.val);}} style={{background:C.accent,color:"#000",border:"none",borderRadius:7,padding:"4px 9px",fontWeight:700,fontSize:11,cursor:"pointer"}}>OK</button>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }
+
+const lbl2 = {fontSize:10,color:"#3A4A62",fontWeight:700,marginBottom:4};
 
 function HabitModal({ onClose, onAdd }) {
   const [form, setForm] = useState({ name: "", icon: "💧", color: C.accent, target: 1, unit: "vez" });

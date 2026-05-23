@@ -67,22 +67,43 @@ export default function ApartamentoApp({ onBack }) {
   const addReservation = (res) => {
     const nights = Math.max(1, Math.round((new Date(res.checkOut)-new Date(res.checkIn))/86400000));
     const room   = data.rooms.find(r=>r.id===res.roomId);
-    const total  = nights * (room?.basePrice||0);
-    setData(d => ({ ...d, reservations: [{ ...res, id:"RES"+Date.now(), nights, total, paid:parseFloat(res.paid)||0, status:"reserved" }, ...d.reservations] }));
+    const newRes = { ...res, id:"RES"+Date.now(), nights, total:0, paid:0, status:"reserved" };
+    const updated = { ...data, reservations: [newRes, ...data.reservations] };
+    setData(updated);
+    // Sync to localStorage for Planner calendar
+    syncToPlanner(updated.reservations, updated.rooms);
     showToast("Reserva creada ✓");
     setModal(null);
   };
 
   const updateReservationStatus = (id, status) => {
-    setData(d => ({ ...d, reservations: d.reservations.map(r => r.id!==id?r:{...r,status}) }));
+    setData(d => {
+      const updated = { ...d, reservations: d.reservations.map(r => r.id!==id?r:{...r,status}) };
+      syncToPlanner(updated.reservations, updated.rooms);
+      return updated;
+    });
     showToast("Estado actualizado ✓");
   };
 
   const deleteReservation = (id) => {
-    setData(d => ({ ...d, reservations: d.reservations.filter(r=>r.id!==id) }));
+    setData(d => {
+      const updated = { ...d, reservations: d.reservations.filter(r=>r.id!==id) };
+      syncToPlanner(updated.reservations, updated.rooms);
+      return updated;
+    });
     showToast("Reserva eliminada","err");
     setModal(null);
   };
+
+  function syncToPlanner(reservations, rooms) {
+    try {
+      const forPlanner = reservations.map(r => {
+        const room = rooms.find(rm=>rm.id===r.roomId);
+        return { ...r, roomName: room?.name||r.roomId };
+      });
+      localStorage.setItem("apt_reservations", JSON.stringify(forPlanner));
+    } catch {}
+  }
 
   const addExpense = (exp) => {
     setData(d => ({ ...d, expenses: [{ ...exp, id:"E"+Date.now() }, ...d.expenses] }));
@@ -147,7 +168,7 @@ export default function ApartamentoApp({ onBack }) {
 
       {/* CONTENT */}
       <div style={{flex:1,overflowY:"auto",overflowX:"hidden",paddingBottom:58,minHeight:0}}>
-        {view==="dashboard" && <DashboardView rooms={data.rooms} reservations={data.reservations} expenses={data.expenses} totalIncome={totalIncome} totalCollected={totalCollected} totalExpenses={totalExpenses} occupancyRate={occupancyRate} getRoomStatus={getRoomStatus} setModal={setModal} updateReservationStatus={updateReservationStatus}/>}
+        {view==="dashboard" && <DashboardView rooms={data.rooms} reservations={data.reservations} expenses={data.expenses} totalIncome={totalIncome} totalCollected={totalCollected} totalExpenses={totalExpenses} occupancyRate={occupancyRate} getRoomStatus={getRoomStatus} setModal={setModal} updateReservationStatus={updateReservationStatus} showToast={showToast}/>}
         {view==="rooms"     && <RoomsView rooms={data.rooms} reservations={data.reservations} getRoomStatus={getRoomStatus} setModal={setModal} updateReservationStatus={updateReservationStatus} deleteReservation={deleteReservation}/>}
         {view==="calendar"  && <CalendarView reservations={data.reservations} rooms={data.rooms} calMonth={calMonth} setCalMonth={setCalMonth} setModal={setModal}/>}
         {view==="finances"  && <FinancesView reservations={data.reservations} expenses={data.expenses} totalIncome={totalIncome} totalCollected={totalCollected} totalExpenses={totalExpenses} setModal={setModal} deleteExpense={id=>setData(d=>({...d,expenses:d.expenses.filter(e=>e.id!==id)}))}/>}
@@ -174,7 +195,7 @@ export default function ApartamentoApp({ onBack }) {
 }
 
 // ─── DASHBOARD ────────────────────────────────────────────────────────────────
-function DashboardView({rooms,reservations,expenses,totalIncome,totalCollected,totalExpenses,occupancyRate,getRoomStatus,setModal,updateReservationStatus}) {
+function DashboardView({rooms,reservations,expenses,totalIncome,totalCollected,totalExpenses,occupancyRate,getRoomStatus,setModal,updateReservationStatus,showToast}) {
   const today = td();
   const activeRes   = reservations.filter(r=>r.checkIn<=today&&r.checkOut>today);
   const upcomingRes = reservations.filter(r=>r.checkIn>today&&r.status==="reserved").sort((a,b)=>a.checkIn.localeCompare(b.checkIn)).slice(0,4);
@@ -187,10 +208,10 @@ function DashboardView({rooms,reservations,expenses,totalIncome,totalCollected,t
       <div style={{background:`linear-gradient(135deg,${C.accentDim},${C.card})`,border:`1px solid ${C.accent}44`,borderRadius:18,padding:18,position:"relative",overflow:"hidden"}}>
         <div style={{position:"absolute",top:-20,right:-20,width:90,height:90,borderRadius:"50%",background:`${C.accent}0D`,pointerEvents:"none"}}/>
         <div style={{fontSize:11,color:C.accent,fontWeight:700,marginBottom:4}}>ESTE MES</div>
-        <div style={{fontSize:28,fontWeight:900,letterSpacing:-1}}>{fmt(totalCollected)}</div>
-        <div style={{fontSize:12,color:C.textMuted,marginTop:2}}>de {fmt(totalIncome)} facturado</div>
+        <div style={{fontSize:28,fontWeight:900,letterSpacing:-1}}>{reservations.filter(r=>r.status==="occupied"||r.status==="reserved").length} hospedajes</div>
+        <div style={{fontSize:12,color:C.textMuted,marginTop:2}}>Habitaciones activas este mes</div>
         <div style={{display:"flex",gap:12,marginTop:14,flexWrap:"wrap"}}>
-          {[[C.accent,"🏠 Ocupación",occupancyRate+"%"],[C.green,"💰 Cobrado",fmt(totalCollected)],[C.red,"🔧 Gastos",fmt(totalExpenses)],[neto>=0?C.green:C.red,"= Neto",fmt(neto)]].map(([color,label,val])=>(
+          {[[C.accent,"🏠 Ocupación",occupancyRate+"%"],[C.green,"✅ Disponibles",rooms.filter(r=>getRoomStatus(r.id)==="available").length+" hab"],[C.red,"🔧 Gastos",fmt(totalExpenses)],[C.yellow,"📅 Reservadas",reservations.filter(r=>r.status==="reserved").length+" hab"]].map(([color,label,val])=>(
             <div key={label} style={{flex:"1 1 0",minWidth:0}}>
               <div style={{fontSize:9,color,fontWeight:700,whiteSpace:"nowrap"}}>{label}</div>
               <div style={{fontSize:13,fontWeight:800,overflow:"hidden",textOverflow:"ellipsis"}}>{val}</div>
@@ -220,36 +241,34 @@ function DashboardView({rooms,reservations,expenses,totalIncome,totalCollected,t
                     {sc.icon} {sc.label}
                   </div>
                 </div>
-                {active && (
-                  <div style={{background:C.bg,borderRadius:10,padding:"8px 12px",fontSize:12}}>
-                    <div style={{fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>👤 {active.guest}</div>
-                    <div style={{color:C.textMuted,marginTop:2}}>Hasta el {active.checkOut} · {fmt(active.total)}</div>
-                    <div style={{display:"flex",gap:6,marginTop:8}}>
-                      {["occupied","cleaning","available"].map(s=>(
-                        <button key={s} onClick={()=>updateReservationStatus(active.id,s)}
-                          style={{flex:1,padding:"5px",borderRadius:7,border:`1px solid ${STATUS_CONFIG[s].color}44`,background:active.status===s?STATUS_CONFIG[s].bg:"transparent",color:STATUS_CONFIG[s].color,cursor:"pointer",fontSize:10,fontWeight:600}}>
-                          {STATUS_CONFIG[s].icon}
-                        </button>
-                      ))}
-                      <button onClick={()=>setModal({type:"viewReservation",data:active})}
-                        style={{flex:2,padding:"5px",borderRadius:7,border:`1px solid ${C.border}`,background:"transparent",color:C.textSub,cursor:"pointer",fontSize:10,fontWeight:600}}>
-                        Ver detalle
+                {/* Siempre mostrar botones de estado */}
+                <div style={{background:C.bg,borderRadius:10,padding:"8px 12px",fontSize:12}}>
+                  {active && <div style={{fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",marginBottom:4}}>👤 {active.guest} · hasta {active.checkOut}</div>}
+                  {!active && next && <div style={{color:C.accent,fontWeight:700,marginBottom:4}}>📅 Próximo: {next.guest} · {next.checkIn}</div>}
+                  {!active && !next && <div style={{color:C.textMuted,marginBottom:4}}>Sin huésped activo</div>}
+                  <div style={{display:"flex",gap:5,marginTop:4,flexWrap:"wrap"}}>
+                    {["available","reserved","occupied","cleaning","blocked"].map(s=>(
+                      <button key={s} onClick={e=>{e.stopPropagation();
+                        const target = active||next;
+                        if(target) updateReservationStatus(target.id,s);
+                        else showToast("Sin reserva activa para cambiar estado","err");
+                      }}
+                        style={{flex:"1 1 auto",padding:"5px 4px",borderRadius:7,border:`1px solid ${STATUS_CONFIG[s].color}44`,background:getRoomStatus(room.id)===s?STATUS_CONFIG[s].bg:"transparent",color:STATUS_CONFIG[s].color,cursor:"pointer",fontSize:9,fontWeight:600,whiteSpace:"nowrap"}}>
+                        {STATUS_CONFIG[s].icon}
                       </button>
-                    </div>
+                    ))}
+                    <button onClick={e=>{e.stopPropagation();setModal({type:"viewReservation",data:active||next});}}
+                      style={{flex:"2 1 auto",padding:"5px",borderRadius:7,border:`1px solid ${C.border}`,background:"transparent",color:C.textSub,cursor:"pointer",fontSize:9,fontWeight:600,opacity:(active||next)?1:0.4}}>
+                      Ver detalle
+                    </button>
                   </div>
-                )}
-                {!active && next && (
-                  <div style={{background:C.bg,borderRadius:10,padding:"8px 12px",fontSize:12}}>
-                    <div style={{color:C.accent,fontWeight:700}}>📅 Próxima: {next.guest}</div>
-                    <div style={{color:C.textMuted,marginTop:2}}>Check-in: {next.checkIn} · {fmt(next.total)}</div>
-                  </div>
-                )}
-                {!active && !next && (
-                  <button onClick={()=>setModal({type:"newReservation",data:{roomId:room.id}})}
-                    style={{width:"100%",marginTop:8,padding:"7px",borderRadius:10,border:`1px solid ${room.color}44`,background:room.color+"11",color:room.color,cursor:"pointer",fontSize:12,fontWeight:600}}>
-                    + Agregar reserva
-                  </button>
-                )}
+                  {!active&&!next&&(
+                    <button onClick={e=>{e.stopPropagation();setModal({type:"newReservation",data:{roomId:room.id}});}}
+                      style={{width:"100%",marginTop:6,padding:"6px",borderRadius:8,border:`1px solid ${room.color}44`,background:room.color+"11",color:room.color,cursor:"pointer",fontSize:11,fontWeight:600}}>
+                      + Agregar reserva
+                    </button>
+                  )}
+                </div>
               </div>
             );
           })}
@@ -513,17 +532,15 @@ function FinancesView({reservations,expenses,totalIncome,totalCollected,totalExp
 
 // ─── MODALS ───────────────────────────────────────────────────────────────────
 function ReservationModal({rooms,onClose,onAdd,editData}) {
-  const [form,setForm]=useState({roomId:editData?.roomId||rooms[0]?.id||"",guest:"",phone:"",checkIn:td(),checkOut:"",platform:"Directo",paid:"",notes:""});
+  const [form,setForm]=useState({roomId:editData?.roomId||rooms[0]?.id||"",guest:"",phone:"",checkIn:td(),checkOut:"",platform:"Directo",notes:""});
   const set=(k,v)=>setForm(f=>({...f,[k]:v}));
-  const room=rooms.find(r=>r.id===form.roomId);
   const nights=form.checkIn&&form.checkOut?Math.max(0,Math.round((new Date(form.checkOut)-new Date(form.checkIn))/86400000)):0;
-  const total=nights*(room?.basePrice||0);
   const ok=form.guest&&form.checkIn&&form.checkOut&&nights>0;
   return(
     <ModalWrap title="Nueva Reserva" onClose={onClose}>
       <div><div style={lbl}>HABITACIÓN</div>
-        <div style={{display:"flex",gap:8}}>
-          {rooms.map(r=><button key={r.id} onClick={()=>set("roomId",r.id)} style={{flex:1,padding:"8px",borderRadius:9,border:`1px solid ${form.roomId===r.id?r.color:C.border}`,background:form.roomId===r.id?r.color+"22":"transparent",color:form.roomId===r.id?r.color:C.textSub,cursor:"pointer",fontSize:11,fontWeight:600}}>{r.name}</button>)}
+        <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+          {rooms.map(r=><button key={r.id} onClick={()=>set("roomId",r.id)} style={{flex:1,padding:"8px 6px",borderRadius:9,border:`1px solid ${form.roomId===r.id?r.color:C.border}`,background:form.roomId===r.id?r.color+"22":"transparent",color:form.roomId===r.id?r.color:C.textSub,cursor:"pointer",fontSize:11,fontWeight:600}}>{r.name}</button>)}
         </div>
       </div>
       {[["Nombre del huésped","guest","text","María García"],["Teléfono","phone","tel","300..."]].map(([label,key,type,ph])=>(
@@ -533,15 +550,14 @@ function ReservationModal({rooms,onClose,onAdd,editData}) {
         <div><div style={lbl}>CHECK-IN</div><input type="date" value={form.checkIn} onChange={e=>set("checkIn",e.target.value)} style={inp}/></div>
         <div><div style={lbl}>CHECK-OUT</div><input type="date" value={form.checkOut} onChange={e=>set("checkOut",e.target.value)} style={inp}/></div>
       </div>
-      {nights>0&&<div style={{background:C.accentDim,border:`1px solid ${C.accent}44`,borderRadius:10,padding:"10px 14px",fontSize:13}}>
-        <div style={{display:"flex",justifyContent:"space-between"}}><span style={{color:C.textSub}}>{nights} noches × {fmt(room?.basePrice||0)}</span><span style={{fontWeight:800,color:C.accent}}>{fmt(total)}</span></div>
+      {nights>0&&<div style={{background:C.accentDim,border:`1px solid ${C.accent}44`,borderRadius:10,padding:"10px 14px",fontSize:13,textAlign:"center"}}>
+        <span style={{color:C.accent,fontWeight:800}}>{nights} noches</span><span style={{color:C.textMuted}}> · Empresa</span>
       </div>}
-      <div><div style={lbl}>PLATAFORMA</div>
+      <div><div style={lbl}>PLATAFORMA / ORIGEN</div>
         <select value={form.platform} onChange={e=>set("platform",e.target.value)} style={inp}>
           {PLATFORMS.map(p=><option key={p}>{p}</option>)}
         </select>
       </div>
-      <div><div style={lbl}>ABONO INICIAL</div><input type="number" value={form.paid} onChange={e=>set("paid",e.target.value)} placeholder="0" style={inp}/></div>
       <div><div style={lbl}>NOTAS</div><input value={form.notes} onChange={e=>set("notes",e.target.value)} placeholder="Opcional..." style={inp}/></div>
       <button onClick={()=>ok&&onAdd(form)} style={{...btnStyle,background:ok?C.accent:C.border,color:ok?"#000":C.textMuted}}>Crear Reserva</button>
     </ModalWrap>
@@ -551,17 +567,16 @@ function ReservationModal({rooms,onClose,onAdd,editData}) {
 function ReservationDetailModal({res,rooms,onClose,onStatusChange,onDelete}) {
   const room=rooms.find(r=>r.id===res.roomId);
   const sc=STATUS_CONFIG[res.status]||STATUS_CONFIG.available;
-  const [paid,setPaid]=useState(res.paid||0);
   return(
     <ModalWrap title="Detalle de Reserva" onClose={onClose}>
       <div style={{background:`${room?.color||C.accent}22`,border:`1px solid ${room?.color||C.accent}44`,borderRadius:14,padding:14}}>
         <div style={{fontSize:16,fontWeight:800,marginBottom:4}}>{res.guest}</div>
         <div style={{fontSize:12,color:C.textMuted,marginBottom:8}}>{room?.name} · {res.platform}</div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
-          {[["Check-in",res.checkIn],["Check-out",res.checkOut],[`${res.nights} noches`,fmt(res.total)]].map(([l,v])=>(
+          {[["Check-in",res.checkIn],["Check-out",res.checkOut],[`${res.nights} noche${res.nights!==1?"s":""}",""]].map(([l,v])=>(
             <div key={l} style={{background:C.bg,borderRadius:8,padding:"8px 10px",textAlign:"center"}}>
               <div style={{fontSize:9,color:C.textMuted,marginBottom:2}}>{l.toUpperCase()}</div>
-              <div style={{fontSize:12,fontWeight:700}}>{v}</div>
+              <div style={{fontSize:12,fontWeight:700}}>{v||l}</div>
             </div>
           ))}
         </div>
@@ -575,24 +590,6 @@ function ReservationDetailModal({res,rooms,onClose,onStatusChange,onDelete}) {
               {s.icon} {s.label}
             </button>
           ))}
-        </div>
-      </div>
-      <div>
-        <div style={lbl}>COBRO</div>
-        <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:12,padding:12}}>
-          <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
-            <span style={{color:C.textMuted,fontSize:13}}>Total</span><span style={{fontWeight:800,fontSize:14}}>{fmt(res.total)}</span>
-          </div>
-          <div style={{display:"flex",justifyContent:"space-between",marginBottom:10}}>
-            <span style={{color:C.textMuted,fontSize:13}}>Cobrado</span><span style={{fontWeight:800,fontSize:14,color:C.green}}>{fmt(paid)}</span>
-          </div>
-          <div style={{height:4,borderRadius:2,background:C.border,marginBottom:10}}>
-            <div style={{height:"100%",borderRadius:2,background:paid>=res.total?C.green:C.yellow,width:`${Math.min(100,Math.round((paid/Math.max(res.total,1))*100))}%`}}/>
-          </div>
-          <div style={{display:"flex",gap:8}}>
-            <input type="number" value={paid} onChange={e=>setPaid(parseFloat(e.target.value)||0)} style={{...inp,flex:1}}/>
-            <button onClick={()=>onStatusChange(res.id,res.status)} style={{background:C.accentDim,color:C.accent,border:`1px solid ${C.accent}44`,borderRadius:9,padding:"8px 12px",fontWeight:700,fontSize:12,cursor:"pointer"}}>OK</button>
-          </div>
         </div>
       </div>
       {res.notes&&<div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:10,padding:"10px 14px",fontSize:12,color:C.textSub}}>💬 {res.notes}</div>}

@@ -148,7 +148,31 @@ export default function FlotaTracker({ onBack }) {
   const totalGastos    = cars.reduce((s,c) => s + (c.gastos||[]).filter(g=>g.fecha.startsWith(filterMonth)).reduce((a,g)=>a+g.monto,0), 0);
   const totalNeto      = totalCobrado - totalGastos;
 
-  const marcarPagado      = (carroId, pagoId) => { togglePayment(carroId, pagoId); showToast("Pago actualizado ✓"); };
+  const marcarPagado = (carroId, pagoId) => {
+    const carro = cars.find(c=>c.id===carroId);
+    const pago  = carro?.pagos?.find(p=>p.id===pagoId);
+    // Solo sincronizar cuando se marca como PAGADO (no cuando se desmarca)
+    const isPaid = !pago?.pagado;
+    togglePayment(carroId, pagoId);
+    if (isPaid && pago) {
+      // Escribir en localStorage para que FinanzApp lo recoja
+      try {
+        const pending = JSON.parse(localStorage.getItem("fa_pending_transactions")||"[]");
+        pending.push({
+          id: "flota-"+Date.now(),
+          date: pago.fecha,
+          type: "income",
+          category: "flota_inc",
+          subcategory: carro?.nombre||"Flota",
+          account: "cash",
+          amount: pago.monto,
+          note: `Cobro ${carro?.nombre} · ${pago.fecha}`,
+        });
+        localStorage.setItem("fa_pending_transactions", JSON.stringify(pending));
+      } catch {}
+    }
+    showToast(isPaid ? "Pago registrado ✓ (sincronizado con FinanzApp)" : "Pago desmarcado");
+  };
   const agregarGasto      = (carroId, gasto)  => { addExpense(carroId, gasto);     showToast("Gasto registrado ✓");  setModal(null); };
   const agregarPagoDiario = (carroId, fecha)  => { addWorkDay(carroId, fecha);     showToast("Día agregado ✓");      setModal(null); };
 
@@ -281,17 +305,21 @@ function Dashboard({carros,getStats,totalEsperado,totalCobrado,totalPendiente,to
       {carros.map(carro => {
         const s = getStats(carro);
         const pct = s.esperadoMes > 0 ? Math.min(100, Math.round((s.cobrado/s.esperadoMes)*100)) : 0;
+        const carColor  = carro.color   || (carro.id==="C1"?C.car1:C.car2);
+        const carDim    = carro.color_dim|| (carro.id==="C1"?C.car1Dim:C.car2Dim);
+        const valDiario = carro.valor_diario  || CARRO1_DIARIO;
+        const valMensual= carro.valor_mensual || CARRO2_MENSUAL;
         return (
           <button key={carro.id} onClick={()=>setView(carro.id==="C1"?"carro1":"carro2")} className="bp"
-            style={{background:`linear-gradient(135deg,${carro.colorDim},${C.card})`,border:`1px solid ${carro.color}44`,borderRadius:18,padding:18,textAlign:"left",cursor:"pointer",color:C.text,width:"100%"}}>
+            style={{background:`linear-gradient(135deg,${carDim},${C.card})`,border:`1px solid ${carColor}44`,borderRadius:18,padding:18,textAlign:"left",cursor:"pointer",color:C.text,width:"100%",boxSizing:"border-box"}}>
             <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:14}}>
-              <div style={{width:48,height:48,borderRadius:14,background:carro.color+"22",border:`1px solid ${carro.color}44`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,flexShrink:0}}>{carro.icon}</div>
-              <div style={{flex:1}}>
+              <div style={{width:48,height:48,borderRadius:14,background:carColor+"22",border:`1px solid ${carColor}44`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,flexShrink:0}}>{carro.icon||"🚗"}</div>
+              <div style={{flex:1,minWidth:0}}>
                 <div style={{fontSize:16,fontWeight:800}}>{carro.nombre}</div>
                 <div style={{fontSize:11,color:C.textSub}}>{carro.conductor} · {carro.placa}</div>
               </div>
-              <div style={{textAlign:"right"}}>
-                <div style={{fontSize:18,fontWeight:900,color:carro.color}}>{fmt(s.cobrado)}</div>
+              <div style={{textAlign:"right",flexShrink:0}}>
+                <div style={{fontSize:18,fontWeight:900,color:carColor}}>{fmt(s.cobrado)}</div>
                 <div style={{fontSize:10,color:C.textMuted}}>cobrado</div>
               </div>
             </div>
@@ -308,14 +336,14 @@ function Dashboard({carros,getStats,totalEsperado,totalCobrado,totalPendiente,to
                 </div>
                 <div style={{flex:1,background:C.bg,borderRadius:8,padding:"8px 10px",textAlign:"center"}}>
                   <div style={{fontSize:10,color:C.textMuted,marginBottom:2}}>Valor/día</div>
-                  <div style={{fontSize:16,fontWeight:800,color:carro.color}}>{fmt(carro.valorDiario)}</div>
+                  <div style={{fontSize:16,fontWeight:800,color:carColor}}>{fmt(valDiario)}</div>
                 </div>
               </div>
             ) : (
               <div style={{display:"flex",gap:10,marginBottom:12}}>
                 <div style={{flex:1,background:C.bg,borderRadius:8,padding:"8px 10px",textAlign:"center"}}>
                   <div style={{fontSize:10,color:C.textMuted,marginBottom:2}}>Mensualidad</div>
-                  <div style={{fontSize:16,fontWeight:800,color:carro.color}}>{fmt(carro.valorMensual)}</div>
+                  <div style={{fontSize:16,fontWeight:800,color:carColor}}>{fmt(valMensual)}</div>
                 </div>
                 <div style={{flex:2,background:C.bg,borderRadius:8,padding:"8px 10px",textAlign:"center"}}>
                   <div style={{fontSize:10,color:C.textMuted,marginBottom:2}}>Estado mes actual</div>
