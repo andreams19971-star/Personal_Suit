@@ -166,7 +166,7 @@ export default function FlotaTracker({ onBack }) {
           subcategory: carro?.nombre||"Flota",
           account: "cash",
           amount: pago.monto,
-          note: `Cobro ${carro?.nombre} · ${pago.fecha}`,
+          note: "Cobro "+(carro?.nombre)+" · "+(pago.fecha),
         });
         localStorage.setItem("fa_pending_transactions", JSON.stringify(pending));
       } catch {}
@@ -228,7 +228,7 @@ export default function FlotaTracker({ onBack }) {
       {/* BOTTOM NAV */}
       <div style={{position:"fixed",bottom:0,left:0,right:0,background:C.surface,borderTop:`1px solid ${C.border}`,display:"flex",zIndex:50}}>
         {nav.map(n=>(
-          <button key={n.id} onClick={()=>setView(n.id)} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:2,padding:"8px 0",border:"none",background:"transparent",color:view===n.id?"#fff":C.textMuted,cursor:"pointer",fontSize:9,fontWeight:600,borderTop:view===n.id?`2px solid ${view==="carro1"?C.car1:view==="carro2"?C.car2:C.green}`:"2px solid transparent"}}>
+          <button key={n.id} onClick={()=>setView(n.id)} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:2,padding:"8px 0",border:"none",background:"transparent",color:view===n.id?"#fff":C.textMuted,cursor:"pointer",fontSize:9,fontWeight:600,borderTop:view===n.id?"2px solid "+(view==="carro1"?C.car1:view==="carro2"?C.car2:C.green):"2px solid transparent"}}>
             <span style={{fontSize:18}}>{n.icon}</span>{n.label}
           </button>
         ))}
@@ -591,7 +591,7 @@ function GastoModal({carroId,carros,onClose,onAdd}) {
   const set = (k,v) => setForm(f=>({...f,[k]:v}));
   const cats = ["Gasolina","Aceite","Llantas","SOAT","Revisión técnica","Lavado","Mantenimiento","Repuestos","Seguro","Parqueadero","Otro"];
   return (
-    <ModalWrap title={`Gasto — ${carro?.nombre}`} onClose={onClose} color={C.red}>
+    <ModalWrap title={"Gasto — "+(carro?.nombre)} onClose={onClose} color={C.red}>
       <div style={{background:C.redDim,border:`1px solid ${C.red}33`,borderRadius:12,padding:14}}>
         <div style={{fontSize:11,color:C.textMuted,marginBottom:3}}>MONTO</div>
         <div style={{display:"flex",alignItems:"center",gap:6}}>

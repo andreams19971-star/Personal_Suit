@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useApartamentoData } from "../hooks/useApartamentoData.js";
 
 // ─── COLORES ──────────────────────────────────────────────────────────────────
 const C = {
@@ -54,65 +55,41 @@ function seedData() {
 }
 
 export default function ApartamentoApp({ onBack }) {
-  const [data, setData]       = useState(seedData);
-  const [view, setView]       = useState("dashboard");
+  const {
+    rooms, reservations, expenses, loading, online,
+    addReservation: dbAddRes, updateReservationStatus: dbUpdateStatus,
+    deleteReservation: dbDeleteRes, addExpense: dbAddExpense,
+    deleteExpense: dbDeleteExpense, updateRoom: dbUpdateRoom,
+  } = useApartamentoData();
+
+  const [view, setView]         = useState("dashboard");
   const [calMonth, setCalMonth] = useState(new Date());
-  const [selRoom,  setSelRoom]  = useState(null);
-  const [modal, setModal]     = useState(null);
-  const [toast, setToast]     = useState(null);
+  const [modal, setModal]       = useState(null);
+  const [toast, setToast]       = useState(null);
 
   const showToast = (m, t="ok") => { setToast({m,t}); setTimeout(()=>setToast(null),2200); };
 
-  // ── ACCIONES ──
-  const addReservation = (res) => {
-    const nights = Math.max(1, Math.round((new Date(res.checkOut)-new Date(res.checkIn))/86400000));
-    const room   = data.rooms.find(r=>r.id===res.roomId);
-    const newRes = { ...res, id:"RES"+Date.now(), nights, total:0, paid:0, status:"reserved" };
-    const updated = { ...data, reservations: [newRes, ...data.reservations] };
-    setData(updated);
-    // Sync to localStorage for Planner calendar
-    syncToPlanner(updated.reservations, updated.rooms);
+  const addReservation = async (res) => {
+    await dbAddRes(res);
     showToast("Reserva creada ✓");
     setModal(null);
   };
-
-  const updateReservationStatus = (id, status) => {
-    setData(d => {
-      const updated = { ...d, reservations: d.reservations.map(r => r.id!==id?r:{...r,status}) };
-      syncToPlanner(updated.reservations, updated.rooms);
-      return updated;
-    });
+  const updateReservationStatus = async (id, status) => {
+    await dbUpdateStatus(id, status);
     showToast("Estado actualizado ✓");
   };
-
-  const deleteReservation = (id) => {
-    setData(d => {
-      const updated = { ...d, reservations: d.reservations.filter(r=>r.id!==id) };
-      syncToPlanner(updated.reservations, updated.rooms);
-      return updated;
-    });
+  const deleteReservation = async (id) => {
+    await dbDeleteRes(id);
     showToast("Reserva eliminada","err");
     setModal(null);
   };
-
-  function syncToPlanner(reservations, rooms) {
-    try {
-      const forPlanner = reservations.map(r => {
-        const room = rooms.find(rm=>rm.id===r.roomId);
-        return { ...r, roomName: room?.name||r.roomId };
-      });
-      localStorage.setItem("apt_reservations", JSON.stringify(forPlanner));
-    } catch {}
-  }
-
-  const addExpense = (exp) => {
-    setData(d => ({ ...d, expenses: [{ ...exp, id:"E"+Date.now() }, ...d.expenses] }));
+  const addExpense = async (exp) => {
+    await dbAddExpense(exp);
     showToast("Gasto registrado ✓");
     setModal(null);
   };
-
-  const updateRoom = (roomId, updates) => {
-    setData(d => ({ ...d, rooms: d.rooms.map(r => r.id!==roomId?r:{...r,...updates}) }));
+  const updateRoom = async (roomId, updates) => {
+    await dbUpdateRoom(roomId, updates);
     showToast("Habitación actualizada ✓");
     setModal(null);
   };
@@ -120,17 +97,14 @@ export default function ApartamentoApp({ onBack }) {
   // ── STATS ──
   const now = new Date();
   const mKey = now.toISOString().slice(0,7);
-  const mRes = data.reservations.filter(r => r.checkIn.startsWith(mKey) || r.checkOut.startsWith(mKey));
-  const totalIncome  = data.reservations.filter(r=>r.checkIn.startsWith(mKey)).reduce((s,r)=>s+r.total,0);
-  const totalCollected = data.reservations.filter(r=>r.checkIn.startsWith(mKey)).reduce((s,r)=>s+(r.paid||0),0);
-  const totalExpenses= data.expenses.reduce((s,e)=>s+e.amount,0);
-  const occupancyRate = Math.round((data.reservations.filter(r=>r.status==="occupied"||r.status==="reserved").length / Math.max(data.rooms.length,1)) * 100);
+  const totalExpenses  = expenses.reduce((s,e)=>s+e.amount,0);
+  const occupancyRate  = Math.round((reservations.filter(r=>r.status==="occupied"||r.status==="reserved").length / Math.max(rooms.length,1)) * 100);
 
   const getRoomStatus = (roomId) => {
     const today = td();
-    const active = data.reservations.find(r => r.roomId===roomId && r.checkIn<=today && r.checkOut>today);
+    const active = reservations.find(r => r.roomId===roomId && r.checkIn<=today && r.checkOut>today);
     if (active) return active.status === "occupied" ? "occupied" : "reserved";
-    const upcoming = data.reservations.find(r => r.roomId===roomId && r.checkIn>today && r.status==="reserved");
+    const upcoming = reservations.find(r => r.roomId===roomId && r.checkIn>today && r.status==="reserved");
     if (upcoming) return "reserved";
     return "available";
   };
@@ -152,8 +126,15 @@ export default function ApartamentoApp({ onBack }) {
         ::-webkit-scrollbar{display:none}*{scrollbar-width:none}
         @keyframes ap-su{from{transform:translateY(60px);opacity:0}to{transform:translateY(0);opacity:1}}
         @keyframes ap-fu{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-        .ap-fu{animation:ap-fu .3s ease both}.bp:active{transform:scale(.97)}.hr:hover{background:${C.cardHover}!important}
+        @keyframes ap-spin{to{transform:rotate(360deg)}}
+        .ap-fu{animation:ap-fu .3s ease both}.bp:active{transform:scale(.97)}
       `}</style>
+      {loading && (
+        <div style={{position:"absolute",inset:0,background:C.bg,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",zIndex:50,gap:14}}>
+          <div style={{width:32,height:32,border:"3px solid "+C.border,borderTop:"3px solid "+C.accent,borderRadius:"50%",animation:"ap-spin .8s linear infinite"}}/>
+          <div style={{fontSize:14,color:C.textMuted}}>Cargando datos...</div>
+        </div>
+      )}
 
       {/* TOP BAR */}
       <div style={{background:C.surface,borderBottom:"1px solid "+(C.border),
@@ -168,10 +149,10 @@ export default function ApartamentoApp({ onBack }) {
 
       {/* CONTENT */}
       <div style={{flex:1,overflowY:"auto",overflowX:"hidden",paddingBottom:58,minHeight:0}}>
-        {view==="dashboard" && <DashboardView rooms={data.rooms} reservations={data.reservations} expenses={data.expenses} totalIncome={totalIncome} totalCollected={totalCollected} totalExpenses={totalExpenses} occupancyRate={occupancyRate} getRoomStatus={getRoomStatus} setModal={setModal} updateReservationStatus={updateReservationStatus} showToast={showToast}/>}
-        {view==="rooms"     && <RoomsView rooms={data.rooms} reservations={data.reservations} getRoomStatus={getRoomStatus} setModal={setModal} updateReservationStatus={updateReservationStatus} deleteReservation={deleteReservation}/>}
-        {view==="calendar"  && <CalendarView reservations={data.reservations} rooms={data.rooms} calMonth={calMonth} setCalMonth={setCalMonth} setModal={setModal}/>}
-        {view==="finances"  && <FinancesView reservations={data.reservations} expenses={data.expenses} totalIncome={totalIncome} totalCollected={totalCollected} totalExpenses={totalExpenses} setModal={setModal} deleteExpense={id=>setData(d=>({...d,expenses:d.expenses.filter(e=>e.id!==id)}))}/>}
+        {view==="dashboard" && <DashboardView rooms={rooms} reservations={reservations} expenses={expenses} totalIncome={totalIncome} totalCollected={totalCollected} totalExpenses={totalExpenses} occupancyRate={occupancyRate} getRoomStatus={getRoomStatus} setModal={setModal} updateReservationStatus={updateReservationStatus} showToast={showToast}/>}
+        {view==="rooms"     && <RoomsView rooms={rooms} reservations={reservations} getRoomStatus={getRoomStatus} setModal={setModal} updateReservationStatus={updateReservationStatus} deleteReservation={deleteReservation}/>}
+        {view==="calendar"  && <CalendarView reservations={reservations} rooms={rooms} calMonth={calMonth} setCalMonth={setCalMonth} setModal={setModal}/>}
+        {view==="finances"  && <FinancesView reservations={reservations} expenses={expenses} totalExpenses={totalExpenses} setModal={setModal} deleteExpense={dbDeleteExpense}/>}
       </div>
 
       {/* BOTTOM NAV */}
@@ -184,10 +165,10 @@ export default function ApartamentoApp({ onBack }) {
       </div>
 
       {/* MODALS */}
-      {modal?.type==="newReservation" && <ReservationModal rooms={data.rooms} onClose={()=>setModal(null)} onAdd={addReservation} editData={modal.data}/>}
-      {modal?.type==="viewReservation"&& <ReservationDetailModal res={modal.data} rooms={data.rooms} onClose={()=>setModal(null)} onStatusChange={updateReservationStatus} onDelete={deleteReservation}/>}
-      {modal?.type==="addExpense"     && <ExpenseModal onClose={()=>setModal(null)} onAdd={addExpense} rooms={data.rooms}/>}
-      {modal?.type==="editRoom"       && <RoomEditModal rooms={data.rooms} onClose={()=>setModal(null)} onSave={updateRoom}/>}
+      {modal?.type==="newReservation" && <ReservationModal rooms={rooms} onClose={()=>setModal(null)} onAdd={addReservation} editData={modal.data}/>}
+      {modal?.type==="viewReservation"&& <ReservationDetailModal res={modal.data} rooms={rooms} onClose={()=>setModal(null)} onStatusChange={updateReservationStatus} onDelete={deleteReservation}/>}
+      {modal?.type==="addExpense"     && <ExpenseModal onClose={()=>setModal(null)} onAdd={addExpense} rooms={rooms}/>}
+      {modal?.type==="editRoom"       && <RoomEditModal rooms={rooms} onClose={()=>setModal(null)} onSave={updateRoom}/>}
 
       {toast && <div style={{position:"fixed",bottom:68,left:"50%",transform:"translateX(-50%)",background:toast.t==="err"?C.red:C.accent,color:toast.t==="err"?"#fff":"#000",padding:"8px 20px",borderRadius:100,fontWeight:700,fontSize:13,zIndex:999,whiteSpace:"nowrap",animation:"ap-su .25s ease"}}>{toast.m}</div>}
     </div>
@@ -569,7 +550,7 @@ function ReservationDetailModal({res,rooms,onClose,onStatusChange,onDelete}) {
   const sc=STATUS_CONFIG[res.status]||STATUS_CONFIG.available;
   return(
     <ModalWrap title="Detalle de Reserva" onClose={onClose}>
-      <div style={{background:`${room?.color||C.accent}22`,border:"1px solid "+((room?.color||C.accent)+"44"),borderRadius:14,padding:14}}>
+      <div style={{background:(room?.color||C.accent)+"22",border:"1px solid "+((room?.color||C.accent)+"44"),borderRadius:14,padding:14}}>
         <div style={{fontSize:16,fontWeight:800,marginBottom:4}}>{res.guest}</div>
         <div style={{fontSize:12,color:C.textMuted,marginBottom:8}}>{room?.name} · {res.platform}</div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>

@@ -196,7 +196,7 @@ function TodayView({ tasks, allTasks, selDate, toggleTask, deleteTask, taskCats 
             <span style={{fontSize:13,fontWeight:800,color:C.accent}}>{done}/{todayTasks.length}</span>
           </div>
           <div style={{height:6,borderRadius:3,background:C.border}}>
-            <div style={{height:"100%",borderRadius:3,background:C.accent,width:`${todayTasks.length>0?(done/todayTasks.length)*100:0}%`,transition:"width .8s ease"}}/>
+            <div style={{height:"100%",borderRadius:3,background:C.accent,width:(todayTasks.length>0?(done/todayTasks.length)*100:0)+"%",transition:"width .8s ease"}}/>
           </div>
         </div>
       )}
@@ -228,7 +228,7 @@ function TaskRow({ task, onToggle, onDelete, taskCats, muted }) {
   const pr  = PRIORITIES.find(p=>p.id===task.priority)||PRIORITIES[1];
   return (
     <div className="hr" style={{background:C.card,border:"1px solid "+(task.done?C.border:pr.color+"33"),borderRadius:12,padding:"10px 12px",display:"flex",alignItems:"center",gap:10,opacity:muted?0.6:1}}>
-      <button onClick={()=>onToggle(task.id)} style={{width:22,height:22,borderRadius:"50%",border:`2px solid ${task.done?C.accent:pr.color}`,background:task.done?C.accent:"transparent",cursor:"pointer",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,color:"#000"}}>
+      <button onClick={()=>onToggle(task.id)} style={{width:22,height:22,borderRadius:"50%",border:"2px solid "+(task.done?C.accent:pr.color),background:task.done?C.accent:"transparent",cursor:"pointer",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,color:"#000"}}>
         {task.done&&"✓"}
       </button>
       <span style={{fontSize:16,flexShrink:0}}>{cat.icon}</span>
@@ -349,7 +349,7 @@ function HabitsView({ habits, toggleHabit, deleteHabit }) {
                 <div style={{ fontSize: 14, fontWeight: 700 }}>{h.name}</div>
                 <div style={{ fontSize: 11, color: h.color, fontWeight: 600 }}>🔥 {streak} días seguidos</div>
               </div>
-              <button onClick={() => toggleHabit(h.id, td())} style={{ width: 36, height: 36, borderRadius: 10, border: `2px solid ${h.completions[td()] ? h.color : C.border}`, background: h.completions[td()] ? h.color : "transparent", cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <button onClick={() => toggleHabit(h.id, td())} style={{ width: 36, height: 36, borderRadius: 10, border: "2px solid "+(h.completions[td()] ? h.color : C.border), background: h.completions[td()] ? h.color : "transparent", cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>
                 {h.completions[td()] ? "✓" : ""}
               </button>
             </div>
@@ -606,7 +606,7 @@ function HabitModal({ onClose, onAdd }) {
       <MF label="Nombre"><input value={form.name} onChange={e => set("name", e.target.value)} placeholder="Ej: Tomar agua" style={inp} /></MF>
       <MF label="Ícono">
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          {HABIT_ICONS.map(ic => <button key={ic} onClick={() => set("icon", ic)} style={{ width: 38, height: 38, borderRadius: 8, border: `1px solid ${form.icon === ic ? C.accent : C.border}`, background: form.icon === ic ? C.accentDim : "transparent", cursor: "pointer", fontSize: 18 }}>{ic}</button>)}
+          {HABIT_ICONS.map(ic => <button key={ic} onClick={() => set("icon", ic)} style={{ width: 38, height: 38, borderRadius: 8, border: "1px solid "+(form.icon === ic ? C.accent : C.border), background: form.icon === ic ? C.accentDim : "transparent", cursor: "pointer", fontSize: 18 }}>{ic}</button>)}
         </div>
       </MF>
       <MF label="Meta diaria">
@@ -630,7 +630,7 @@ function GoalModal({ onClose, onAdd }) {
       <MF label="Título"><input value={form.title} onChange={e => set("title", e.target.value)} placeholder="Ej: Ahorrar para viaje" style={inp} /></MF>
       <MF label="Ícono & Color">
         <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-          {["🎯","✈️","📚","⚖️","💰","🏠","🚗","💪","🌎","🎵"].map(ic => <button key={ic} onClick={() => set("icon", ic)} style={{ width: 34, height: 34, borderRadius: 8, border: `1px solid ${form.icon === ic ? C.accent : C.border}`, background: form.icon === ic ? C.accentDim : "transparent", cursor: "pointer", fontSize: 16 }}>{ic}</button>)}
+          {["🎯","✈️","📚","⚖️","💰","🏠","🚗","💪","🌎","🎵"].map(ic => <button key={ic} onClick={() => set("icon", ic)} style={{ width: 34, height: 34, borderRadius: 8, border: "1px solid "+(form.icon === ic ? C.accent : C.border), background: form.icon === ic ? C.accentDim : "transparent", cursor: "pointer", fontSize: 16 }}>{ic}</button>)}
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           {colors.map(c => <button key={c} onClick={() => set("color", c)} style={{ width: 28, height: 28, borderRadius: "50%", background: c, border: form.color === c ? `3px solid #fff` : "2px solid transparent", cursor: "pointer" }} />)}
