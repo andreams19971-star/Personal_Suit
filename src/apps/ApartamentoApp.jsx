@@ -573,7 +573,7 @@ function ReservationDetailModal({res,rooms,onClose,onStatusChange,onDelete}) {
         <div style={{fontSize:16,fontWeight:800,marginBottom:4}}>{res.guest}</div>
         <div style={{fontSize:12,color:C.textMuted,marginBottom:8}}>{room?.name} · {res.platform}</div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
-          {[["Check-in",res.checkIn],["Check-out",res.checkOut],[`${res.nights} noche${res.nights!==1?"s":""}",""]].map(([l,v])=>(
+          {[["Check-in",res.checkIn],["Check-out",res.checkOut],[res.nights+" noche"+(res.nights!==1?"s":""),""]].map(([l,v])=>(
             <div key={l} style={{background:C.bg,borderRadius:8,padding:"8px 10px",textAlign:"center"}}>
               <div style={{fontSize:9,color:C.textMuted,marginBottom:2}}>{l.toUpperCase()}</div>
               <div style={{fontSize:12,fontWeight:700}}>{v||l}</div>
