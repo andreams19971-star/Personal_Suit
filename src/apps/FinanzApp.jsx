@@ -555,7 +555,7 @@ function LoansView({loans,transactions,setShowLoanModal,setShowPayModal,accounts
           const pct=Math.round(((loan.amount-loan.balance)/loan.amount)*100);
           const acc=accounts.find(a=>a.id===loan.account);
           return(
-            <button key={loan.id} onClick={()=>setSelLoan(loan.id)} className="fa-btn" style={{background:C.card,border:`1px solid ${loan.status==="paid"?C.accentText+"44":C.orange+"44"}`,borderRadius:18,padding:16,cursor:"pointer",textAlign:"left",width:"100%"}}>
+            <button key={loan.id} onClick={()=>setSelLoan(loan.id)} className="fa-btn" style={{background:C.card,border:"1px solid "+(loan.status==="paid"?C.accentText+"44":C.orange+"44"),borderRadius:18,padding:16,cursor:"pointer",textAlign:"left",width:"100%"}}>
               <div style={{display:"flex",alignItems:"flex-start",gap:12}}>
                 <div style={{width:44,height:44,borderRadius:12,background:loan.status==="paid"?C.accentDim:C.orangeDim,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>
                   {loan.status==="paid"?"✅":"👤"}
@@ -738,7 +738,7 @@ function CardsView({ cards, setCards, filterMonth, showToast }) {
           <button key={c.id} onClick={()=>setSelCard(c.id)} style={{
             padding:"10px 14px",borderRadius:12,flexShrink:0,cursor:"pointer",fontWeight:700,fontSize:12,
             background:selCard===c.id?c.color+"33":C.card,
-            border:`1px solid ${selCard===c.id?c.color:C.border}`,
+            border:"1px solid "+(selCard===c.id?c.color:C.border),
             color:selCard===c.id?c.color:C.textSub,
             display:"flex",alignItems:"center",gap:6,
           }}>
@@ -864,7 +864,7 @@ function ChargeModal({ card, onClose, onAdd, cats }) {
             <div style={{fontSize:10,color:C.textMuted,fontWeight:700,marginBottom:4}}>CUOTAS</div>
             <div style={{display:"flex",gap:6}}>
               {[1,3,6,12,24,36].map(n=>(
-                <button key={n} onClick={()=>set("installments",n)} style={{flex:1,padding:"8px 4px",borderRadius:8,border:`1px solid ${form.installments===n?card.color:C.border}`,background:form.installments===n?card.color+"22":"transparent",color:form.installments===n?card.color:C.textSub,cursor:"pointer",fontSize:12,fontWeight:600}}>
+                <button key={n} onClick={()=>set("installments",n)} style={{flex:1,padding:"8px 4px",borderRadius:8,border:"1px solid "+(form.installments===n?card.color:C.border),background:form.installments===n?card.color+"22":"transparent",color:form.installments===n?card.color:C.textSub,cursor:"pointer",fontSize:12,fontWeight:600}}>
                   {n===1?"Cont.":n+"x"}
                 </button>
               ))}
@@ -1002,7 +1002,7 @@ function Stats({monthTxs,totalIncome,totalExpense,transactions,filterMonth,categ
           <div style={{fontSize:11,color:C.red,fontWeight:700}}>GASTOS</div>
           <div style={{fontSize:22,fontWeight:900,marginTop:4}}>{fmtCOP(totalExpense)}</div>
         </div>
-        <div style={{background:savings>=0?`linear-gradient(135deg,${C.accentDim},${C.card})`:`linear-gradient(135deg,${C.redDim},${C.card})`,border:`1px solid ${savings>=0?C.accentText:C.red}33`,borderRadius:16,padding:14}}>
+        <div style={{background:savings>=0?`linear-gradient(135deg,${C.accentDim},${C.card})`:`linear-gradient(135deg,${C.redDim},${C.card})`,border:"1px solid "+((savings>=0?C.accentText:C.red)+"33"),borderRadius:16,padding:14}}>
           <div style={{fontSize:11,color:savings>=0?C.accentText:C.red,fontWeight:700}}>BALANCE</div>
           <div style={{fontSize:22,fontWeight:900,marginTop:4,color:savings>=0?C.accentText:C.red}}>{fmtCOP(savings)}</div>
         </div>
@@ -1171,7 +1171,7 @@ function AccountsManager({accounts, updateAccountBalance, showToast}) {
               <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
                 {ACCOUNT_ICONS.map(ic=>(
                   <button key={ic} onClick={()=>setNewAcc(a=>({...a,icon:ic}))}
-                    style={{width:34,height:34,borderRadius:8,border:`1px solid ${newAcc.icon===ic?C.accent:C.border}`,background:newAcc.icon===ic?C.accentDim:"transparent",cursor:"pointer",fontSize:16}}>
+                    style={{width:34,height:34,borderRadius:8,border:"1px solid "+(newAcc.icon===ic?C.accent:C.border),background:newAcc.icon===ic?C.accentDim:"transparent",cursor:"pointer",fontSize:16}}>
                     {ic}
                   </button>
                 ))}
@@ -1213,7 +1213,7 @@ function AccountsManager({accounts, updateAccountBalance, showToast}) {
 
       {/* Cuentas existentes */}
       {accounts.map(acc=>(
-        <div key={acc.id} style={{background:C.card,border:`1px solid ${editId===acc.id?acc.color+"66":C.border}`,borderRadius:14,overflow:"hidden"}}>
+        <div key={acc.id} style={{background:C.card,border:"1px solid "+(editId===acc.id?acc.color+"66":C.border),borderRadius:14,overflow:"hidden"}}>
           {editId===acc.id ? (
             <div style={{padding:14}}>
               <div style={{fontSize:12,fontWeight:700,color:acc.color,marginBottom:10}}>EDITANDO: {acc.label}</div>
@@ -1228,7 +1228,7 @@ function AccountsManager({accounts, updateAccountBalance, showToast}) {
                   <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
                     {ACCOUNT_ICONS.map(ic=>(
                       <button key={ic} onClick={()=>setEditForm(f=>({...f,icon:ic}))}
-                        style={{width:32,height:32,borderRadius:8,border:`1px solid ${editForm.icon===ic?C.accent:C.border}`,background:editForm.icon===ic?C.accentDim:"transparent",cursor:"pointer",fontSize:15}}>
+                        style={{width:32,height:32,borderRadius:8,border:"1px solid "+(editForm.icon===ic?C.accent:C.border),background:editForm.icon===ic?C.accentDim:"transparent",cursor:"pointer",fontSize:15}}>
                         {ic}
                       </button>
                     ))}
@@ -1309,7 +1309,7 @@ function CategoriesManager({ categories, saveCategories, showToast }) {
     <div style={{display:"grid",gap:12}}>
       <div style={{display:"flex",gap:6}}>
         {[["income","Ingresos"],["expense","Gastos"]].map(([t,l])=>(
-          <button key={t} onClick={()=>setType(t)} style={{flex:1,padding:"8px",borderRadius:9,border:`1px solid ${type===t?C.accent:C.border}`,background:type===t?C.accentDim:"transparent",color:type===t?C.accent:C.textSub,cursor:"pointer",fontWeight:700,fontSize:12}}>{l}</button>
+          <button key={t} onClick={()=>setType(t)} style={{flex:1,padding:"8px",borderRadius:9,border:"1px solid "+(type===t?C.accent:C.border),background:type===t?C.accentDim:"transparent",color:type===t?C.accent:C.textSub,cursor:"pointer",fontWeight:700,fontSize:12}}>{l}</button>
         ))}
       </div>
 
@@ -1372,7 +1372,7 @@ function CatForm({ initial, onSave, onCancel }) {
       <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
         {CAT_ICONS.map(ic=>(
           <button key={ic} onClick={()=>setForm(f=>({...f,icon:ic}))}
-            style={{width:32,height:32,borderRadius:7,border:`1px solid ${form.icon===ic?C.accent:C.border}`,background:form.icon===ic?C.accentDim:"transparent",cursor:"pointer",fontSize:16}}>
+            style={{width:32,height:32,borderRadius:7,border:"1px solid "+(form.icon===ic?C.accent:C.border),background:form.icon===ic?C.accentDim:"transparent",cursor:"pointer",fontSize:16}}>
             {ic}
           </button>
         ))}
@@ -1416,7 +1416,7 @@ function Sidebar({open,onClose,accounts,updateAccountBalance,settings,setSetting
             <div style={{display:"grid",gap:14}}>
               <div style={{fontSize:12,color:C.textMuted,fontWeight:700}}>NOTIFICACIONES</div>
               {/* Estado actual */}
-              <div style={{background:C.card,border:`1px solid ${permission==="granted"?C.accentText+"44":C.border}`,borderRadius:14,padding:14}}>
+              <div style={{background:C.card,border:"1px solid "+(permission==="granted"?C.accentText+"44":C.border),borderRadius:14,padding:14}}>
                 <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
                   <div style={{width:10,height:10,borderRadius:"50%",background:permission==="granted"?C.accentText:permission==="denied"?C.red:C.yellow,flexShrink:0}}/>
                   <div style={{fontSize:13,fontWeight:700}}>

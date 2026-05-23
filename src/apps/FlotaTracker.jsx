@@ -248,7 +248,7 @@ export default function FlotaTracker({ onBack }) {
           </div>
           <div style={{padding:16,display:"grid",gap:14,overflowY:"auto"}}>
             {/* ESTADO CONEXIÓN */}
-            <div style={{background:C.card,border:`1px solid ${online?C.green+"44":C.red+"44"}`,borderRadius:12,padding:12,display:"flex",alignItems:"center",gap:10}}>
+            <div style={{background:C.card,border:"1px solid "+(online?C.green+"44":C.red+"44"),borderRadius:12,padding:12,display:"flex",alignItems:"center",gap:10}}>
               <div style={{width:10,height:10,borderRadius:"50%",background:online?C.green:C.red,flexShrink:0}}/>
               <div>
                 <div style={{fontSize:13,fontWeight:700,color:online?C.green:C.red}}>{online?"Conectado a Supabase":"Sin conexión"}</div>
@@ -475,9 +475,9 @@ function CarroView({carro,stats,pagos,filterMonth,marcarPagado,setModal}) {
             const fecha = new Date(pago.fecha+"T12:00");
             const diaSemana = DAYS_ES[fecha.getDay()];
             return (
-              <div key={pago.id} style={{background:C.card,border:`1px solid ${pago.pagado?carro.color+"33":C.yellow+"33"}`,borderRadius:14,padding:"12px 14px",display:"flex",alignItems:"center",gap:12}}>
+              <div key={pago.id} style={{background:C.card,border:"1px solid "+(pago.pagado?carro.color+"33":C.yellow+"33"),borderRadius:14,padding:"12px 14px",display:"flex",alignItems:"center",gap:12}}>
                 {/* DÍA / FECHA */}
-                <div style={{width:46,height:46,borderRadius:12,background:pago.pagado?carro.color+"22":C.yellow+"15",border:`1px solid ${pago.pagado?carro.color+"44":C.yellow+"33"}`,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                <div style={{width:46,height:46,borderRadius:12,background:pago.pagado?carro.color+"22":C.yellow+"15",border:"1px solid "+(pago.pagado?carro.color+"44":C.yellow+"33"),display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",flexShrink:0}}>
                   <div style={{fontSize:8,fontWeight:700,color:pago.pagado?carro.color:C.yellow}}>{diaSemana.toUpperCase()}</div>
                   <div style={{fontSize:16,fontWeight:900,color:pago.pagado?carro.color:C.yellow}}>{fecha.getDate()}</div>
                 </div>
@@ -489,7 +489,7 @@ function CarroView({carro,stats,pagos,filterMonth,marcarPagado,setModal}) {
 
                 {/* TOGGLE PAGADO */}
                 <button onClick={()=>marcarPagado(carro.id,pago.id)} className="bp"
-                  style={{padding:"6px 14px",borderRadius:100,border:`1px solid ${pago.pagado?carro.color:C.yellow}`,background:pago.pagado?carro.color+"22":C.yellow+"15",color:pago.pagado?carro.color:C.yellow,fontWeight:700,fontSize:11,cursor:"pointer",whiteSpace:"nowrap"}}>
+                  style={{padding:"6px 14px",borderRadius:100,border:"1px solid "+(pago.pagado?carro.color:C.yellow),background:pago.pagado?carro.color+"22":C.yellow+"15",color:pago.pagado?carro.color:C.yellow,fontWeight:700,fontSize:11,cursor:"pointer",whiteSpace:"nowrap"}}>
                   {pago.pagado?"✓ Pagado":"⏳ Pendiente"}
                 </button>
               </div>
@@ -671,7 +671,7 @@ function CarroConfig({carro, onSave}) {
             <div style={{fontSize:10,color:C.textMuted,fontWeight:700,marginBottom:4}}>TIPO DE COBRO</div>
             <div style={{display:"flex",gap:8}}>
               {[["diario","Diario (por día)"],["mensual","Mensual (fijo)"]].map(([v,l])=>(
-                <button key={v} onClick={()=>set("tipo",v)} style={{flex:1,padding:"8px",borderRadius:8,border:`1px solid ${form.tipo===v?carro.color:C.border}`,background:form.tipo===v?carro.color+"22":"transparent",color:form.tipo===v?carro.color:C.textSub,cursor:"pointer",fontSize:12,fontWeight:600}}>{l}</button>
+                <button key={v} onClick={()=>set("tipo",v)} style={{flex:1,padding:"8px",borderRadius:8,border:"1px solid "+(form.tipo===v?carro.color:C.border),background:form.tipo===v?carro.color+"22":"transparent",color:form.tipo===v?carro.color:C.textSub,cursor:"pointer",fontSize:12,fontWeight:600}}>{l}</button>
               ))}
             </div>
           </div>

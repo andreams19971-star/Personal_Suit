@@ -317,7 +317,7 @@ function RoomsView({rooms,reservations,getRoomStatus,setModal,updateReservationS
         {rooms.map(r=>{
           const status=getRoomStatus(r.id);const sc=STATUS_CONFIG[status];
           return(
-            <button key={r.id} onClick={()=>setSelRoom(r.id)} style={{padding:"9px 14px",borderRadius:12,flexShrink:0,cursor:"pointer",fontWeight:700,fontSize:12,background:selRoom===r.id?r.color+"22":C.card,border:`1px solid ${selRoom===r.id?r.color:C.border}`,color:selRoom===r.id?r.color:C.textSub,display:"flex",alignItems:"center",gap:6}}>
+            <button key={r.id} onClick={()=>setSelRoom(r.id)} style={{padding:"9px 14px",borderRadius:12,flexShrink:0,cursor:"pointer",fontWeight:700,fontSize:12,background:selRoom===r.id?r.color+"22":C.card,border:"1px solid "+(selRoom===r.id?r.color:C.border),color:selRoom===r.id?r.color:C.textSub,display:"flex",alignItems:"center",gap:6}}>
               <span>{sc.icon}</span>{r.name}
             </button>
           );
@@ -449,7 +449,7 @@ function CalendarView({reservations,rooms,calMonth,setCalMonth,setModal}) {
             const room=rooms.find(r=>r.id===res.roomId);const sc=STATUS_CONFIG[res.status]||STATUS_CONFIG.available;
             return(
               <button key={res.id} onClick={()=>setModal({type:"viewReservation",data:res})} className="hr"
-                style={{background:C.card,border:`1px solid ${room?.color||C.border}33`,borderRadius:12,padding:"10px 14px",cursor:"pointer",textAlign:"left",width:"100%",color:C.text,display:"flex",alignItems:"center",gap:10}}>
+                style={{background:C.card,border:"1px solid "+((room?.color||C.border)+"33"),borderRadius:12,padding:"10px 14px",cursor:"pointer",textAlign:"left",width:"100%",color:C.text,display:"flex",alignItems:"center",gap:10}}>
                 <div style={{width:8,height:"100%",minHeight:36,borderRadius:4,background:room?.color||C.accent,flexShrink:0,alignSelf:"stretch"}}/>
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontSize:13,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{res.guest}</div>
@@ -540,7 +540,7 @@ function ReservationModal({rooms,onClose,onAdd,editData}) {
     <ModalWrap title="Nueva Reserva" onClose={onClose}>
       <div><div style={lbl}>HABITACIÓN</div>
         <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-          {rooms.map(r=><button key={r.id} onClick={()=>set("roomId",r.id)} style={{flex:1,padding:"8px 6px",borderRadius:9,border:`1px solid ${form.roomId===r.id?r.color:C.border}`,background:form.roomId===r.id?r.color+"22":"transparent",color:form.roomId===r.id?r.color:C.textSub,cursor:"pointer",fontSize:11,fontWeight:600}}>{r.name}</button>)}
+          {rooms.map(r=><button key={r.id} onClick={()=>set("roomId",r.id)} style={{flex:1,padding:"8px 6px",borderRadius:9,border:"1px solid "+(form.roomId===r.id?r.color:C.border),background:form.roomId===r.id?r.color+"22":"transparent",color:form.roomId===r.id?r.color:C.textSub,cursor:"pointer",fontSize:11,fontWeight:600}}>{r.name}</button>)}
         </div>
       </div>
       {[["Nombre del huésped","guest","text","María García"],["Teléfono","phone","tel","300..."]].map(([label,key,type,ph])=>(
@@ -569,7 +569,7 @@ function ReservationDetailModal({res,rooms,onClose,onStatusChange,onDelete}) {
   const sc=STATUS_CONFIG[res.status]||STATUS_CONFIG.available;
   return(
     <ModalWrap title="Detalle de Reserva" onClose={onClose}>
-      <div style={{background:`${room?.color||C.accent}22`,border:`1px solid ${room?.color||C.accent}44`,borderRadius:14,padding:14}}>
+      <div style={{background:`${room?.color||C.accent}22`,border:"1px solid "+((room?.color||C.accent)+"44"),borderRadius:14,padding:14}}>
         <div style={{fontSize:16,fontWeight:800,marginBottom:4}}>{res.guest}</div>
         <div style={{fontSize:12,color:C.textMuted,marginBottom:8}}>{room?.name} · {res.platform}</div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
@@ -584,12 +584,19 @@ function ReservationDetailModal({res,rooms,onClose,onStatusChange,onDelete}) {
       <div>
         <div style={lbl}>ESTADO</div>
         <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-          {Object.entries(STATUS_CONFIG).map(([key,s])=>(
-            <button key={key} onClick={()=>onStatusChange(res.id,key)}
-              style={{flex:"1 1 auto",padding:"8px 4px",borderRadius:9,border:`1px solid ${res.status===key?s.color:C.border}`,background:res.status===key?s.bg:"transparent",color:res.status===key?s.color:C.textSub,cursor:"pointer",fontSize:11,fontWeight:600}}>
-              {s.icon} {s.label}
-            </button>
-          ))}
+          {Object.entries(STATUS_CONFIG).map(([key,s])=>{
+            const isActive = res.status===key;
+            return (
+              <button key={key} onClick={()=>onStatusChange(res.id,key)}
+                style={{flex:"1 1 auto",padding:"8px 4px",borderRadius:9,
+                  border:"1px solid "+(isActive?s.color:C.border),
+                  background:isActive?s.bg:"transparent",
+                  color:isActive?s.color:C.textSub,
+                  cursor:"pointer",fontSize:11,fontWeight:600}}>
+                {s.icon} {s.label}
+              </button>
+            );
+          })}
         </div>
       </div>
       {res.notes&&<div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:10,padding:"10px 14px",fontSize:12,color:C.textSub}}>💬 {res.notes}</div>}
@@ -635,7 +642,7 @@ function RoomEditModal({rooms,onClose,onSave}) {
   return(
     <ModalWrap title="Configurar Habitaciones" onClose={onClose}>
       <div style={{display:"flex",gap:8}}>
-        {rooms.map(r=><button key={r.id} onClick={()=>{setSelId(r.id);setForm({name:r.name,description:r.description||"",basePrice:r.basePrice||0,amenities:(r.amenities||[]).join(", ")});}} style={{flex:1,padding:"8px 4px",borderRadius:9,border:`1px solid ${selId===r.id?r.color:C.border}`,background:selId===r.id?r.color+"22":"transparent",color:selId===r.id?r.color:C.textSub,cursor:"pointer",fontSize:11,fontWeight:600}}>{r.name}</button>)}
+        {rooms.map(r=><button key={r.id} onClick={()=>{setSelId(r.id);setForm({name:r.name,description:r.description||"",basePrice:r.basePrice||0,amenities:(r.amenities||[]).join(", ")});}} style={{flex:1,padding:"8px 4px",borderRadius:9,border:"1px solid "+(selId===r.id?r.color:C.border),background:selId===r.id?r.color+"22":"transparent",color:selId===r.id?r.color:C.textSub,cursor:"pointer",fontSize:11,fontWeight:600}}>{r.name}</button>)}
       </div>
       {[["Nombre","name","text"],["Descripción","description","text"]].map(([label,key,type])=>(
         <div key={key}><div style={lbl}>{label.toUpperCase()}</div><input type={type} value={form[key]} onChange={e=>set(key,e.target.value)} style={inp}/></div>

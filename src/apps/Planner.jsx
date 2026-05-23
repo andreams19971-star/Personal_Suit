@@ -227,7 +227,7 @@ function TaskRow({ task, onToggle, onDelete, taskCats, muted }) {
   const cat = taskCats?.find(c=>c.id===task.category)||{icon:"📦",label:task.category};
   const pr  = PRIORITIES.find(p=>p.id===task.priority)||PRIORITIES[1];
   return (
-    <div className="hr" style={{background:C.card,border:`1px solid ${task.done?C.border:pr.color+"33"}`,borderRadius:12,padding:"10px 12px",display:"flex",alignItems:"center",gap:10,opacity:muted?0.6:1}}>
+    <div className="hr" style={{background:C.card,border:"1px solid "+(task.done?C.border:pr.color+"33"),borderRadius:12,padding:"10px 12px",display:"flex",alignItems:"center",gap:10,opacity:muted?0.6:1}}>
       <button onClick={()=>onToggle(task.id)} style={{width:22,height:22,borderRadius:"50%",border:`2px solid ${task.done?C.accent:pr.color}`,background:task.done?C.accent:"transparent",cursor:"pointer",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,color:"#000"}}>
         {task.done&&"✓"}
       </button>
@@ -466,7 +466,7 @@ function TaskModal({ onClose, onAdd, defaultDate, taskCats=DEFAULT_TASK_CATS }) 
             <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
               {taskCats.map(c=>(
                 <button key={c.id} onClick={()=>set("category",c.id)}
-                  style={{padding:"6px 10px",borderRadius:9,border:`1px solid ${form.category===c.id?C.accent:C.border}`,background:form.category===c.id?C.accentDim:"transparent",color:form.category===c.id?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:600,display:"flex",alignItems:"center",gap:4}}>
+                  style={{padding:"6px 10px",borderRadius:9,border:"1px solid "+(form.category===c.id?C.accent:C.border),background:form.category===c.id?C.accentDim:"transparent",color:form.category===c.id?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:600,display:"flex",alignItems:"center",gap:4}}>
                   {c.icon} {c.label}
                 </button>
               ))}
@@ -476,10 +476,10 @@ function TaskModal({ onClose, onAdd, defaultDate, taskCats=DEFAULT_TASK_CATS }) 
             <div>
               <div style={lbl2}>SUBCATEGORÍA</div>
               <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                <button onClick={()=>set("subcategory","")} style={{padding:"5px 10px",borderRadius:8,border:`1px solid ${!form.subcategory?C.accent:C.border}`,background:!form.subcategory?C.accentDim:"transparent",color:!form.subcategory?C.accent:C.textSub,cursor:"pointer",fontSize:11}}>Ninguna</button>
+                <button onClick={()=>set("subcategory","")} style={{padding:"5px 10px",borderRadius:8,border:"1px solid "+(!form.subcategory?C.accent:C.border),background:!form.subcategory?C.accentDim:"transparent",color:!form.subcategory?C.accent:C.textSub,cursor:"pointer",fontSize:11}}>Ninguna</button>
                 {cat.subs.map(s=>(
                   <button key={s} onClick={()=>set("subcategory",s)}
-                    style={{padding:"5px 10px",borderRadius:8,border:`1px solid ${form.subcategory===s?C.accent:C.border}`,background:form.subcategory===s?C.accentDim:"transparent",color:form.subcategory===s?C.accent:C.textSub,cursor:"pointer",fontSize:11}}>
+                    style={{padding:"5px 10px",borderRadius:8,border:"1px solid "+(form.subcategory===s?C.accent:C.border),background:form.subcategory===s?C.accentDim:"transparent",color:form.subcategory===s?C.accent:C.textSub,cursor:"pointer",fontSize:11}}>
                     {s}
                   </button>
                 ))}
@@ -491,7 +491,7 @@ function TaskModal({ onClose, onAdd, defaultDate, taskCats=DEFAULT_TASK_CATS }) 
             <div style={{display:"flex",gap:6}}>
               {PRIORITIES.map(p=>(
                 <button key={p.id} onClick={()=>set("priority",p.id)}
-                  style={{flex:1,padding:"7px",borderRadius:8,border:`1px solid ${form.priority===p.id?p.color:C.border}`,background:form.priority===p.id?p.color+"22":"transparent",color:form.priority===p.id?p.color:C.textSub,cursor:"pointer",fontSize:12,fontWeight:600}}>
+                  style={{flex:1,padding:"7px",borderRadius:8,border:"1px solid "+(form.priority===p.id?p.color:C.border),background:form.priority===p.id?p.color+"22":"transparent",color:form.priority===p.id?p.color:C.textSub,cursor:"pointer",fontSize:12,fontWeight:600}}>
                   {p.label}
                 </button>
               ))}
@@ -543,7 +543,7 @@ function TaskCatManager({ taskCats, saveTaskCats, onClose }) {
             <input value={newCat.label} onChange={e=>setNewCat(n=>({...n,label:e.target.value}))} placeholder="Nombre"
               style={{width:"100%",background:C.bg,border:`1px solid ${C.border}`,borderRadius:8,padding:"7px 10px",color:C.text,fontSize:13}}/>
             <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
-              {icons.map(ic=><button key={ic} onClick={()=>setNewCat(n=>({...n,icon:ic}))} style={{width:30,height:30,borderRadius:7,border:`1px solid ${newCat.icon===ic?C.accent:C.border}`,background:newCat.icon===ic?C.accentDim:"transparent",cursor:"pointer",fontSize:15}}>{ic}</button>)}
+              {icons.map(ic=><button key={ic} onClick={()=>setNewCat(n=>({...n,icon:ic}))} style={{width:30,height:30,borderRadius:7,border:"1px solid "+(newCat.icon===ic?C.accent:C.border),background:newCat.icon===ic?C.accentDim:"transparent",cursor:"pointer",fontSize:15}}>{ic}</button>)}
             </div>
             <div style={{display:"flex",gap:6}}>
               <button onClick={()=>newCat.label&&addCat(newCat)} style={{flex:1,background:C.accent,border:"none",borderRadius:8,padding:"7px",color:"#000",fontWeight:700,fontSize:12,cursor:"pointer"}}>Crear</button>
@@ -564,7 +564,7 @@ function TaskCatManager({ taskCats, saveTaskCats, onClose }) {
                 <div style={{padding:"0 12px 10px",borderTop:`1px solid ${C.border}`,display:"grid",gap:6}}>
                   <input defaultValue={cat.label} onBlur={e=>updateCat(idx,{label:e.target.value})} style={{width:"100%",background:C.bg,border:`1px solid ${C.border}`,borderRadius:7,padding:"6px 9px",color:C.text,fontSize:12,marginTop:8}}/>
                   <div style={{display:"flex",gap:3,flexWrap:"wrap"}}>
-                    {icons.map(ic=><button key={ic} onClick={()=>updateCat(idx,{icon:ic})} style={{width:27,height:27,borderRadius:6,border:`1px solid ${cat.icon===ic?C.accent:C.border}`,background:cat.icon===ic?C.accentDim:"transparent",cursor:"pointer",fontSize:13}}>{ic}</button>)}
+                    {icons.map(ic=><button key={ic} onClick={()=>updateCat(idx,{icon:ic})} style={{width:27,height:27,borderRadius:6,border:"1px solid "+(cat.icon===ic?C.accent:C.border),background:cat.icon===ic?C.accentDim:"transparent",cursor:"pointer",fontSize:13}}>{ic}</button>)}
                   </div>
                 </div>
               )}
