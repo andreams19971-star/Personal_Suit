@@ -420,7 +420,7 @@ function Dashboard({transactions,accounts,loans,totalIncome,totalExpense,netBala
       <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:16,padding:16}}>
         <SectionHeader title="Movimientos Recientes" action="Ver todos" onAction={()=>setView("movements")}/>
         <div style={{marginTop:8}}>
-          {monthTxs.slice(0,5).map(tx=><TxRow key={tx.id} tx={tx} compact/>)}
+          {monthTxs.slice(0,5).map(tx=><TxRow key={tx.id} tx={tx} compact categories={categories}/>)}
           {monthTxs.length===0&&<EmptyState label="Sin movimientos este mes"/>}
         </div>
       </div>
@@ -459,7 +459,7 @@ function Movements({transactions,filterMonth,deleteTransaction,openAddModal,loan
           </div>
           <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:16,overflow:"hidden"}}>
             {grouped[date].map((tx,i)=>(
-              <TxRow key={tx.id} tx={tx} onDelete={()=>deleteTransaction(tx.id)} showDivider={i<grouped[date].length-1}/>
+              <TxRow key={tx.id} tx={tx} onDelete={()=>deleteTransaction(tx.id)} showDivider={i<grouped[date].length-1} categories={categories}/>
             ))}
           </div>
         </div>
@@ -504,7 +504,7 @@ function AccountsView({accounts,transactions,selAccount,setSelAccount,filterMont
         {accTxs.length===0&&<EmptyState label="Sin movimientos en esta cuenta"/>}
         <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:16,overflow:"hidden"}}>
           {accTxs.sort((a,b)=>b.date.localeCompare(a.date)).map((tx,i)=>(
-            <TxRow key={tx.id} tx={tx} showDivider={i<accTxs.length-1}/>
+            <TxRow key={tx.id} tx={tx} showDivider={i<accTxs.length-1} categories={categories}/>
           ))}
         </div>
       </div>
@@ -658,7 +658,7 @@ function LoanDetail({loan,transactions,onBack,setShowPayModal,accounts}){
         <div>
           <div style={{fontSize:13,fontWeight:700,color:C.textMuted,marginBottom:10}}>MOVIMIENTOS VINCULADOS</div>
           <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:16,overflow:"hidden"}}>
-            {loanTx.map((tx,i)=><TxRow key={tx.id} tx={tx} showDivider={i<loanTx.length-1}/>)}
+            {loanTx.map((tx,i)=><TxRow key={tx.id} tx={tx} showDivider={i<loanTx.length-1} categories={categories}/>)}
           </div>
         </div>
       )}
@@ -1659,7 +1659,7 @@ function PayModal({onClose,loan,onPay,accounts}){
 }
 
 // ─── MICRO COMPONENTS ─────────────────────────────────────────────────────────
-function TxRow({tx,onDelete,showDivider=false,compact=false}){
+function TxRow({tx,onDelete,showDivider=false,compact=false,categories=DEFAULT_CATEGORIES}){
   const allCats=[...categories.income,...categories.expense];
   const cat=allCats.find(c=>c.id===tx.category)||{icon:"📦",label:tx.category};
   const acc=ACCOUNTS_DEF.find(a=>a.id===tx.account)||{icon:"💰",label:tx.account};
