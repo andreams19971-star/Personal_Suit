@@ -149,7 +149,7 @@ export default function ApartamentoApp({ onBack }) {
 
       {/* CONTENT */}
       <div style={{flex:1,overflowY:"auto",overflowX:"hidden",paddingBottom:58,minHeight:0}}>
-        {view==="dashboard" && <DashboardView rooms={rooms} reservations={reservations} expenses={expenses} totalIncome={totalIncome} totalCollected={totalCollected} totalExpenses={totalExpenses} occupancyRate={occupancyRate} getRoomStatus={getRoomStatus} setModal={setModal} updateReservationStatus={updateReservationStatus} showToast={showToast}/>}
+        {view==="dashboard" && <DashboardView rooms={rooms} reservations={reservations} expenses={expenses} totalExpenses={totalExpenses} occupancyRate={occupancyRate} getRoomStatus={getRoomStatus} setModal={setModal} updateReservationStatus={updateReservationStatus} showToast={showToast}/>}
         {view==="rooms"     && <RoomsView rooms={rooms} reservations={reservations} getRoomStatus={getRoomStatus} setModal={setModal} updateReservationStatus={updateReservationStatus} deleteReservation={deleteReservation}/>}
         {view==="calendar"  && <CalendarView reservations={reservations} rooms={rooms} calMonth={calMonth} setCalMonth={setCalMonth} setModal={setModal}/>}
         {view==="finances"  && <FinancesView reservations={reservations} expenses={expenses} totalExpenses={totalExpenses} setModal={setModal} deleteExpense={dbDeleteExpense}/>}
@@ -176,11 +176,10 @@ export default function ApartamentoApp({ onBack }) {
 }
 
 // ─── DASHBOARD ────────────────────────────────────────────────────────────────
-function DashboardView({rooms,reservations,expenses,totalIncome,totalCollected,totalExpenses,occupancyRate,getRoomStatus,setModal,updateReservationStatus,showToast}) {
+function DashboardView({rooms,reservations,expenses,totalExpenses,occupancyRate,getRoomStatus,setModal,updateReservationStatus,showToast}) {
   const today = td();
   const activeRes   = reservations.filter(r=>r.checkIn<=today&&r.checkOut>today);
   const upcomingRes = reservations.filter(r=>r.checkIn>today&&r.status==="reserved").sort((a,b)=>a.checkIn.localeCompare(b.checkIn)).slice(0,4);
-  const neto = totalCollected - totalExpenses;
 
   return (
     <div style={{padding:"14px",display:"grid",gap:14,boxSizing:"border-box",overflowX:"hidden"}} className="ap-fu">
@@ -450,14 +449,13 @@ function CalendarView({reservations,rooms,calMonth,setCalMonth,setModal}) {
 }
 
 // ─── FINANCES VIEW ────────────────────────────────────────────────────────────
-function FinancesView({reservations,expenses,totalIncome,totalCollected,totalExpenses,setModal,deleteExpense}) {
-  const neto = totalCollected - totalExpenses;
-  const pending = totalIncome - totalCollected;
+function FinancesView({reservations,expenses,totalExpenses,setModal,deleteExpense}) {
+  const neto = -totalExpenses;
 
   return(
     <div style={{padding:"14px",display:"grid",gap:14,boxSizing:"border-box"}} className="ap-fu">
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-        {[[C.accent,"💰","Facturado",fmt(totalIncome)],[C.green,"✓","Cobrado",fmt(totalCollected)],[C.yellow,"⏳","Por cobrar",fmt(pending)],[neto>=0?C.green:C.red,"=","Neto",fmt(neto)]].map(([color,icon,label,val])=>(
+        {[[C.red,"🔧","Gastos del mes",fmt(totalExpenses)],[neto<=0?C.red:C.green,"=","Neto",fmt(neto)]].map(([color,icon,label,val])=>(
           <div key={label} style={{background:C.card,border:"1px solid "+((color)+"33"),borderRadius:14,padding:14}}>
             <div style={{fontSize:18,marginBottom:4}}>{icon}</div>
             <div style={{fontSize:10,color:C.textMuted,marginBottom:2}}>{label.toUpperCase()}</div>
@@ -467,27 +465,6 @@ function FinancesView({reservations,expenses,totalIncome,totalCollected,totalExp
       </div>
 
       <button onClick={()=>setModal({type:"addExpense"})} style={{background:C.redDim,border:"1px solid "+((C.red)+"44"),color:C.red,borderRadius:12,padding:12,fontWeight:700,fontSize:13,cursor:"pointer"}}>+ Registrar gasto</button>
-
-      {/* PENDIENTES DE COBRO */}
-      {reservations.filter(r=>r.paid<r.total).length>0&&(
-        <div>
-          <div style={{fontSize:12,fontWeight:700,color:C.yellow,marginBottom:8}}>⏳ PENDIENTES DE COBRO</div>
-          <div style={{display:"grid",gap:8}}>
-            {reservations.filter(r=>r.paid<r.total).map(res=>(
-              <div key={res.id} style={{background:C.card,border:"1px solid "+((C.yellow)+"33"),borderRadius:12,padding:"10px 14px",display:"flex",justifyContent:"space-between",alignItems:"center",gap:10}}>
-                <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontSize:13,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{res.guest}</div>
-                  <div style={{fontSize:10,color:C.textMuted}}>{res.checkIn}</div>
-                </div>
-                <div style={{textAlign:"right",flexShrink:0}}>
-                  <div style={{fontSize:13,fontWeight:800,color:C.yellow}}>{fmt(res.total-(res.paid||0))}</div>
-                  <div style={{fontSize:10,color:C.textMuted}}>pendiente</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* GASTOS */}
       <div>
