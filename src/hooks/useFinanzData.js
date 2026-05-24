@@ -50,7 +50,27 @@ export function useFinanzData() {
     setOnline(val)
   }
 
-  useEffect(() => { loadAll() }, [])
+  useEffect(() => {
+    loadAll()
+
+    // Suscribirse a cambios en tiempo real en transactions
+    const channel = supabase
+      .channel('transactions-changes')
+      .on('postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'transactions' },
+        (payload) => {
+          console.log('[FinanzData] Nueva transacción en tiempo real:', payload.new.id)
+          setTransactions(prev => {
+            // Evitar duplicados
+            if (prev.find(t => t.id === payload.new.id)) return prev
+            return [rowToTx(payload.new), ...prev]
+          })
+        }
+      )
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [])
 
   async function loadAll() {
     setLoading(true)
