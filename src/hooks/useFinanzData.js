@@ -70,7 +70,7 @@ export function useFinanzData() {
         setAccountBalances(prev => ({ ...prev, ...balMap }))
       }
       setOnlineState(true)
-      console.log(`[FinanzData] ✅ Online — ${txRes.data?.length||0} txs, ${loanRes.data?.length||0} loans`)
+      console.log("[FinanzData] ✅ Online — "+(txRes.data?.length||0)+" txs, "+(loanRes.data?.length||0)+" loans")
     } catch (err) {
       console.warn('[FinanzData] ❌ Offline →', err.message)
       const s = seed()

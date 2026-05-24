@@ -74,7 +74,7 @@ export default function App() {
       `}</style>
 
       {/* HEADER */}
-      <div style={{ padding: "52px 24px 20px", animation: "launcher-fadeUp .5s ease both" }}>
+      <div style={{ paddingTop: "max(52px, calc(env(safe-area-inset-top) + 20px))", paddingBottom: "20px", paddingLeft: "24px", paddingRight: "24px", animation: "launcher-fadeUp .5s ease both" }}>
         <div style={{ fontSize: 12, color: "#3A4A65", fontWeight: 600, letterSpacing: 2, marginBottom: 10 }}>
           MI SUITE PERSONAL
         </div>

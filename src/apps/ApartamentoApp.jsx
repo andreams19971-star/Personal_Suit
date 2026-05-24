@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useApartamentoData } from "../hooks/useApartamentoData.js";
 
 // ─── COLORES ──────────────────────────────────────────────────────────────────
 const C = {
@@ -54,65 +55,41 @@ function seedData() {
 }
 
 export default function ApartamentoApp({ onBack }) {
-  const [data, setData]       = useState(seedData);
-  const [view, setView]       = useState("dashboard");
+  const {
+    rooms, reservations, expenses, loading, online,
+    addReservation: dbAddRes, updateReservationStatus: dbUpdateStatus,
+    deleteReservation: dbDeleteRes, addExpense: dbAddExpense,
+    deleteExpense: dbDeleteExpense, updateRoom: dbUpdateRoom,
+  } = useApartamentoData();
+
+  const [view, setView]         = useState("dashboard");
   const [calMonth, setCalMonth] = useState(new Date());
-  const [selRoom,  setSelRoom]  = useState(null);
-  const [modal, setModal]     = useState(null);
-  const [toast, setToast]     = useState(null);
+  const [modal, setModal]       = useState(null);
+  const [toast, setToast]       = useState(null);
 
   const showToast = (m, t="ok") => { setToast({m,t}); setTimeout(()=>setToast(null),2200); };
 
-  // ── ACCIONES ──
-  const addReservation = (res) => {
-    const nights = Math.max(1, Math.round((new Date(res.checkOut)-new Date(res.checkIn))/86400000));
-    const room   = data.rooms.find(r=>r.id===res.roomId);
-    const newRes = { ...res, id:"RES"+Date.now(), nights, total:0, paid:0, status:"reserved" };
-    const updated = { ...data, reservations: [newRes, ...data.reservations] };
-    setData(updated);
-    // Sync to localStorage for Planner calendar
-    syncToPlanner(updated.reservations, updated.rooms);
+  const addReservation = async (res) => {
+    await dbAddRes(res);
     showToast("Reserva creada ✓");
     setModal(null);
   };
-
-  const updateReservationStatus = (id, status) => {
-    setData(d => {
-      const updated = { ...d, reservations: d.reservations.map(r => r.id!==id?r:{...r,status}) };
-      syncToPlanner(updated.reservations, updated.rooms);
-      return updated;
-    });
+  const updateReservationStatus = async (id, status) => {
+    await dbUpdateStatus(id, status);
     showToast("Estado actualizado ✓");
   };
-
-  const deleteReservation = (id) => {
-    setData(d => {
-      const updated = { ...d, reservations: d.reservations.filter(r=>r.id!==id) };
-      syncToPlanner(updated.reservations, updated.rooms);
-      return updated;
-    });
+  const deleteReservation = async (id) => {
+    await dbDeleteRes(id);
     showToast("Reserva eliminada","err");
     setModal(null);
   };
-
-  function syncToPlanner(reservations, rooms) {
-    try {
-      const forPlanner = reservations.map(r => {
-        const room = rooms.find(rm=>rm.id===r.roomId);
-        return { ...r, roomName: room?.name||r.roomId };
-      });
-      localStorage.setItem("apt_reservations", JSON.stringify(forPlanner));
-    } catch {}
-  }
-
-  const addExpense = (exp) => {
-    setData(d => ({ ...d, expenses: [{ ...exp, id:"E"+Date.now() }, ...d.expenses] }));
+  const addExpense = async (exp) => {
+    await dbAddExpense(exp);
     showToast("Gasto registrado ✓");
     setModal(null);
   };
-
-  const updateRoom = (roomId, updates) => {
-    setData(d => ({ ...d, rooms: d.rooms.map(r => r.id!==roomId?r:{...r,...updates}) }));
+  const updateRoom = async (roomId, updates) => {
+    await dbUpdateRoom(roomId, updates);
     showToast("Habitación actualizada ✓");
     setModal(null);
   };
@@ -120,17 +97,14 @@ export default function ApartamentoApp({ onBack }) {
   // ── STATS ──
   const now = new Date();
   const mKey = now.toISOString().slice(0,7);
-  const mRes = data.reservations.filter(r => r.checkIn.startsWith(mKey) || r.checkOut.startsWith(mKey));
-  const totalIncome  = data.reservations.filter(r=>r.checkIn.startsWith(mKey)).reduce((s,r)=>s+r.total,0);
-  const totalCollected = data.reservations.filter(r=>r.checkIn.startsWith(mKey)).reduce((s,r)=>s+(r.paid||0),0);
-  const totalExpenses= data.expenses.reduce((s,e)=>s+e.amount,0);
-  const occupancyRate = Math.round((data.reservations.filter(r=>r.status==="occupied"||r.status==="reserved").length / Math.max(data.rooms.length,1)) * 100);
+  const totalExpenses  = expenses.reduce((s,e)=>s+e.amount,0);
+  const occupancyRate  = Math.round((reservations.filter(r=>r.status==="occupied"||r.status==="reserved").length / Math.max(rooms.length,1)) * 100);
 
   const getRoomStatus = (roomId) => {
     const today = td();
-    const active = data.reservations.find(r => r.roomId===roomId && r.checkIn<=today && r.checkOut>today);
+    const active = reservations.find(r => r.roomId===roomId && r.checkIn<=today && r.checkOut>today);
     if (active) return active.status === "occupied" ? "occupied" : "reserved";
-    const upcoming = data.reservations.find(r => r.roomId===roomId && r.checkIn>today && r.status==="reserved");
+    const upcoming = reservations.find(r => r.roomId===roomId && r.checkIn>today && r.status==="reserved");
     if (upcoming) return "reserved";
     return "available";
   };
@@ -152,8 +126,15 @@ export default function ApartamentoApp({ onBack }) {
         ::-webkit-scrollbar{display:none}*{scrollbar-width:none}
         @keyframes ap-su{from{transform:translateY(60px);opacity:0}to{transform:translateY(0);opacity:1}}
         @keyframes ap-fu{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-        .ap-fu{animation:ap-fu .3s ease both}.bp:active{transform:scale(.97)}.hr:hover{background:${C.cardHover}!important}
+        @keyframes ap-spin{to{transform:rotate(360deg)}}
+        .ap-fu{animation:ap-fu .3s ease both}.bp:active{transform:scale(.97)}
       `}</style>
+      {loading && (
+        <div style={{position:"absolute",inset:0,background:C.bg,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",zIndex:50,gap:14}}>
+          <div style={{width:32,height:32,border:"3px solid "+C.border,borderTop:"3px solid "+C.accent,borderRadius:"50%",animation:"ap-spin .8s linear infinite"}}/>
+          <div style={{fontSize:14,color:C.textMuted}}>Cargando datos...</div>
+        </div>
+      )}
 
       {/* TOP BAR */}
       <div style={{background:C.surface,borderBottom:"1px solid "+(C.border),
@@ -168,10 +149,10 @@ export default function ApartamentoApp({ onBack }) {
 
       {/* CONTENT */}
       <div style={{flex:1,overflowY:"auto",overflowX:"hidden",paddingBottom:58,minHeight:0}}>
-        {view==="dashboard" && <DashboardView rooms={data.rooms} reservations={data.reservations} expenses={data.expenses} totalIncome={totalIncome} totalCollected={totalCollected} totalExpenses={totalExpenses} occupancyRate={occupancyRate} getRoomStatus={getRoomStatus} setModal={setModal} updateReservationStatus={updateReservationStatus} showToast={showToast}/>}
-        {view==="rooms"     && <RoomsView rooms={data.rooms} reservations={data.reservations} getRoomStatus={getRoomStatus} setModal={setModal} updateReservationStatus={updateReservationStatus} deleteReservation={deleteReservation}/>}
-        {view==="calendar"  && <CalendarView reservations={data.reservations} rooms={data.rooms} calMonth={calMonth} setCalMonth={setCalMonth} setModal={setModal}/>}
-        {view==="finances"  && <FinancesView reservations={data.reservations} expenses={data.expenses} totalIncome={totalIncome} totalCollected={totalCollected} totalExpenses={totalExpenses} setModal={setModal} deleteExpense={id=>setData(d=>({...d,expenses:d.expenses.filter(e=>e.id!==id)}))}/>}
+        {view==="dashboard" && <DashboardView rooms={rooms} reservations={reservations} expenses={expenses} totalExpenses={totalExpenses} occupancyRate={occupancyRate} getRoomStatus={getRoomStatus} setModal={setModal} updateReservationStatus={updateReservationStatus} showToast={showToast}/>}
+        {view==="rooms"     && <RoomsView rooms={rooms} reservations={reservations} getRoomStatus={getRoomStatus} setModal={setModal} updateReservationStatus={updateReservationStatus} deleteReservation={deleteReservation}/>}
+        {view==="calendar"  && <CalendarView reservations={reservations} rooms={rooms} calMonth={calMonth} setCalMonth={setCalMonth} setModal={setModal}/>}
+        {view==="finances"  && <FinancesView reservations={reservations} expenses={expenses} totalExpenses={totalExpenses} setModal={setModal} deleteExpense={dbDeleteExpense}/>}
       </div>
 
       {/* BOTTOM NAV */}
@@ -184,10 +165,10 @@ export default function ApartamentoApp({ onBack }) {
       </div>
 
       {/* MODALS */}
-      {modal?.type==="newReservation" && <ReservationModal rooms={data.rooms} onClose={()=>setModal(null)} onAdd={addReservation} editData={modal.data}/>}
-      {modal?.type==="viewReservation"&& <ReservationDetailModal res={modal.data} rooms={data.rooms} onClose={()=>setModal(null)} onStatusChange={updateReservationStatus} onDelete={deleteReservation}/>}
-      {modal?.type==="addExpense"     && <ExpenseModal onClose={()=>setModal(null)} onAdd={addExpense} rooms={data.rooms}/>}
-      {modal?.type==="editRoom"       && <RoomEditModal rooms={data.rooms} onClose={()=>setModal(null)} onSave={updateRoom}/>}
+      {modal?.type==="newReservation" && <ReservationModal rooms={rooms} onClose={()=>setModal(null)} onAdd={addReservation} editData={modal.data}/>}
+      {modal?.type==="viewReservation"&& <ReservationDetailModal res={modal.data} rooms={rooms} onClose={()=>setModal(null)} onStatusChange={updateReservationStatus} onDelete={deleteReservation}/>}
+      {modal?.type==="addExpense"     && <ExpenseModal onClose={()=>setModal(null)} onAdd={addExpense} rooms={rooms}/>}
+      {modal?.type==="editRoom"       && <RoomEditModal rooms={rooms} onClose={()=>setModal(null)} onSave={updateRoom}/>}
 
       {toast && <div style={{position:"fixed",bottom:68,left:"50%",transform:"translateX(-50%)",background:toast.t==="err"?C.red:C.accent,color:toast.t==="err"?"#fff":"#000",padding:"8px 20px",borderRadius:100,fontWeight:700,fontSize:13,zIndex:999,whiteSpace:"nowrap",animation:"ap-su .25s ease"}}>{toast.m}</div>}
     </div>
@@ -195,109 +176,131 @@ export default function ApartamentoApp({ onBack }) {
 }
 
 // ─── DASHBOARD ────────────────────────────────────────────────────────────────
-function DashboardView({rooms,reservations,expenses,totalIncome,totalCollected,totalExpenses,occupancyRate,getRoomStatus,setModal,updateReservationStatus,showToast}) {
+function DashboardView({rooms,reservations,expenses,totalExpenses,occupancyRate,getRoomStatus,setModal,updateReservationStatus,showToast}) {
   const today = td();
   const activeRes   = reservations.filter(r=>r.checkIn<=today&&r.checkOut>today);
-  const upcomingRes = reservations.filter(r=>r.checkIn>today&&r.status==="reserved").sort((a,b)=>a.checkIn.localeCompare(b.checkIn)).slice(0,4);
-  const neto = totalCollected - totalExpenses;
+  const upcomingRes = reservations.filter(r=>r.checkIn>today&&r.status==="reserved").sort((a,b)=>a.checkIn.localeCompare(b.checkIn)).slice(0,3);
+  const availableCount = rooms.filter(r=>getRoomStatus(r.id)==="available").length;
+  const occupiedCount  = rooms.filter(r=>["occupied","reserved"].includes(getRoomStatus(r.id))).length;
 
   return (
-    <div style={{padding:"14px",display:"grid",gap:14,boxSizing:"border-box",overflowX:"hidden"}} className="ap-fu">
+    <div style={{padding:"14px",display:"grid",gap:12,boxSizing:"border-box",overflowX:"hidden"}} className="ap-fu">
 
       {/* HERO */}
-      <div style={{background:`linear-gradient(135deg,${C.accentDim},${C.card})`,border:"1px solid "+((C.accent)+"44"),borderRadius:18,padding:18,position:"relative",overflow:"hidden"}}>
-        <div style={{position:"absolute",top:-20,right:-20,width:90,height:90,borderRadius:"50%",background:`${C.accent}0D`,pointerEvents:"none"}}/>
-        <div style={{fontSize:11,color:C.accent,fontWeight:700,marginBottom:4}}>ESTE MES</div>
-        <div style={{fontSize:28,fontWeight:900,letterSpacing:-1}}>{reservations.filter(r=>r.status==="occupied"||r.status==="reserved").length} hospedajes</div>
-        <div style={{fontSize:12,color:C.textMuted,marginTop:2}}>Habitaciones activas este mes</div>
-        <div style={{display:"flex",gap:12,marginTop:14,flexWrap:"wrap"}}>
-          {[[C.accent,"🏠 Ocupación",occupancyRate+"%"],[C.green,"✅ Disponibles",rooms.filter(r=>getRoomStatus(r.id)==="available").length+" hab"],[C.red,"🔧 Gastos",fmt(totalExpenses)],[C.yellow,"📅 Reservadas",reservations.filter(r=>r.status==="reserved").length+" hab"]].map(([color,label,val])=>(
-            <div key={label} style={{flex:"1 1 0",minWidth:0}}>
-              <div style={{fontSize:9,color,fontWeight:700,whiteSpace:"nowrap"}}>{label}</div>
-              <div style={{fontSize:13,fontWeight:800,overflow:"hidden",textOverflow:"ellipsis"}}>{val}</div>
+      <div style={{background:"linear-gradient(135deg,"+C.accentDim+","+C.card+")",border:"1px solid "+(C.accent+"33"),borderRadius:18,padding:18,position:"relative",overflow:"hidden"}}>
+        <div style={{position:"absolute",top:-20,right:-20,width:100,height:100,borderRadius:"50%",background:C.accent+"08",pointerEvents:"none"}}/>
+        <div style={{fontSize:11,color:C.accent,fontWeight:700,letterSpacing:1,marginBottom:6}}>ESTADO DEL APARTAMENTO</div>
+        <div style={{display:"flex",alignItems:"center",gap:16,marginBottom:14}}>
+          <div style={{flex:1}}>
+            <div style={{fontSize:26,fontWeight:900,letterSpacing:-1,lineHeight:1}}>{occupiedCount}/{rooms.length}</div>
+            <div style={{fontSize:12,color:C.textMuted,marginTop:2}}>habitaciones ocupadas</div>
+          </div>
+          <div style={{textAlign:"right"}}>
+            <div style={{fontSize:22,fontWeight:900,color:occupancyRate>0?C.accent:C.textMuted}}>{occupancyRate}%</div>
+            <div style={{fontSize:11,color:C.textMuted}}>ocupación</div>
+          </div>
+        </div>
+        <div style={{display:"flex",gap:8}}>
+          {[
+            [C.green,  "✅", availableCount+" disponibles"],
+            [C.accent, "📅", occupiedCount+" activas"],
+            [C.red,    "🔧", fmt(totalExpenses)+" gastos"],
+          ].map(([color,icon,val])=>(
+            <div key={val} style={{flex:1,background:C.bg+"99",borderRadius:10,padding:"8px 10px",textAlign:"center"}}>
+              <div style={{fontSize:14}}>{icon}</div>
+              <div style={{fontSize:10,color,fontWeight:700,marginTop:2,lineHeight:1.2}}>{val}</div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* ESTADO HABITACIONES */}
-      <div>
-        <div style={{fontSize:13,fontWeight:700,marginBottom:10}}>Estado de habitaciones</div>
-        <div style={{display:"grid",gap:10}}>
-          {rooms.map(room=>{
-            const status = getRoomStatus(room.id);
-            const sc = STATUS_CONFIG[status];
-            const active = reservations.find(r=>r.roomId===room.id&&r.checkIn<=today&&r.checkOut>today);
-            const next   = reservations.filter(r=>r.roomId===room.id&&r.checkIn>today&&r.status==="reserved").sort((a,b)=>a.checkIn.localeCompare(b.checkIn))[0];
-            return (
-              <div key={room.id} style={{background:C.card,border:"1px solid "+((room.color)+"33"),borderRadius:16,padding:14}}>
-                <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:active||next?10:0}}>
-                  <div style={{width:42,height:42,borderRadius:12,background:room.color+"22",border:"1px solid "+((room.color)+"44"),display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>🛏️</div>
-                  <div style={{flex:1,minWidth:0}}>
-                    <div style={{fontSize:14,fontWeight:800}}>{room.name}</div>
-                    <div style={{fontSize:11,color:C.textMuted,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{room.description}</div>
-                  </div>
-                  <div style={{background:sc.bg,border:"1px solid "+((sc.color)+"44"),borderRadius:100,padding:"4px 10px",fontSize:11,fontWeight:700,color:sc.color,flexShrink:0}}>
-                    {sc.icon} {sc.label}
-                  </div>
-                </div>
-                {/* Siempre mostrar botones de estado */}
-                <div style={{background:C.bg,borderRadius:10,padding:"8px 12px",fontSize:12}}>
-                  {active && <div style={{fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",marginBottom:4}}>👤 {active.guest} · hasta {active.checkOut}</div>}
-                  {!active && next && <div style={{color:C.accent,fontWeight:700,marginBottom:4}}>📅 Próximo: {next.guest} · {next.checkIn}</div>}
-                  {!active && !next && <div style={{color:C.textMuted,marginBottom:4}}>Sin huésped activo</div>}
-                  <div style={{display:"flex",gap:5,marginTop:4,flexWrap:"wrap"}}>
-                    {["available","reserved","occupied","cleaning","blocked"].map(s=>(
-                      <button key={s} onClick={e=>{e.stopPropagation();
-                        const target = active||next;
-                        if(target) updateReservationStatus(target.id,s);
-                        else showToast("Sin reserva activa para cambiar estado","err");
-                      }}
-                        style={{flex:"1 1 auto",padding:"5px 4px",borderRadius:7,border:"1px solid "+((STATUS_CONFIG[s].color)+"44"),background:getRoomStatus(room.id)===s?STATUS_CONFIG[s].bg:"transparent",color:STATUS_CONFIG[s].color,cursor:"pointer",fontSize:9,fontWeight:600,whiteSpace:"nowrap"}}>
-                        {STATUS_CONFIG[s].icon}
-                      </button>
-                    ))}
-                    <button onClick={e=>{e.stopPropagation();setModal({type:"viewReservation",data:active||next});}}
-                      style={{flex:"2 1 auto",padding:"5px",borderRadius:7,border:"1px solid "+(C.border),background:"transparent",color:C.textSub,cursor:"pointer",fontSize:9,fontWeight:600,opacity:(active||next)?1:0.4}}>
-                      Ver detalle
-                    </button>
-                  </div>
-                  {!active&&!next&&(
-                    <button onClick={e=>{e.stopPropagation();setModal({type:"newReservation",data:{roomId:room.id}});}}
-                      style={{width:"100%",marginTop:6,padding:"6px",borderRadius:8,border:"1px solid "+((room.color)+"44"),background:room.color+"11",color:room.color,cursor:"pointer",fontSize:11,fontWeight:600}}>
-                      + Agregar reserva
-                    </button>
-                  )}
-                </div>
+      {/* HABITACIONES */}
+      <div style={{fontSize:13,fontWeight:700,marginBottom:-4}}>Estado de habitaciones</div>
+      {rooms.map(room=>{
+        const status = getRoomStatus(room.id);
+        const sc = STATUS_CONFIG[status];
+        const active = reservations.find(r=>r.roomId===room.id&&r.checkIn<=today&&r.checkOut>today);
+        const next   = reservations.filter(r=>r.roomId===room.id&&r.checkIn>today&&r.status==="reserved").sort((a,b)=>a.checkIn.localeCompare(b.checkIn))[0];
+        return (
+          <div key={room.id} style={{background:C.card,border:"1px solid "+(room.color+"22"),borderRadius:16,overflow:"hidden"}}>
+            {/* Header */}
+            <div style={{padding:"12px 14px",display:"flex",alignItems:"center",gap:10}}>
+              <div style={{width:38,height:38,borderRadius:10,background:room.color+"22",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>🛏️</div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:14,fontWeight:800}}>{room.name}</div>
+                <div style={{fontSize:10,color:C.textMuted,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{room.description}</div>
               </div>
-            );
-          })}
-        </div>
-      </div>
+              <div style={{background:sc.bg,borderRadius:100,padding:"3px 10px",fontSize:11,fontWeight:700,color:sc.color,flexShrink:0,whiteSpace:"nowrap"}}>
+                {sc.icon} {sc.label}
+              </div>
+            </div>
+            {/* Huésped info */}
+            <div style={{padding:"0 14px 12px"}}>
+              {active && (
+                <div style={{background:C.bg,borderRadius:8,padding:"6px 10px",marginBottom:8,fontSize:12}}>
+                  <span style={{fontWeight:700}}>👤 {active.guest}</span>
+                  <span style={{color:C.textMuted}}> · sale el {active.checkOut}</span>
+                </div>
+              )}
+              {!active && next && (
+                <div style={{background:C.accentDim,borderRadius:8,padding:"6px 10px",marginBottom:8,fontSize:12,color:C.accent}}>
+                  📅 Próximo: <strong>{next.guest}</strong> · llega el {next.checkIn}
+                </div>
+              )}
+              {/* Botones de estado */}
+              <div style={{display:"flex",gap:5}}>
+                {["available","reserved","occupied","cleaning","blocked"].map(s=>(
+                  <button key={s} onClick={e=>{
+                    e.stopPropagation();
+                    const target = active||next;
+                    if(target) updateReservationStatus(target.id,s);
+                    else showToast("Sin reserva activa","err");
+                  }}
+                    style={{flex:1,padding:"6px 2px",borderRadius:7,border:"1px solid "+(getRoomStatus(room.id)===s?STATUS_CONFIG[s].color+"66":"transparent"),background:getRoomStatus(room.id)===s?STATUS_CONFIG[s].bg:"transparent",color:STATUS_CONFIG[s].color,cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                    {STATUS_CONFIG[s].icon}
+                  </button>
+                ))}
+                <button onClick={e=>{e.stopPropagation();setModal({type:"newReservation",data:{roomId:room.id}});}}
+                  style={{flex:2,padding:"6px",borderRadius:7,border:"1px solid "+(room.color+"33"),background:room.color+"11",color:room.color,cursor:"pointer",fontSize:10,fontWeight:700}}>
+                  + Reserva
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })}
 
-      {/* PRÓXIMAS RESERVAS */}
-      {upcomingRes.length > 0 && (
+      {/* PRÓXIMAS LLEGADAS */}
+      {upcomingRes.length>0&&(
         <div>
-          <div style={{fontSize:13,fontWeight:700,marginBottom:10}}>📅 Próximas llegadas</div>
-          <div style={{background:C.card,border:"1px solid "+(C.border),borderRadius:14,overflow:"hidden"}}>
-            {upcomingRes.map((res,i)=>{
+          <div style={{fontSize:12,fontWeight:700,color:C.textMuted,marginBottom:8}}>📅 PRÓXIMAS LLEGADAS</div>
+          <div style={{display:"grid",gap:6}}>
+            {upcomingRes.map(res=>{
               const room=rooms.find(r=>r.id===res.roomId);
+              const daysLeft=Math.round((new Date(res.checkIn)-new Date())/86400000);
               return(
-                <button key={res.id} onClick={()=>setModal({type:"viewReservation",data:res})} className="hr"
-                  style={{width:"100%",padding:"11px 14px",borderBottom:i<upcomingRes.length-1?"1px solid "+(C.border):"none",display:"flex",alignItems:"center",gap:10,background:"transparent",border:"none",cursor:"pointer",color:C.text,textAlign:"left"}}>
-                  <div style={{width:36,height:36,borderRadius:9,background:room?.color+"22",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>🛏️</div>
+                <button key={res.id} onClick={()=>setModal({type:"viewReservation",data:res})}
+                  style={{background:C.card,border:"1px solid "+(room?.color||C.accent)+"22",borderRadius:12,padding:"10px 14px",cursor:"pointer",textAlign:"left",width:"100%",color:C.text,display:"flex",alignItems:"center",gap:10}}>
+                  <div style={{width:8,minHeight:36,borderRadius:4,background:room?.color||C.accent,flexShrink:0,alignSelf:"stretch"}}/>
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{fontSize:13,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{res.guest}</div>
                     <div style={{fontSize:10,color:C.textMuted}}>{room?.name} · {res.checkIn} → {res.checkOut}</div>
                   </div>
-                  <div style={{textAlign:"right",flexShrink:0}}>
-                    <div style={{fontSize:13,fontWeight:800,color:C.accent}}>{fmt(res.total)}</div>
-                    <div style={{fontSize:10,color:res.paid>=res.total?C.green:C.yellow}}>{res.paid>=res.total?"Pagado":"Pendiente"}</div>
+                  <div style={{fontSize:11,fontWeight:700,color:daysLeft<=1?C.red:daysLeft<=3?C.yellow:C.accent,flexShrink:0}}>
+                    {daysLeft===0?"Hoy":daysLeft===1?"Mañana":"en "+daysLeft+"d"}
                   </div>
                 </button>
               );
             })}
           </div>
+        </div>
+      )}
+
+      {reservations.length===0&&(
+        <div style={{textAlign:"center",padding:"24px 16px",color:C.textMuted,background:C.card,borderRadius:14,border:"1px solid "+C.border}}>
+          <div style={{fontSize:32,marginBottom:8}}>🏠</div>
+          <div style={{fontSize:14,fontWeight:700,color:C.text,marginBottom:4}}>Sin reservas aún</div>
+          <div style={{fontSize:12}}>Toca <strong style={{color:C.accent}}>+ Reserva</strong> para agregar</div>
         </div>
       )}
     </div>
@@ -469,14 +472,13 @@ function CalendarView({reservations,rooms,calMonth,setCalMonth,setModal}) {
 }
 
 // ─── FINANCES VIEW ────────────────────────────────────────────────────────────
-function FinancesView({reservations,expenses,totalIncome,totalCollected,totalExpenses,setModal,deleteExpense}) {
-  const neto = totalCollected - totalExpenses;
-  const pending = totalIncome - totalCollected;
+function FinancesView({reservations,expenses,totalExpenses,setModal,deleteExpense}) {
+  const neto = -totalExpenses;
 
   return(
     <div style={{padding:"14px",display:"grid",gap:14,boxSizing:"border-box"}} className="ap-fu">
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-        {[[C.accent,"💰","Facturado",fmt(totalIncome)],[C.green,"✓","Cobrado",fmt(totalCollected)],[C.yellow,"⏳","Por cobrar",fmt(pending)],[neto>=0?C.green:C.red,"=","Neto",fmt(neto)]].map(([color,icon,label,val])=>(
+        {[[C.red,"🔧","Gastos del mes",fmt(totalExpenses)],[neto<=0?C.red:C.green,"=","Neto",fmt(neto)]].map(([color,icon,label,val])=>(
           <div key={label} style={{background:C.card,border:"1px solid "+((color)+"33"),borderRadius:14,padding:14}}>
             <div style={{fontSize:18,marginBottom:4}}>{icon}</div>
             <div style={{fontSize:10,color:C.textMuted,marginBottom:2}}>{label.toUpperCase()}</div>
@@ -486,27 +488,6 @@ function FinancesView({reservations,expenses,totalIncome,totalCollected,totalExp
       </div>
 
       <button onClick={()=>setModal({type:"addExpense"})} style={{background:C.redDim,border:"1px solid "+((C.red)+"44"),color:C.red,borderRadius:12,padding:12,fontWeight:700,fontSize:13,cursor:"pointer"}}>+ Registrar gasto</button>
-
-      {/* PENDIENTES DE COBRO */}
-      {reservations.filter(r=>r.paid<r.total).length>0&&(
-        <div>
-          <div style={{fontSize:12,fontWeight:700,color:C.yellow,marginBottom:8}}>⏳ PENDIENTES DE COBRO</div>
-          <div style={{display:"grid",gap:8}}>
-            {reservations.filter(r=>r.paid<r.total).map(res=>(
-              <div key={res.id} style={{background:C.card,border:"1px solid "+((C.yellow)+"33"),borderRadius:12,padding:"10px 14px",display:"flex",justifyContent:"space-between",alignItems:"center",gap:10}}>
-                <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontSize:13,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{res.guest}</div>
-                  <div style={{fontSize:10,color:C.textMuted}}>{res.checkIn}</div>
-                </div>
-                <div style={{textAlign:"right",flexShrink:0}}>
-                  <div style={{fontSize:13,fontWeight:800,color:C.yellow}}>{fmt(res.total-(res.paid||0))}</div>
-                  <div style={{fontSize:10,color:C.textMuted}}>pendiente</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* GASTOS */}
       <div>
@@ -569,7 +550,7 @@ function ReservationDetailModal({res,rooms,onClose,onStatusChange,onDelete}) {
   const sc=STATUS_CONFIG[res.status]||STATUS_CONFIG.available;
   return(
     <ModalWrap title="Detalle de Reserva" onClose={onClose}>
-      <div style={{background:`${room?.color||C.accent}22`,border:"1px solid "+((room?.color||C.accent)+"44"),borderRadius:14,padding:14}}>
+      <div style={{background:(room?.color||C.accent)+"22",border:"1px solid "+((room?.color||C.accent)+"44"),borderRadius:14,padding:14}}>
         <div style={{fontSize:16,fontWeight:800,marginBottom:4}}>{res.guest}</div>
         <div style={{fontSize:12,color:C.textMuted,marginBottom:8}}>{room?.name} · {res.platform}</div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>

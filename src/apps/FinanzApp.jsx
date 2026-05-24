@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useFinanzData } from "../hooks/useFinanzData.js";
+import { useCardsData } from "../hooks/useCardsData.js";
 import { useNotifications } from "../hooks/useNotifications.js";
 
 // ─── PALETTE ─────────────────────────────────────────────────────────────────
@@ -131,11 +132,9 @@ export default function FinanzApp({ onBack }){
       }
     } catch {}
   },[]);
-  const [showCardModal, setShowCardModal] = useState(false);
-  const [cards, setCards] = useState([
-    { id:"C1", name:"Visa Bancolombia", bank:"Bancolombia", last4:"4521", color:"#FFD166", icon:"💳", limit:5000000, cutDay:25, payDay:10, balance:0, charges:[] },
-    { id:"C2", name:"Mastercard BBVA",  bank:"BBVA",        last4:"8834", color:"#60A5FA", icon:"💳", limit:8000000, cutDay:15, payDay:5,  balance:0, charges:[] },
-  ]);
+  const {
+    cards, addCharge, deleteCharge, markPaid, saveCard, addCard,
+  } = useCardsData();
   const [showPayModal,setShowPayModal]=useState(null);
   const [showLoanModal,setShowLoanModal]=useState(false);
 
@@ -216,7 +215,7 @@ export default function FinanzApp({ onBack }){
             {view==="dashboard" && <Dashboard transactions={transactions} accounts={computedAccounts} loans={loans} totalIncome={totalIncome} totalExpense={totalExpense} netBalance={netBalance} filterMonth={filterMonth} setView={setView} setSelAccount={setSelAccount} monthTxs={monthTxs} categories={categories}/>}
             {view==="movements" && <Movements transactions={transactions} filterMonth={filterMonth} deleteTransaction={deleteTransaction} openAddModal={openAddModal} loans={loans} categories={categories}/>}
             {view==="accounts"  && <AccountsView accounts={computedAccounts} transactions={transactions} selAccount={selAccount} setSelAccount={setSelAccount} filterMonth={filterMonth} showToast={showToast} categories={categories}/>}
-            {view==="cards"     && <CardsView cards={cards} setCards={setCards} filterMonth={filterMonth} showToast={showToast}/>}
+            {view==="cards"     && <CardsView cards={cards} addCharge={addCharge} deleteCharge={deleteCharge} markPaid={markPaid} saveCard={saveCard} addCard={addCard} filterMonth={filterMonth} showToast={showToast}/>}
             {view==="loans"     && <LoansView loans={loans} transactions={transactions} setShowLoanModal={setShowLoanModal} setShowPayModal={setShowPayModal} accounts={computedAccounts} showToast={showToast} categories={categories}/>}
             {view==="stats"     && <Stats monthTxs={monthTxs} totalIncome={totalIncome} totalExpense={totalExpense} transactions={transactions} filterMonth={filterMonth} categories={categories}/>}
           </div>
@@ -420,7 +419,7 @@ function Dashboard({transactions,accounts,loans,totalIncome,totalExpense,netBala
       <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:16,padding:16}}>
         <SectionHeader title="Movimientos Recientes" action="Ver todos" onAction={()=>setView("movements")}/>
         <div style={{marginTop:8}}>
-          {monthTxs.slice(0,5).map(tx=><TxRow key={tx.id} tx={tx} compact/>)}
+          {monthTxs.slice(0,5).map(tx=><TxRow key={tx.id} tx={tx} compact categories={categories}/>)}
           {monthTxs.length===0&&<EmptyState label="Sin movimientos este mes"/>}
         </div>
       </div>
@@ -459,7 +458,7 @@ function Movements({transactions,filterMonth,deleteTransaction,openAddModal,loan
           </div>
           <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:16,overflow:"hidden"}}>
             {grouped[date].map((tx,i)=>(
-              <TxRow key={tx.id} tx={tx} onDelete={()=>deleteTransaction(tx.id)} showDivider={i<grouped[date].length-1}/>
+              <TxRow key={tx.id} tx={tx} onDelete={()=>deleteTransaction(tx.id)} showDivider={i<grouped[date].length-1} categories={categories}/>
             ))}
           </div>
         </div>
@@ -504,7 +503,7 @@ function AccountsView({accounts,transactions,selAccount,setSelAccount,filterMont
         {accTxs.length===0&&<EmptyState label="Sin movimientos en esta cuenta"/>}
         <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:16,overflow:"hidden"}}>
           {accTxs.sort((a,b)=>b.date.localeCompare(a.date)).map((tx,i)=>(
-            <TxRow key={tx.id} tx={tx} showDivider={i<accTxs.length-1}/>
+            <TxRow key={tx.id} tx={tx} showDivider={i<accTxs.length-1} categories={categories}/>
           ))}
         </div>
       </div>
@@ -523,7 +522,7 @@ function LoansView({loans,transactions,setShowLoanModal,setShowPayModal,accounts
   const detail=selLoan?loans.find(l=>l.id===selLoan):null;
 
   if(detail)return(
-    <LoanDetail loan={detail} transactions={transactions} onBack={()=>setSelLoan(null)} setShowPayModal={setShowPayModal} accounts={accounts}/>
+    <LoanDetail loan={detail} transactions={transactions} onBack={()=>setSelLoan(null)} setShowPayModal={setShowPayModal} accounts={accounts} categories={categories}/>
   );
 
   return(
@@ -596,7 +595,7 @@ function LoansView({loans,transactions,setShowLoanModal,setShowPayModal,accounts
 }
 
 // ─── LOAN DETAIL ──────────────────────────────────────────────────────────────
-function LoanDetail({loan,transactions,onBack,setShowPayModal,accounts}){
+function LoanDetail({loan,transactions,onBack,setShowPayModal,accounts,categories=DEFAULT_CATEGORIES}){
   const acc=accounts.find(a=>a.id===loan.account);
   const pct=Math.round(((loan.amount-loan.balance)/loan.amount)*100);
   const loanTx=transactions.filter(t=>t.loanId===loan.id);
@@ -658,7 +657,7 @@ function LoanDetail({loan,transactions,onBack,setShowPayModal,accounts}){
         <div>
           <div style={{fontSize:13,fontWeight:700,color:C.textMuted,marginBottom:10}}>MOVIMIENTOS VINCULADOS</div>
           <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:16,overflow:"hidden"}}>
-            {loanTx.map((tx,i)=><TxRow key={tx.id} tx={tx} showDivider={i<loanTx.length-1}/>)}
+            {loanTx.map((tx,i)=><TxRow key={tx.id} tx={tx} showDivider={i<loanTx.length-1} categories={categories}/>)}
           </div>
         </div>
       )}
@@ -667,48 +666,18 @@ function LoanDetail({loan,transactions,onBack,setShowPayModal,accounts}){
 }
 
 // ─── TARJETAS DE CRÉDITO ──────────────────────────────────────────────────────
-function CardsView({ cards, setCards, filterMonth, showToast }) {
+function CardsView({ cards, addCharge, deleteCharge, markPaid, saveCard, addCard, filterMonth, showToast }) {
   const [selCard, setSelCard] = useState(cards[0]?.id || null);
   const [showAddCharge, setShowAddCharge] = useState(false);
   const [showEditCard, setShowEditCard] = useState(null);
 
   const card = cards.find(c => c.id === selCard) || cards[0];
 
-  const addCharge = (charge) => {
-    setCards(prev => prev.map(c => c.id !== selCard ? c : {
-      ...c,
-      charges: [{ ...charge, id: "ch-"+Date.now() }, ...(c.charges || [])],
-      balance: (c.balance || 0) + charge.amount,
-    }));
-    showToast("Gasto registrado ✓");
-    setShowAddCharge(false);
-  };
-
-  const deleteCharge = (cardId, chargeId) => {
-    setCards(prev => prev.map(c => {
-      if (c.id !== cardId) return c;
-      const ch = c.charges.find(x => x.id === chargeId);
-      return { ...c, charges: c.charges.filter(x => x.id !== chargeId), balance: Math.max(0, (c.balance||0) - (ch?.amount||0)) };
-    }));
-    showToast("Gasto eliminado", "error");
-  };
-
-  const markPaid = (cardId) => {
-    setCards(prev => prev.map(c => c.id !== cardId ? c : { ...c, balance: 0, charges: [] }));
-    showToast("💳 Tarjeta marcada como pagada ✓");
-  };
-
-  const saveCard = (cardId, updates) => {
-    setCards(prev => prev.map(c => c.id !== cardId ? c : { ...c, ...updates }));
-    showToast("Tarjeta actualizada ✓");
-    setShowEditCard(null);
-  };
-
-  const addNewCard = (data) => {
-    setCards(prev => [...prev, { ...data, id: "card-"+Date.now(), charges: [], balance: 0 }]);
-    showToast("Tarjeta agregada ✓");
-    setShowEditCard(null);
-  };
+  const handleAddCharge = async (charge) => { await addCharge(selCard, charge); showToast("Gasto registrado ✓"); setShowAddCharge(false); };
+  const handleDeleteCharge = async (cardId, chargeId) => { await deleteCharge(cardId, chargeId); showToast("Gasto eliminado", "error"); };
+  const handleMarkPaid = async (cardId) => { await markPaid(cardId); showToast("Tarjeta pagada ✓"); };
+  const handleSaveCard = async (cardId, updates) => { await saveCard(cardId, updates); showToast("Tarjeta actualizada ✓"); setShowEditCard(null); };
+  const handleAddCard = async (data) => { await addCard(data); showToast("Tarjeta agregada ✓"); setShowEditCard(null); };
 
   const totalDebt = cards.reduce((s, c) => s + (c.balance || 0), 0);
   const totalLimit = cards.reduce((s, c) => s + (c.limit || 0), 0);
@@ -776,7 +745,7 @@ function CardsView({ cards, setCards, filterMonth, showToast }) {
           </div>
           <div style={{display:"flex",gap:8}}>
             <button onClick={()=>setShowAddCharge(true)} style={{flex:1,background:card.color,color:"#000",border:"none",borderRadius:10,padding:"10px",fontWeight:800,fontSize:13,cursor:"pointer"}}>+ Registrar gasto</button>
-            <button onClick={()=>markPaid(card.id)} style={{background:C.greenDim,border:`1px solid ${C.green}44`,color:C.green,borderRadius:10,padding:"10px 14px",fontWeight:700,fontSize:12,cursor:"pointer"}}>✓ Pagar</button>
+            <button onClick={()=>handleMarkPaid(card.id)} style={{background:C.greenDim,border:`1px solid ${C.green}44`,color:C.green,borderRadius:10,padding:"10px 14px",fontWeight:700,fontSize:12,cursor:"pointer"}}>✓ Pagar</button>
           </div>
         </div>
       )}
@@ -802,7 +771,7 @@ function CardsView({ cards, setCards, filterMonth, showToast }) {
               <div style={{textAlign:"right",flexShrink:0}}>
                 <div style={{fontSize:13,fontWeight:800,color:C.red}}>-{fmtCOP(ch.amount)}</div>
               </div>
-              <button onClick={()=>deleteCharge(card.id, ch.id)} style={{background:"none",border:"none",color:C.textMuted,cursor:"pointer",fontSize:13,opacity:.5,flexShrink:0}}>🗑</button>
+              <button onClick={()=>handleDeleteCharge(card.id, ch.id)} style={{background:"none",border:"none",color:C.textMuted,cursor:"pointer",fontSize:13,opacity:.5,flexShrink:0}}>🗑</button>
             </div>
           ))}
         </div>
@@ -810,7 +779,7 @@ function CardsView({ cards, setCards, filterMonth, showToast }) {
 
       {/* MODAL NUEVO GASTO */}
       {showAddCharge && (
-        <ChargeModal card={card} onClose={()=>setShowAddCharge(false)} onAdd={addCharge} cats={CHARGE_CATS}/>
+        <ChargeModal card={card} onClose={()=>setShowAddCharge(false)} onAdd={handleAddCharge} cats={CHARGE_CATS}/>
       )}
 
       {/* MODAL EDITAR/NUEVA TARJETA */}
@@ -818,7 +787,7 @@ function CardsView({ cards, setCards, filterMonth, showToast }) {
         <CardEditModal
           card={showEditCard==="new" ? null : cards.find(c=>c.id===showEditCard)}
           onClose={()=>setShowEditCard(null)}
-          onSave={showEditCard==="new" ? addNewCard : (updates)=>saveCard(showEditCard, updates)}
+          onSave={showEditCard==="new" ? handleAddCard : (updates)=>handleSaveCard(showEditCard, updates)}
         />
       )}
     </div>
@@ -1659,7 +1628,7 @@ function PayModal({onClose,loan,onPay,accounts}){
 }
 
 // ─── MICRO COMPONENTS ─────────────────────────────────────────────────────────
-function TxRow({tx,onDelete,showDivider=false,compact=false}){
+function TxRow({tx,onDelete,showDivider=false,compact=false,categories=DEFAULT_CATEGORIES}){
   const allCats=[...categories.income,...categories.expense];
   const cat=allCats.find(c=>c.id===tx.category)||{icon:"📦",label:tx.category};
   const acc=ACCOUNTS_DEF.find(a=>a.id===tx.account)||{icon:"💰",label:tx.account};
