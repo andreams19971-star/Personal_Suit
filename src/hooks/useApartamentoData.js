@@ -73,7 +73,6 @@ export function useApartamentoData() {
     const nights = Math.max(1, Math.round((new Date(res.checkOut)-new Date(res.checkIn))/86400000))
     const newRes = { ...res, id:'RES'+Date.now(), nights, total:0, paid:0, status:'reserved' }
     setReservations(prev => [newRes, ...prev])
-    syncToPlanner([newRes, ...reservations], rooms)
 
     if (!onlineRef.current) return
     const { error } = await supabase.from('apt_reservations').insert([{
@@ -89,7 +88,6 @@ export function useApartamentoData() {
   async function updateReservationStatus(id, status) {
     setReservations(prev => {
       const updated = prev.map(r => r.id!==id ? r : {...r, status})
-      syncToPlanner(updated, rooms)
       return updated
     })
     if (!onlineRef.current) return
@@ -99,7 +97,6 @@ export function useApartamentoData() {
   async function deleteReservation(id) {
     setReservations(prev => {
       const updated = prev.filter(r => r.id!==id)
-      syncToPlanner(updated, rooms)
       return updated
     })
     if (!onlineRef.current) return
@@ -131,13 +128,11 @@ export function useApartamentoData() {
     }).eq('id', roomId)
   }
 
-  function syncToPlanner(resList, roomsList) {
     try {
       const forPlanner = resList.map(r => {
         const room = roomsList.find(rm => rm.id===r.roomId)
         return { ...r, roomName: room?.name||r.roomId }
       })
-      localStorage.setItem('apt_reservations', JSON.stringify(forPlanner))
     } catch {}
   }
 

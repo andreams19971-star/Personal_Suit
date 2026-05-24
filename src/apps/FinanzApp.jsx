@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useFinanzData } from "../hooks/useFinanzData.js";
 import { useCardsData } from "../hooks/useCardsData.js";
 import { useNotifications } from "../hooks/useNotifications.js";
+import { loadSetting, saveSetting } from "../hooks/useSettings.js";
 
 // ─── PALETTE ─────────────────────────────────────────────────────────────────
 const C = {
@@ -113,25 +114,20 @@ export default function FinanzApp({ onBack }){
   const [selAccount,setSelAccount]=useState(null);
   const [filterMonth,setFilterMonth]=useState(today().slice(0,7));
   const [settings,setSettings]=useState({currency:"COP",budgets:{}});
-  const [categories,setCategories]=useState(()=>{
-    try { const s=localStorage.getItem("fa_categories"); return s?JSON.parse(s):DEFAULT_CATEGORIES; } catch { return DEFAULT_CATEGORIES; }
-  });
-  const saveCategories = (cats) => {
+  const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
+  const saveCategories = async (cats) => {
     setCategories(cats);
-    try { localStorage.setItem("fa_categories",JSON.stringify(cats)); } catch {}
+    await saveSetting('fa_categories', cats);
   };
-  const [toast,setToast]=useState(null);
 
-  // Recoger transacciones pendientes de FlotaTracker
-  useEffect(()=>{
-    try {
-      const pending = JSON.parse(localStorage.getItem("fa_pending_transactions")||"[]");
-      if (pending.length>0) {
-        pending.forEach(tx => dbAddTx(tx));
-        localStorage.removeItem("fa_pending_transactions");
-      }
-    } catch {}
-  },[]);
+  // Cargar categorías desde Supabase
+  useEffect(() => {
+    loadSetting('fa_categories', DEFAULT_CATEGORIES).then(cats => {
+      if (cats) setCategories(cats);
+    });
+  }, []);
+
+  const [toast,setToast]=useState(null);
   const {
     cards, addCharge, deleteCharge, markPaid, saveCard, addCard,
   } = useCardsData();

@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { usePlannerData } from "../hooks/usePlannerData.js";
+import { loadSetting, saveSetting } from "../hooks/useSettings.js";
+import { supabase } from "../supabase.js";
 
 const C = {
   bg: "#080C14", surface: "#0F1624", card: "#141E30", cardHover: "#192338",
@@ -75,15 +77,27 @@ export default function Planner({ onBack }) {
     addNote: dbAddNote, deleteNote: dbDeleteNote,
   } = usePlannerData();
 
-  const [taskCats, setTaskCats] = useState(() => {
-    try { const s = localStorage.getItem("pl_task_cats"); return s ? JSON.parse(s) : DEFAULT_TASK_CATS; } catch { return DEFAULT_TASK_CATS; }
-  });
-  const saveTaskCats = (cats) => {
+  const [taskCats, setTaskCats] = useState(DEFAULT_TASK_CATS);
+  const saveTaskCats = async (cats) => {
     setTaskCats(cats);
-    try { localStorage.setItem("pl_task_cats", JSON.stringify(cats)); } catch {}
+    await saveSetting('pl_task_cats', cats);
   };
+  useEffect(() => {
+    loadSetting('pl_task_cats', DEFAULT_TASK_CATS).then(cats => {
+      if (cats && Array.isArray(cats)) setTaskCats(cats);
+    });
+  }, []);
 
-  const [view, setView]           = useState("today");
+  // Reservas de apartamento desde Supabase
+  const [aptReservations, setAptReservations] = useState([]);
+  useEffect(() => {
+    supabase.from('apt_reservations').select('*').then(({ data }) => {
+      if (data) setAptReservations(data.map(r => ({
+        ...r, roomId: r.room_id, checkIn: r.check_in, checkOut: r.check_out,
+        roomName: r.room_id,
+      })));
+    });
+  }, []);
   const [calDate, setCalDate]     = useState(new Date());
   const [selDate, setSelDate]     = useState(td());
   const [showTaskModal, setShowTaskModal]   = useState(false);
@@ -104,11 +118,7 @@ export default function Planner({ onBack }) {
   const addNote           = (note) => { dbAddNote(note); showToast("Nota guardada ✓"); setShowNoteModal(false); };
   const deleteNote        = (id)   => dbDeleteNote(id);
 
-  // Reservas de apartamento desde localStorage
-  const aptReservations = (() => {
-    try { return JSON.parse(localStorage.getItem("apt_reservations") || "[]"); } catch { return []; }
-  })();
-
+  const [view, setView] = useState("today");
   const todayTasks = tasks.filter(t => t.date === selDate);
   const nav = [
     { id:"today",    icon:"☀️", label:"Hoy"       },

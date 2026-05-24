@@ -151,39 +151,43 @@ export default function FlotaTracker({ onBack }) {
   const totalGastos    = cars.reduce((s,c) => s + (c.gastos||[]).filter(g=>g.fecha.startsWith(filterMonth)).reduce((a,g)=>a+g.monto,0), 0);
   const totalNeto      = totalCobrado - totalGastos;
 
-  const marcarPagado = (carroId, pagoId) => {
+  const marcarPagado = async (carroId, pagoId) => {
     const carro = cars.find(c=>c.id===carroId);
     const pago  = carro?.pagos?.find(p=>p.id===pagoId);
-    // Solo sincronizar cuando se marca como PAGADO (no cuando se desmarca)
     const isPaid = !pago?.pagado;
     togglePayment(carroId, pagoId);
+
     if (isPaid && pago) {
-      // Escribir en localStorage para que FinanzApp lo recoja
+      // Insertar directamente en Supabase transactions
       try {
-        const pending = JSON.parse(localStorage.getItem("fa_pending_transactions")||"[]");
-        pending.push({
-          id: "flota-"+Date.now(),
-          date: pago.fecha,
-          type: "income",
-          category: "flota_inc",
+        const { supabase } = await import('../supabase.js');
+        const tx = {
+          id:          "flota-"+Date.now(),
+          date:        pago.fecha,
+          type:        "income",
+          category:    "flota_inc",
           subcategory: carro?.nombre||"Flota",
-          account: "cash",
-          amount: pago.monto,
-          note: "Cobro "+(carro?.nombre)+" · "+(pago.fecha),
-        });
-        localStorage.setItem("fa_pending_transactions", JSON.stringify(pending));
-      } catch {}
+          account:     "cash",
+          amount:      pago.monto,
+          note:        "Cobro "+(carro?.nombre)+" · "+(pago.fecha),
+          loan_id:     null,
+        };
+        const { error } = await supabase.from('transactions').insert([tx]);
+        if (error) console.error('[FlotaTracker] Error guardando en FinanzApp:', error.message);
+        else console.log('[FlotaTracker] ✅ Ingreso guardado en FinanzApp');
+      } catch(e) { console.error('[FlotaTracker] sync error:', e); }
+      showToast("Pago registrado ✓ — ingreso en FinanzApp");
+    } else {
+      showToast("Pago desmarcado");
     }
-    showToast(isPaid ? "Pago registrado ✓ (sincronizado con FinanzApp)" : "Pago desmarcado");
   };
   const agregarGasto      = (carroId, gasto)  => { addExpense(carroId, gasto);     showToast("Gasto registrado ✓");  setModal(null); };
   const agregarPagoDiario = (carroId, fecha)  => { addWorkDay(carroId, fecha);     showToast("Día agregado ✓");      setModal(null); };
 
   const nav = [
-    {id:"dashboard",icon:"📊",label:"Resumen"},
-    {id:"carro1",   icon:"🚗",label: cars[0]?.nombre||"Carro 1"},
-    {id:"carro2",   icon:"🚙",label: cars[1]?.nombre||"Carro 2"},
-    {id:"gastos",   icon:"🔧",label:"Gastos"},
+    {id:"dashboard", icon:"📊", label:"Resumen"},
+    ...cars.map((c,i) => ({id:"carro_"+c.id, icon:i===0?"🚗":"🚙", label:c.nombre||("Carro "+(i+1))})),
+    {id:"gastos", icon:"🔧", label:"Gastos"},
   ];
 
   const [yStr, mStr] = filterMonth.split("-");
@@ -223,15 +227,16 @@ export default function FlotaTracker({ onBack }) {
           </div>
         )}
         {!loading && view==="dashboard" && <Dashboard carros={cars} getStats={getStats} totalEsperado={totalEsperado} totalCobrado={totalCobrado} totalPendiente={totalPendiente} totalGastos={totalGastos} totalNeto={totalNeto} filterMonth={filterMonth} setView={setView} />}
-        {!loading && view==="carro1"    && cars[0] && <CarroView carro={cars[0]} stats={getStats(cars[0])} pagos={cars[0]?.pagos||[]} filterMonth={filterMonth} marcarPagado={marcarPagado} eliminarPago={(carId,pagoId)=>{deletePayment(carId,pagoId);showToast("Registro eliminado","err");}} setModal={setModal} />}
-        {!loading && view==="carro2"    && cars[1] && <CarroView carro={cars[1]} stats={getStats(cars[1])} pagos={cars[1]?.pagos||[]} filterMonth={filterMonth} marcarPagado={marcarPagado} eliminarPago={(carId,pagoId)=>{deletePayment(carId,pagoId);showToast("Registro eliminado","err");}} setModal={setModal} />}
+        {!loading && cars.map(carro => (
+          view==="carro_"+carro.id && <CarroView key={carro.id} carro={carro} stats={getStats(carro)} pagos={carro.pagos||[]} filterMonth={filterMonth} marcarPagado={marcarPagado} eliminarPago={(carId,pagoId)=>{deletePayment(carId,pagoId);showToast("Registro eliminado","err");}} setModal={setModal} />
+        ))}
         {!loading && view==="gastos"    && <GastosView carros={cars} filterMonth={filterMonth} setModal={setModal} totalGastos={totalGastos} />}
       </div>
 
       {/* BOTTOM NAV */}
       <div style={{position:"fixed",bottom:0,left:0,right:0,background:C.surface,borderTop:`1px solid ${C.border}`,display:"flex",zIndex:50}}>
         {nav.map(n=>(
-          <button key={n.id} onClick={()=>setView(n.id)} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:2,padding:"8px 0",border:"none",background:"transparent",color:view===n.id?"#fff":C.textMuted,cursor:"pointer",fontSize:9,fontWeight:600,borderTop:view===n.id?"2px solid "+(view==="carro1"?C.car1:view==="carro2"?C.car2:C.green):"2px solid transparent"}}>
+          <button key={n.id} onClick={()=>setView(n.id)} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:2,padding:"8px 0",border:"none",background:"transparent",color:view===n.id?"#fff":C.textMuted,cursor:"pointer",fontSize:9,fontWeight:600,borderTop:view===n.id?"2px solid "+(n.id==="dashboard"?C.green:n.id.startsWith("carro_")?C.car1:C.green):"2px solid transparent"}}>
             <span style={{fontSize:18}}>{n.icon}</span>{n.label}
           </button>
         ))}
@@ -313,7 +318,7 @@ function Dashboard({carros,getStats,totalEsperado,totalCobrado,totalPendiente,to
         const valDiario = carro.valor_diario  || CARRO1_DIARIO;
         const valMensual= carro.valor_mensual || CARRO2_MENSUAL;
         return (
-          <button key={carro.id} onClick={()=>setView(carro.id==="C1"?"carro1":"carro2")} className="bp"
+          <button key={carro.id} onClick={()=>setView("carro_"+carro.id)} className="bp"
             style={{background:`linear-gradient(135deg,${carDim},${C.card})`,border:`1px solid ${carColor}44`,borderRadius:18,padding:18,textAlign:"left",cursor:"pointer",color:C.text,width:"100%",boxSizing:"border-box"}}>
             <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:14}}>
               <div style={{width:48,height:48,borderRadius:14,background:carColor+"22",border:`1px solid ${carColor}44`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,flexShrink:0}}>{carro.icon||"🚗"}</div>
