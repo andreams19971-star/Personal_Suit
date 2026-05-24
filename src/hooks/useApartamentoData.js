@@ -128,13 +128,6 @@ export function useApartamentoData() {
     }).eq('id', roomId)
   }
 
-    try {
-      const forPlanner = resList.map(r => {
-        const room = roomsList.find(rm => rm.id===r.roomId)
-        return { ...r, roomName: room?.name||r.roomId }
-      })
-    } catch {}
-  }
 
   return {
     rooms, reservations, expenses, loading, online,
