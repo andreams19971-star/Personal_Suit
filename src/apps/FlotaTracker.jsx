@@ -154,11 +154,20 @@ export default function FlotaTracker({ onBack }) {
   const marcarPagado = async (carroId, pagoId) => {
     const carro = cars.find(c=>c.id===carroId);
     const pago  = carro?.pagos?.find(p=>p.id===pagoId);
+
+    // Si el pagoId no existe (carro mensual sin registro), crear primero
+    if (!pago) {
+      const today = new Date().toISOString().slice(0,10);
+      const monto = carro?.valor_mensual || 500000;
+      await addWorkDay(carroId, today);
+      showToast("Pago registrado ✓");
+      return;
+    }
+
     const isPaid = !pago?.pagado;
     togglePayment(carroId, pagoId);
 
-    if (isPaid && pago) {
-      // Insertar directamente en Supabase transactions
+    if (isPaid) {
       try {
         const { supabase } = await import('../supabase.js');
         const tx = {
@@ -173,8 +182,8 @@ export default function FlotaTracker({ onBack }) {
           loan_id:     null,
         };
         const { error } = await supabase.from('transactions').insert([tx]);
-        if (error) console.error('[FlotaTracker] Error guardando en FinanzApp:', error.message);
-        else console.log('[FlotaTracker] ✅ Ingreso guardado en FinanzApp');
+        if (error) console.error('[FlotaTracker] Error en FinanzApp:', error.message);
+        else console.log('[FlotaTracker] ✅ Ingreso en FinanzApp');
       } catch(e) { console.error('[FlotaTracker] sync error:', e); }
       showToast("Pago registrado ✓ — ingreso en FinanzApp");
     } else {

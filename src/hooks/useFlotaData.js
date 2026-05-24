@@ -66,8 +66,18 @@ export function useFlotaData() {
       return {...prev, [carId]: list}
     })
     if (!onlineRef.current || !updated) return
-    const { error } = await supabase.from('car_payments').update({ pagado: updated.pagado }).eq('id', pagoId)
+
+    // Upsert en lugar de update — funciona aunque el registro no exista aún
+    const { error } = await supabase.from('car_payments').upsert({
+      id: updated.id,
+      car_id: carId,
+      fecha: updated.fecha,
+      monto: updated.monto,
+      pagado: updated.pagado,
+      nota: updated.nota || ''
+    })
     if (error) console.error('[togglePayment]', error.message)
+    else console.log('[togglePayment] ✅', pagoId, updated.pagado)
   }
 
   // ── Eliminar registro de día ──
