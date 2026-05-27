@@ -54,30 +54,47 @@ export function useFlotaData() {
     } finally { setLoading(false) }
   }
 
+  const paymentsRef = useRef({})
+
+  // Keep ref in sync
+  useEffect(() => { paymentsRef.current = payments }, [payments])
+
   // ── Marcar/desmarcar pago ──
   async function togglePayment(carId, pagoId) {
-    let updated
-    setPayments(prev => {
-      const list = (prev[carId]||[]).map(p => {
-        if (p.id !== pagoId) return p
-        updated = {...p, pagado: !p.pagado}
-        return updated
-      })
-      return {...prev, [carId]: list}
-    })
-    if (!onlineRef.current || !updated) return
+    // Read CURRENT state from ref (not stale closure)
+    const currentList = paymentsRef.current[carId] || []
+    const pago = currentList.find(p => p.id === pagoId)
+    if (!pago) { console.warn('[togglePayment] not found:', pagoId); return false }
 
-    // Upsert en lugar de update — funciona aunque el registro no exista aún
+    const newPagado = !pago.pagado
+    const updatedPago = { ...pago, pagado: newPagado }
+
+    // Optimistic UI update
+    setPayments(prev => ({
+      ...prev,
+      [carId]: (prev[carId]||[]).map(p => p.id === pagoId ? updatedPago : p)
+    }))
+
+    if (!onlineRef.current) return newPagado
+
+    // Upsert — works even if record doesn't exist in DB yet
     const { error } = await supabase.from('car_payments').upsert({
-      id: updated.id,
-      car_id: carId,
-      fecha: updated.fecha,
-      monto: updated.monto,
-      pagado: updated.pagado,
-      nota: updated.nota || ''
+      id: pago.id, car_id: carId, fecha: pago.fecha,
+      monto: pago.monto, pagado: newPagado, nota: pago.nota || ''
     })
-    if (error) console.error('[togglePayment]', error.message)
-    else console.log('[togglePayment] ✅', pagoId, updated.pagado)
+
+    if (error) {
+      console.error('[togglePayment] ERROR:', error.message)
+      // Revert on failure
+      setPayments(prev => ({
+        ...prev,
+        [carId]: (prev[carId]||[]).map(p => p.id === pagoId ? pago : p)
+      }))
+      return pago.pagado
+    }
+
+    console.log('[togglePayment] ✅', pagoId, '→ pagado:', newPagado)
+    return newPagado
   }
 
   // ── Eliminar registro de día ──

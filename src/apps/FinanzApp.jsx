@@ -95,10 +95,11 @@ export default function FinanzApp({ onBack }){
   // ── Supabase hook ──────────────────────────────────────────────────────────
   const {
     transactions, loans, accountBalances, loading, online,
-    addTransaction: dbAddTx,
+    addTransaction:    dbAddTx,
     deleteTransaction: dbDelTx,
-    addLoan: dbAddLoan,
-    addPayment: dbAddPayment,
+    updateTransaction: dbUpdateTx,
+    addLoan:           dbAddLoan,
+    addPayment:        dbAddPayment,
     updateAccountBalance,
   } = useFinanzData();
 
@@ -158,16 +159,22 @@ export default function FinanzApp({ onBack }){
     await dbDelTx(id);
     showToast("Eliminado","error");
   };
+  const updateTransaction=async(id,updates)=>{
+    await dbUpdateTx(id,updates);
+    showToast("Movimiento actualizado ✓");
+    setEditTx(null);
+  };
+  const [editTx, setEditTx]=useState(null);
 
   const addLoan=async data=>{
     await dbAddLoan(data);
-    showToast(`Préstamo registrado a ${data.debtor} ✓`);
+    showToast("Préstamo registrado a "+(data.debtor)+" ✓");
     setShowLoanModal(false);
   };
 
   const addPayment=async(loan,payData)=>{
     await dbAddPayment(loan,payData);
-    showToast(loan.balance-parseFloat(payData.amount)<=0?`¡Préstamo de ${loan.debtor} saldado! 🎉`:"Abono registrado ✓");
+    showToast(loan.balance-parseFloat(payData.amount)<=0?"¡Préstamo de "+(loan.debtor)+" saldado! 🎉":"Abono registrado ✓");
     setShowPayModal(null);
   };
 
@@ -177,13 +184,12 @@ export default function FinanzApp({ onBack }){
     <div style={{
       fontFamily:"'SF Pro Display',-apple-system,BlinkMacSystemFont,sans-serif",
       background:C.bg,
-      width:"100vw",
-      height:"100vh",
+      position:"absolute",
+      top:0, left:0, right:0, bottom:0,
       overflow:"hidden",
       color:C.text,
       display:"flex",
       flexDirection:"column",
-      position:"relative",
     }}>
       <style>{`
         .fa-scroll::-webkit-scrollbar{display:none}
@@ -199,7 +205,7 @@ export default function FinanzApp({ onBack }){
       `}</style>
       {loading && (
         <div style={{position:"absolute",inset:0,background:C.bg,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",zIndex:50,gap:14}}>
-          <div style={{width:36,height:36,border:`3px solid ${C.border}`,borderTop:`3px solid ${C.accent}`,borderRadius:"50%",animation:"fa-spin .8s linear infinite"}}/>
+          <div style={{width:36,height:36,border:"3px solid "+(C.border),borderTop:"3px solid "+(C.accent),borderRadius:"50%",animation:"fa-spin .8s linear infinite"}}/>
           <div style={{fontSize:14,color:C.textMuted}}>Cargando datos...</div>
         </div>
       )}
@@ -209,7 +215,7 @@ export default function FinanzApp({ onBack }){
           <TopBar view={view} filterMonth={filterMonth} setFilterMonth={setFilterMonth} setSidebarOpen={setSidebarOpen} openAddModal={openAddModal} onBack={onBack}/>
           <div className="fa-scroll" style={{flex:1,overflowY:"auto",overflowX:"hidden",paddingBottom:80,minHeight:0,width:"100%",maxWidth:"100%",position:"relative"}}>
             {view==="dashboard" && <Dashboard transactions={transactions} accounts={computedAccounts} loans={loans} totalIncome={totalIncome} totalExpense={totalExpense} netBalance={netBalance} filterMonth={filterMonth} setView={setView} setSelAccount={setSelAccount} monthTxs={monthTxs} categories={categories}/>}
-            {view==="movements" && <Movements transactions={transactions} filterMonth={filterMonth} deleteTransaction={deleteTransaction} openAddModal={openAddModal} loans={loans} categories={categories}/>}
+            {view==="movements" && <Movements transactions={transactions} filterMonth={filterMonth} deleteTransaction={deleteTransaction} openAddModal={openAddModal} loans={loans} categories={categories} setEditTx={setEditTx}/>}
             {view==="accounts"  && <AccountsView accounts={computedAccounts} transactions={transactions} selAccount={selAccount} setSelAccount={setSelAccount} filterMonth={filterMonth} showToast={showToast} categories={categories}/>}
             {view==="cards"     && <CardsView cards={cards} addCharge={addCharge} deleteCharge={deleteCharge} markPaid={markPaid} saveCard={saveCard} addCard={addCard} filterMonth={filterMonth} showToast={showToast}/>}
             {view==="loans"     && <LoansView loans={loans} transactions={transactions} setShowLoanModal={setShowLoanModal} setShowPayModal={setShowPayModal} accounts={computedAccounts} showToast={showToast} categories={categories}/>}
@@ -219,7 +225,8 @@ export default function FinanzApp({ onBack }){
         <Sidebar open={sidebarOpen} onClose={()=>setSidebarOpen(false)} accounts={computedAccounts} updateAccountBalance={updateAccountBalance} settings={settings} setSettings={setSettings} showToast={showToast} categories={categories} saveCategories={saveCategories}/>
       </div>
       <MobileNav view={view} setView={setView} openAddModal={openAddModal} loans={loans}/>
-      <button onClick={()=>openAddModal()} className="fa-btn fa-mobile" style={{position:"fixed",bottom:82,right:20,width:54,height:54,borderRadius:"50%",background:C.accent,border:"none",cursor:"pointer",fontSize:24,boxShadow:`0 8px 24px ${C.accent}66`,zIndex:100,display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
+      <button onClick={()=>openAddModal()} className="fa-btn fa-mobile" style={{position:"fixed",bottom:82,right:20,width:54,height:54,borderRadius:"50%",background:C.accent,border:"none",cursor:"pointer",fontSize:24,boxShadow:"0 8px 24px "+(C.accent)+"66",zIndex:100,display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
+      {editTx     && <EditTxModal tx={editTx} onClose={()=>setEditTx(null)} onSave={updateTransaction} accounts={accounts} categories={categories}/>}
       {showAddModal  && <AddModal  onClose={()=>{ setShowAddModal(false); setAddModalOpts({}); }} onAdd={addTransaction} accounts={accounts} opts={addModalOpts} categories={categories}/>}
       {showLoanModal && <LoanModal onClose={()=>setShowLoanModal(false)} onAdd={addLoan} accounts={accounts}/>}
       {showPayModal  && <PayModal  onClose={()=>setShowPayModal(null)} loan={showPayModal} onPay={addPayment} accounts={accounts}/>}
@@ -240,7 +247,7 @@ function DesktopNav({view,setView,setSidebarOpen,loans}){
     {id:"stats",    icon:"◉",label:"Estadísticas"},
   ];
   return(
-    <div className="fa-desktop" style={{width:220,background:C.surface,borderRight:`1px solid ${C.border}`,display:"flex",flexDirection:"column",padding:"24px 16px",flexShrink:0}}>
+    <div className="fa-desktop" style={{width:220,background:C.surface,borderRight:"1px solid "+(C.border),display:"flex",flexDirection:"column",padding:"24px 16px",flexShrink:0}}>
       <div style={{marginBottom:32}}>
         <div style={{fontSize:20,fontWeight:800,color:C.accent,letterSpacing:-1}}>💰 FinanzApp</div>
         <div style={{fontSize:11,color:C.textMuted,marginTop:2}}>Control financiero total</div>
@@ -252,7 +259,7 @@ function DesktopNav({view,setView,setSidebarOpen,loans}){
         </button>
       ))}
       <div style={{flex:1}}/>
-      <button onClick={()=>setSidebarOpen(true)} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",borderRadius:12,border:`1px solid ${C.border}`,cursor:"pointer",background:"transparent",color:C.textSub,fontSize:14,fontWeight:500}}>⚙ Configuración</button>
+      <button onClick={()=>setSidebarOpen(true)} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",borderRadius:12,border:"1px solid "+(C.border),cursor:"pointer",background:"transparent",color:C.textSub,fontSize:14,fontWeight:500}}>⚙ Configuración</button>
     </div>
   );
 }
@@ -266,8 +273,8 @@ function TopBar({view,filterMonth,setFilterMonth,setSidebarOpen,openAddModal,onB
   return(
     <div style={{
       background:C.surface,
-      borderBottom:`1px solid ${C.border}`,
-      paddingTop:`max(14px, calc(env(safe-area-inset-top) + 8px))`,
+      borderBottom:"1px solid "+(C.border),
+      paddingTop:"max(14px, calc(env(safe-area-inset-top) + 8px))",
       paddingBottom:"14px",
       paddingLeft:"16px",
       paddingRight:"16px",
@@ -277,15 +284,15 @@ function TopBar({view,filterMonth,setFilterMonth,setSidebarOpen,openAddModal,onB
       flexShrink:0,
       width:"100%",
     }}>
-      {onBack&&<button onClick={onBack} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:8,padding:"6px 10px",color:C.textSub,cursor:"pointer",fontSize:12,fontWeight:600,flexShrink:0}}>← Suite</button>}
+      {onBack&&<button onClick={onBack} style={{background:C.card,border:"1px solid "+(C.border),borderRadius:8,padding:"6px 10px",color:C.textSub,cursor:"pointer",fontSize:12,fontWeight:600,flexShrink:0}}>← Suite</button>}
       <div style={{fontSize:16,fontWeight:800,flex:1,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{titles[view]||""}</div>
-      <div style={{display:"flex",alignItems:"center",gap:4,background:C.card,borderRadius:8,padding:"5px 8px",border:`1px solid ${C.border}`,flexShrink:0}}>
+      <div style={{display:"flex",alignItems:"center",gap:4,background:C.card,borderRadius:8,padding:"5px 8px",border:"1px solid "+(C.border),flexShrink:0}}>
         <button onClick={prev} style={{background:"none",border:"none",color:C.textSub,cursor:"pointer",fontSize:15,padding:"0 3px",lineHeight:1}}>‹</button>
         <span style={{fontSize:12,fontWeight:600,minWidth:62,textAlign:"center"}}>{MONTHS[parseInt(m)-1]} {y}</span>
         <button onClick={next} style={{background:"none",border:"none",color:C.textSub,cursor:"pointer",fontSize:15,padding:"0 3px",lineHeight:1}}>›</button>
       </div>
       <button onClick={()=>openAddModal()} className="fa-btn fa-desktop" style={{background:C.accent,color:"#000",border:"none",borderRadius:8,padding:"7px 12px",fontWeight:700,fontSize:12,cursor:"pointer",flexShrink:0}}>+ Agregar</button>
-      <button onClick={()=>setSidebarOpen(true)} className="fa-btn" style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:8,padding:"7px 10px",color:C.textSub,cursor:"pointer",fontSize:14,flexShrink:0}}>⚙</button>
+      <button onClick={()=>setSidebarOpen(true)} className="fa-btn" style={{background:C.card,border:"1px solid "+(C.border),borderRadius:8,padding:"7px 10px",color:C.textSub,cursor:"pointer",fontSize:14,flexShrink:0}}>⚙</button>
     </div>
   );
 }
@@ -303,7 +310,7 @@ function MobileNav({view,setView,openAddModal,loans}){
   return(
     <div className="fa-mobile" style={{
       position:"fixed",bottom:0,left:0,right:0,zIndex:90,
-      background:C.surface,borderTop:`1px solid ${C.border}`,
+      background:C.surface,borderTop:"1px solid "+(C.border),
       display:"flex",
       paddingBottom:"max(env(safe-area-inset-bottom), 6px)",
     }}>
@@ -332,8 +339,8 @@ function Dashboard({transactions,accounts,loans,totalIncome,totalExpense,netBala
   const maxDay=Math.max(...last7.map(d=>d.total),1);
   return(
     <div style={{padding:"16px",display:"grid",gap:14,boxSizing:"border-box",overflowX:"hidden",contain:"layout"}} className="fa-fade-up">
-      <div style={{background:`linear-gradient(135deg,${C.accentDim},${C.card})`,border:`1px solid ${C.accentText}33`,borderRadius:20,padding:20,position:"relative",overflow:"hidden",width:"100%"}}>
-        <div style={{position:"absolute",top:-30,right:-30,width:120,height:120,borderRadius:"50%",background:`${C.accent}11`,pointerEvents:"none"}}/>
+      <div style={{background:"linear-gradient(135deg,"+(C.accentDim)+","+(C.card)+")",border:"1px solid "+(C.accentText)+"33",borderRadius:20,padding:20,position:"relative",overflow:"hidden",width:"100%"}}>
+        <div style={{position:"absolute",top:-30,right:-30,width:120,height:120,borderRadius:"50%",background:(C.accent)+"11",pointerEvents:"none"}}/>
         <div style={{fontSize:12,color:C.accentText,fontWeight:700,marginBottom:4}}>PATRIMONIO TOTAL</div>
         <div style={{fontSize:30,fontWeight:900,letterSpacing:-1}}>{fmtCOP(totalAssets)}</div>
         <div style={{display:"flex",gap:8,marginTop:14,width:"100%",overflow:"hidden"}}>
@@ -348,7 +355,7 @@ function Dashboard({transactions,accounts,loans,totalIncome,totalExpense,netBala
         <div style={{display:"flex",gap:10,overflowX:"auto",paddingBottom:4,paddingRight:4}}>
           {accounts.map(acc=>(
             <button key={acc.id} onClick={()=>{setSelAccount(acc.id);setView("accounts");}} className="fa-btn"
-              style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:14,padding:"12px 14px",minWidth:110,maxWidth:140,flexShrink:0,cursor:"pointer",textAlign:"left"}}>
+              style={{background:C.card,border:"1px solid "+(C.border),borderRadius:14,padding:"12px 14px",minWidth:110,maxWidth:140,flexShrink:0,cursor:"pointer",textAlign:"left"}}>
               <div style={{fontSize:20,marginBottom:4}}>{acc.icon}</div>
               <div style={{fontSize:10,color:C.textSub,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{acc.label}</div>
               <div style={{fontSize:13,fontWeight:800,color:acc.balance>=0?C.text:C.red,marginTop:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{fmtCOP(acc.balance)}</div>
@@ -357,7 +364,7 @@ function Dashboard({transactions,accounts,loans,totalIncome,totalExpense,netBala
         </div>
       </div>
       {loans.filter(l=>l.status==="active").length>0&&(
-        <div style={{background:C.card,border:`1px solid ${C.orange}44`,borderRadius:16,padding:16}}>
+        <div style={{background:C.card,border:"1px solid "+(C.orange)+"44",borderRadius:16,padding:16}}>
           <SectionHeader title="🤝 Préstamos Pendientes" action="Ver todos" onAction={()=>setView("loans")}/>
           <div style={{display:"grid",gap:10,marginTop:8}}>
             {loans.filter(l=>l.status==="active").slice(0,3).map(loan=>(
@@ -366,7 +373,7 @@ function Dashboard({transactions,accounts,loans,totalIncome,totalExpense,netBala
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontSize:13,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{loan.debtor}</div>
                   <div style={{height:3,borderRadius:2,background:C.border,marginTop:4}}>
-                    <div style={{height:"100%",borderRadius:2,background:C.orange,width:`${Math.round((1-loan.balance/loan.amount)*100)}%`,transition:"width .8s ease"}}/>
+                    <div style={{height:"100%",borderRadius:2,background:C.orange,width:(Math.round((1-loan.balance/loan.amount)*100))+"%",transition:"width .8s ease"}}/>
                   </div>
                 </div>
                 <div style={{textAlign:"right",flexShrink:0,minWidth:80}}>
@@ -378,7 +385,7 @@ function Dashboard({transactions,accounts,loans,totalIncome,totalExpense,netBala
           </div>
         </div>
       )}
-      <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:16,padding:16}}>
+      <div style={{background:C.card,border:"1px solid "+(C.border),borderRadius:16,padding:16}}>
         <SectionHeader title="Gastos últimos 7 días"/>
         <div style={{display:"flex",gap:8,alignItems:"flex-end",height:70,marginTop:12}}>
           {last7.map((d,i)=>(
@@ -391,7 +398,7 @@ function Dashboard({transactions,accounts,loans,totalIncome,totalExpense,netBala
           ))}
         </div>
       </div>
-      <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:16,padding:16}}>
+      <div style={{background:C.card,border:"1px solid "+(C.border),borderRadius:16,padding:16}}>
         <SectionHeader title="Top Gastos por Categoría" action="Ver stats" onAction={()=>setView("stats")}/>
         <div style={{display:"grid",gap:10,marginTop:12}}>
           {topCats.map(([catId,amount])=>{
@@ -404,7 +411,7 @@ function Dashboard({transactions,accounts,loans,totalIncome,totalExpense,netBala
                   <span style={{fontSize:13,fontWeight:700,color:C.red}}>{fmtCOP(amount)}</span>
                 </div>
                 <div style={{height:5,borderRadius:3,background:C.border}}>
-                  <div style={{height:"100%",borderRadius:3,background:C.red,width:`${pct}%`,transition:"width .8s ease"}}/>
+                  <div style={{height:"100%",borderRadius:3,background:C.red,width:(pct)+"%",transition:"width .8s ease"}}/>
                 </div>
               </div>
             );
@@ -412,7 +419,7 @@ function Dashboard({transactions,accounts,loans,totalIncome,totalExpense,netBala
           {topCats.length===0&&<EmptyState label="Sin gastos este mes"/>}
         </div>
       </div>
-      <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:16,padding:16}}>
+      <div style={{background:C.card,border:"1px solid "+(C.border),borderRadius:16,padding:16}}>
         <SectionHeader title="Movimientos Recientes" action="Ver todos" onAction={()=>setView("movements")}/>
         <div style={{marginTop:8}}>
           {monthTxs.slice(0,5).map(tx=><TxRow key={tx.id} tx={tx} compact categories={categories}/>)}
@@ -424,7 +431,7 @@ function Dashboard({transactions,accounts,loans,totalIncome,totalExpense,netBala
 }
 
 // ─── MOVEMENTS ────────────────────────────────────────────────────────────────
-function Movements({transactions,filterMonth,deleteTransaction,openAddModal,loans,categories=DEFAULT_CATEGORIES}){
+function Movements({transactions,filterMonth,deleteTransaction,openAddModal,loans,categories=DEFAULT_CATEGORIES,setEditTx}){
   const [filter,setFilter]=useState("all");
   const [search,setSearch]=useState("");
   const filtered=transactions
@@ -439,11 +446,11 @@ function Movements({transactions,filterMonth,deleteTransaction,openAddModal,loan
       <div style={{position:"relative"}}>
         <span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",color:C.textMuted}}>🔍</span>
         <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar..."
-          style={{width:"100%",background:C.card,border:`1px solid ${C.border}`,borderRadius:12,padding:"10px 12px 10px 36px",color:C.text,fontSize:14}}/>
+          style={{width:"100%",background:C.card,border:"1px solid "+(C.border),borderRadius:12,padding:"10px 12px 10px 36px",color:C.text,fontSize:14}}/>
       </div>
       <div style={{display:"flex",gap:8}}>
         {[["all","Todos"],["income","Ingresos"],["expense","Gastos"]].map(([v,l])=>(
-          <button key={v} onClick={()=>setFilter(v)} style={{padding:"6px 14px",borderRadius:100,border:filter!==v?`1px solid ${C.border}`:"none",cursor:"pointer",fontSize:12,fontWeight:600,background:filter===v?C.accent:C.card,color:filter===v?"#000":C.textSub}}>{l}</button>
+          <button key={v} onClick={()=>setFilter(v)} style={{padding:"6px 14px",borderRadius:100,border:filter!==v?"1px solid "+(C.border):"none",cursor:"pointer",fontSize:12,fontWeight:600,background:filter===v?C.accent:C.card,color:filter===v?"#000":C.textSub}}>{l}</button>
         ))}
       </div>
       {sortedDates.length===0&&<EmptyState label="Sin movimientos"/>}
@@ -452,9 +459,9 @@ function Movements({transactions,filterMonth,deleteTransaction,openAddModal,loan
           <div style={{fontSize:11,fontWeight:700,color:C.textMuted,marginBottom:6,paddingLeft:4}}>
             {new Date(date+"T12:00").toLocaleDateString("es-CO",{weekday:"long",day:"numeric",month:"long"}).toUpperCase()}
           </div>
-          <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:16,overflow:"hidden"}}>
+          <div style={{background:C.card,border:"1px solid "+(C.border),borderRadius:16,overflow:"hidden"}}>
             {grouped[date].map((tx,i)=>(
-              <TxRow key={tx.id} tx={tx} onDelete={()=>deleteTransaction(tx.id)} showDivider={i<grouped[date].length-1} categories={categories}/>
+              <TxRow key={tx.id} tx={tx} onDelete={()=>deleteTransaction(tx.id)} onEdit={setEditTx?()=>setEditTx(tx):null} showDivider={i<grouped[date].length-1} categories={categories}/>
             ))}
           </div>
         </div>
@@ -474,13 +481,13 @@ function AccountsView({accounts,transactions,selAccount,setSelAccount,filterMont
     <div style={{padding:"16px",display:"grid",gap:16,boxSizing:"border-box",overflowX:"hidden"}} className="fa-fade-up">
       <div style={{display:"flex",gap:10,overflowX:"auto",paddingBottom:4}}>
         {accounts.map(a=>(
-          <button key={a.id} onClick={()=>setSelAccount(a.id)} style={{padding:"10px 14px",borderRadius:14,border:active!==a.id?`1px solid ${C.border}`:"none",cursor:"pointer",background:active===a.id?C.accent:C.card,color:active===a.id?"#000":C.textSub,fontWeight:700,fontSize:13,flexShrink:0,display:"flex",alignItems:"center",gap:6}}>
+          <button key={a.id} onClick={()=>setSelAccount(a.id)} style={{padding:"10px 14px",borderRadius:14,border:active!==a.id?"1px solid "+(C.border):"none",cursor:"pointer",background:active===a.id?C.accent:C.card,color:active===a.id?"#000":C.textSub,fontWeight:700,fontSize:13,flexShrink:0,display:"flex",alignItems:"center",gap:6}}>
             <span>{a.icon}</span>{a.label}
           </button>
         ))}
       </div>
       {acc&&(
-        <div style={{background:`linear-gradient(135deg,${C.card},${C.cardHover})`,border:`1px solid ${acc.color}44`,borderRadius:20,padding:20}}>
+        <div style={{background:"linear-gradient(135deg,"+(C.card)+","+(C.cardHover)+")",border:"1px solid "+(acc.color)+"44",borderRadius:20,padding:20}}>
           <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:16}}>
             <div style={{fontSize:32}}>{acc.icon}</div>
             <div><div style={{fontSize:20,fontWeight:800}}>{acc.label}</div><div style={{fontSize:12,color:C.textMuted}}>Cuenta activa</div></div>
@@ -497,7 +504,7 @@ function AccountsView({accounts,transactions,selAccount,setSelAccount,filterMont
       <div>
         <div style={{fontSize:13,fontWeight:700,color:C.textMuted,marginBottom:10}}>MOVIMIENTOS DEL MES ({accTxs.length})</div>
         {accTxs.length===0&&<EmptyState label="Sin movimientos en esta cuenta"/>}
-        <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:16,overflow:"hidden"}}>
+        <div style={{background:C.card,border:"1px solid "+(C.border),borderRadius:16,overflow:"hidden"}}>
           {accTxs.sort((a,b)=>b.date.localeCompare(a.date)).map((tx,i)=>(
             <TxRow key={tx.id} tx={tx} showDivider={i<accTxs.length-1} categories={categories}/>
           ))}
@@ -523,14 +530,14 @@ function LoansView({loans,transactions,setShowLoanModal,setShowPayModal,accounts
 
   return(
     <div style={{padding:"16px",display:"grid",gap:16,boxSizing:"border-box",overflowX:"hidden"}} className="fa-fade-up">
-      <div style={{background:`linear-gradient(135deg,${C.orangeDim},${C.card})`,border:`1px solid ${C.orange}44`,borderRadius:20,padding:20,position:"relative",overflow:"hidden"}}>
-        <div style={{position:"absolute",top:-20,right:-20,width:100,height:100,borderRadius:"50%",background:`${C.orange}11`}}/>
+      <div style={{background:"linear-gradient(135deg,"+(C.orangeDim)+","+(C.card)+")",border:"1px solid "+(C.orange)+"44",borderRadius:20,padding:20,position:"relative",overflow:"hidden"}}>
+        <div style={{position:"absolute",top:-20,right:-20,width:100,height:100,borderRadius:"50%",background:(C.orange)+"11"}}/>
         <div style={{fontSize:12,color:C.orange,fontWeight:700,marginBottom:4}}>TOTAL POR COBRAR</div>
         <div style={{fontSize:32,fontWeight:900,letterSpacing:-2}}>{fmtCOP(totalActive)}</div>
         <div style={{display:"flex",gap:12,marginTop:14,flexWrap:"wrap"}}>
           <Pill color={C.orange}     label="Prestado" value={fmtCOP(totalLent)}  icon="📤"/>
           <Pill color={C.accentText} label="Cobrado"  value={fmtCOP(totalRecov)} icon="✓"/>
-          <Pill color={C.textSub}    label="Activos"  value={`${loans.filter(l=>l.status==="active").length}`} icon="#"/>
+          <Pill color={C.textSub}    label="Activos"  value={(loans.filter(l=>l.status==="active").length)} icon="#"/>
         </div>
       </div>
 
@@ -540,7 +547,7 @@ function LoansView({loans,transactions,setShowLoanModal,setShowPayModal,accounts
 
       <div style={{display:"flex",gap:8}}>
         {[["active","Activos"],["paid","Saldados"],["all","Todos"]].map(([v,l])=>(
-          <button key={v} onClick={()=>setFilter(v)} style={{padding:"6px 14px",borderRadius:100,border:filter!==v?`1px solid ${C.border}`:"none",cursor:"pointer",fontSize:12,fontWeight:600,background:filter===v?C.orange:C.card,color:filter===v?"#fff":C.textSub}}>{l}</button>
+          <button key={v} onClick={()=>setFilter(v)} style={{padding:"6px 14px",borderRadius:100,border:filter!==v?"1px solid "+(C.border):"none",cursor:"pointer",fontSize:12,fontWeight:600,background:filter===v?C.orange:C.card,color:filter===v?"#fff":C.textSub}}>{l}</button>
         ))}
       </div>
 
@@ -572,11 +579,11 @@ function LoansView({loans,transactions,setShowLoanModal,setShowPayModal,accounts
                       <span style={{fontSize:11,fontWeight:700,color:loan.status==="paid"?C.accentText:C.orange}}>{pct}% cobrado</span>
                     </div>
                     <div style={{height:6,borderRadius:3,background:C.border}}>
-                      <div style={{height:"100%",borderRadius:3,background:loan.status==="paid"?C.accent:C.orange,width:`${pct}%`,transition:"width .8s ease"}}/>
+                      <div style={{height:"100%",borderRadius:3,background:loan.status==="paid"?C.accent:C.orange,width:(pct)+"%",transition:"width .8s ease"}}/>
                     </div>
                   </div>
                   {loan.status==="active"&&(
-                    <button onClick={e=>{e.stopPropagation();setShowPayModal(loan);}} className="fa-btn" style={{marginTop:10,padding:"6px 14px",borderRadius:100,border:`1px solid ${C.orange}`,background:C.orangeDim,color:C.orange,fontSize:12,fontWeight:700,cursor:"pointer"}}>
+                    <button onClick={e=>{e.stopPropagation();setShowPayModal(loan);}} className="fa-btn" style={{marginTop:10,padding:"6px 14px",borderRadius:100,border:"1px solid "+(C.orange),background:C.orangeDim,color:C.orange,fontSize:12,fontWeight:700,cursor:"pointer"}}>
                       + Registrar Abono
                     </button>
                   )}
@@ -598,7 +605,7 @@ function LoanDetail({loan,transactions,onBack,setShowPayModal,accounts,categorie
   return(
     <div style={{padding:"16px",display:"grid",gap:16,boxSizing:"border-box",overflowX:"hidden"}} className="fa-fade-up">
       <button onClick={onBack} style={{display:"flex",alignItems:"center",gap:6,background:"none",border:"none",color:C.orange,cursor:"pointer",fontWeight:600,fontSize:14,padding:0}}>← Volver a Préstamos</button>
-      <div style={{background:`linear-gradient(135deg,${C.orangeDim},${C.card})`,border:`1px solid ${C.orange}44`,borderRadius:20,padding:20}}>
+      <div style={{background:"linear-gradient(135deg,"+(C.orangeDim)+","+(C.card)+")",border:"1px solid "+(C.orange)+"44",borderRadius:20,padding:20}}>
         <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:16}}>
           <div style={{width:52,height:52,borderRadius:16,background:C.orangeDim,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24}}>{loan.status==="paid"?"✅":"👤"}</div>
           <div>
@@ -626,7 +633,7 @@ function LoanDetail({loan,transactions,onBack,setShowPayModal,accounts,categorie
           <span style={{fontSize:12,fontWeight:700,color:loan.status==="paid"?C.accentText:C.orange}}>{pct}%</span>
         </div>
         <div style={{height:10,borderRadius:5,background:C.border}}>
-          <div style={{height:"100%",borderRadius:5,background:loan.status==="paid"?C.accent:C.orange,width:`${pct}%`,transition:"width 1s ease"}}/>
+          <div style={{height:"100%",borderRadius:5,background:loan.status==="paid"?C.accent:C.orange,width:(pct)+"%",transition:"width 1s ease"}}/>
         </div>
         <div style={{fontSize:11,color:C.textMuted,marginTop:6}}>Cuenta: {acc?.icon} {acc?.label}</div>
       </div>
@@ -636,9 +643,9 @@ function LoanDetail({loan,transactions,onBack,setShowPayModal,accounts,categorie
       <div>
         <div style={{fontSize:13,fontWeight:700,color:C.textMuted,marginBottom:10}}>HISTORIAL DE PAGOS ({loan.payments.length})</div>
         {loan.payments.length===0&&<EmptyState label="Sin pagos registrados aún"/>}
-        <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:16,overflow:"hidden"}}>
+        <div style={{background:C.card,border:"1px solid "+(C.border),borderRadius:16,overflow:"hidden"}}>
           {[...loan.payments].reverse().map((p,i)=>(
-            <div key={p.id} className="fa-tx-row" style={{padding:"12px 16px",borderBottom:i<loan.payments.length-1?`1px solid ${C.border}`:"none",display:"flex",alignItems:"center",gap:12}}>
+            <div key={p.id} className="fa-tx-row" style={{padding:"12px 16px",borderBottom:i<loan.payments.length-1?"1px solid "+(C.border):"none",display:"flex",alignItems:"center",gap:12}}>
               <div style={{width:36,height:36,borderRadius:10,background:C.accentDim,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>💸</div>
               <div style={{flex:1}}>
                 <div style={{fontSize:14,fontWeight:600}}>{p.note||"Abono"}</div>
@@ -652,7 +659,7 @@ function LoanDetail({loan,transactions,onBack,setShowPayModal,accounts,categorie
       {loanTx.length>0&&(
         <div>
           <div style={{fontSize:13,fontWeight:700,color:C.textMuted,marginBottom:10}}>MOVIMIENTOS VINCULADOS</div>
-          <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:16,overflow:"hidden"}}>
+          <div style={{background:C.card,border:"1px solid "+(C.border),borderRadius:16,overflow:"hidden"}}>
             {loanTx.map((tx,i)=><TxRow key={tx.id} tx={tx} showDivider={i<loanTx.length-1} categories={categories}/>)}
           </div>
         </div>
@@ -686,13 +693,13 @@ function CardsView({ cards, addCharge, deleteCharge, markPaid, saveCard, addCard
     <div style={{padding:"16px",display:"grid",gap:14,boxSizing:"border-box",overflowX:"hidden"}} className="fa-fade-up">
 
       {/* RESUMEN GLOBAL */}
-      <div style={{background:`linear-gradient(135deg,${C.redDim},${C.card})`,border:`1px solid ${C.red}44`,borderRadius:18,padding:18,position:"relative",overflow:"hidden"}}>
-        <div style={{position:"absolute",top:-20,right:-20,width:90,height:90,borderRadius:"50%",background:`${C.red}0D`,pointerEvents:"none"}}/>
+      <div style={{background:"linear-gradient(135deg,"+(C.redDim)+","+(C.card)+")",border:"1px solid "+(C.red)+"44",borderRadius:18,padding:18,position:"relative",overflow:"hidden"}}>
+        <div style={{position:"absolute",top:-20,right:-20,width:90,height:90,borderRadius:"50%",background:(C.red)+"0D",pointerEvents:"none"}}/>
         <div style={{fontSize:11,color:C.red,fontWeight:700,marginBottom:3}}>DEUDA TOTAL TARJETAS</div>
         <div style={{fontSize:28,fontWeight:900}}>{fmtCOP(totalDebt)}</div>
         <div style={{fontSize:12,color:C.textMuted,marginTop:4}}>Límite total disponible: {fmtCOP(totalLimit - totalDebt)}</div>
         <div style={{height:6,borderRadius:3,background:C.border,marginTop:10}}>
-          <div style={{height:"100%",borderRadius:3,background:C.red,width:`${Math.min(100,Math.round((totalDebt/Math.max(totalLimit,1))*100))}%`,transition:"width 1s ease"}}/>
+          <div style={{height:"100%",borderRadius:3,background:C.red,width:(Math.min(100,Math.round((totalDebt/Math.max(totalLimit,1))*100)))+"%",transition:"width 1s ease"}}/>
         </div>
         <div style={{fontSize:11,color:C.textMuted,marginTop:4}}>{Math.round((totalDebt/Math.max(totalLimit,1))*100)}% del límite usado</div>
       </div>
@@ -710,25 +717,25 @@ function CardsView({ cards, addCharge, deleteCharge, markPaid, saveCard, addCard
             <span>💳</span>{c.name}
           </button>
         ))}
-        <button onClick={()=>setShowEditCard("new")} style={{padding:"10px 14px",borderRadius:12,flexShrink:0,cursor:"pointer",fontSize:12,fontWeight:700,background:C.card,border:`1px solid ${C.border}`,color:C.textMuted}}>+ Nueva</button>
+        <button onClick={()=>setShowEditCard("new")} style={{padding:"10px 14px",borderRadius:12,flexShrink:0,cursor:"pointer",fontSize:12,fontWeight:700,background:C.card,border:"1px solid "+(C.border),color:C.textMuted}}>+ Nueva</button>
       </div>
 
       {/* TARJETA ACTIVA */}
       {card && (
-        <div style={{background:`linear-gradient(135deg, ${card.color}22, ${C.card})`,border:`1px solid ${card.color}44`,borderRadius:20,padding:18}}>
+        <div style={{background:"linear-gradient(135deg, "+(card.color)+"22, "+(C.card)+")",border:"1px solid "+(card.color)+"44",borderRadius:20,padding:18}}>
           <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:14}}>
             <div>
               <div style={{fontSize:16,fontWeight:800}}>{card.name}</div>
               <div style={{fontSize:12,color:C.textMuted}}>{card.bank} •••• {card.last4}</div>
             </div>
-            <button onClick={()=>setShowEditCard(card.id)} style={{background:card.color+"22",border:`1px solid ${card.color}44`,color:card.color,borderRadius:8,padding:"5px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>✏️ Editar</button>
+            <button onClick={()=>setShowEditCard(card.id)} style={{background:card.color+"22",border:"1px solid "+(card.color)+"44",color:card.color,borderRadius:8,padding:"5px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>✏️ Editar</button>
           </div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
             {[
               {l:"Saldo actual",    v:fmtCOP(card.balance||0),   c:card.color},
               {l:"Límite",          v:fmtCOP(card.limit||0),     c:C.textSub},
               {l:"Disponible",      v:fmtCOP((card.limit||0)-(card.balance||0)), c:(card.limit||0)-(card.balance||0)>0?C.green:C.red},
-              {l:"Día de corte",    v:`Día ${card.cutDay||"-"}`,  c:C.yellow},
+              {l:"Día de corte",    v:"Día "+(card.cutDay||"-"),  c:C.yellow},
             ].map(item=>(
               <div key={item.l} style={{background:C.bg,borderRadius:10,padding:"10px 12px"}}>
                 <div style={{fontSize:10,color:C.textMuted,marginBottom:2}}>{item.l.toUpperCase()}</div>
@@ -737,11 +744,11 @@ function CardsView({ cards, addCharge, deleteCharge, markPaid, saveCard, addCard
             ))}
           </div>
           <div style={{height:8,borderRadius:4,background:C.border,marginBottom:8}}>
-            <div style={{height:"100%",borderRadius:4,background:card.color,width:`${Math.min(100,Math.round(((card.balance||0)/Math.max(card.limit||1,1))*100))}%`,transition:"width 1s ease"}}/>
+            <div style={{height:"100%",borderRadius:4,background:card.color,width:(Math.min(100,Math.round(((card.balance||0)/Math.max(card.limit||1,1))*100)))+"%",transition:"width 1s ease"}}/>
           </div>
           <div style={{display:"flex",gap:8}}>
             <button onClick={()=>setShowAddCharge(true)} style={{flex:1,background:card.color,color:"#000",border:"none",borderRadius:10,padding:"10px",fontWeight:800,fontSize:13,cursor:"pointer"}}>+ Registrar gasto</button>
-            <button onClick={()=>handleMarkPaid(card.id)} style={{background:C.greenDim,border:`1px solid ${C.green}44`,color:C.green,borderRadius:10,padding:"10px 14px",fontWeight:700,fontSize:12,cursor:"pointer"}}>✓ Pagar</button>
+            <button onClick={()=>handleMarkPaid(card.id)} style={{background:C.greenDim,border:"1px solid "+(C.green)+"44",color:C.green,borderRadius:10,padding:"10px 14px",fontWeight:700,fontSize:12,cursor:"pointer"}}>✓ Pagar</button>
           </div>
         </div>
       )}
@@ -752,13 +759,13 @@ function CardsView({ cards, addCharge, deleteCharge, markPaid, saveCard, addCard
           GASTOS DEL MES ({monthCharges.length}) · {fmtCOP(monthCharges.reduce((s,c)=>s+c.amount,0))}
         </div>
         {monthCharges.length === 0 && (
-          <div style={{textAlign:"center",padding:20,color:C.textMuted,fontSize:13,background:C.card,borderRadius:14,border:`1px solid ${C.border}`}}>
+          <div style={{textAlign:"center",padding:20,color:C.textMuted,fontSize:13,background:C.card,borderRadius:14,border:"1px solid "+(C.border)}}>
             📭 Sin gastos este mes
           </div>
         )}
-        <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:14,overflow:"hidden"}}>
+        <div style={{background:C.card,border:"1px solid "+(C.border),borderRadius:14,overflow:"hidden"}}>
           {monthCharges.map((ch,i)=>(
-            <div key={ch.id} className="fa-tx-row" style={{padding:"11px 14px",borderBottom:i<monthCharges.length-1?`1px solid ${C.border}`:"none",display:"flex",alignItems:"center",gap:10}}>
+            <div key={ch.id} className="fa-tx-row" style={{padding:"11px 14px",borderBottom:i<monthCharges.length-1?"1px solid "+(C.border):"none",display:"flex",alignItems:"center",gap:10}}>
               <div style={{width:36,height:36,borderRadius:9,background:C.redDim,display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,flexShrink:0}}>💳</div>
               <div style={{flex:1,minWidth:0}}>
                 <div style={{fontSize:13,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{ch.note||ch.category}</div>
@@ -795,13 +802,13 @@ function ChargeModal({ card, onClose, onAdd, cats }) {
   const set = (k,v) => setForm(f=>({...f,[k]:v}));
   return (
     <div style={{position:"fixed",inset:0,background:"#000000BB",zIndex:500,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
-      <div onClick={e=>e.stopPropagation()} style={{background:C.surface,borderRadius:"22px 22px 0 0",width:"100%",maxWidth:480,padding:"18px 18px 36px",maxHeight:"90vh",overflowY:"auto",borderTop:`1px solid ${card.color}55`,animation:"fa-slideUp .3s ease"}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:C.surface,borderRadius:"22px 22px 0 0",width:"100%",maxWidth:480,padding:"18px 18px 36px",maxHeight:"90vh",overflowY:"auto",borderTop:"1px solid "+(card.color)+"55",animation:"fa-slideUp .3s ease"}}>
         <div style={{width:32,height:3,background:C.border,borderRadius:2,margin:"0 auto 16px"}}/>
         <div style={{display:"flex",justifyContent:"space-between",marginBottom:14}}>
           <div style={{fontSize:16,fontWeight:800}}>💳 Gasto en {card.name}</div>
-          <button onClick={onClose} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:6,padding:"4px 8px",color:C.text,cursor:"pointer"}}>✕</button>
+          <button onClick={onClose} style={{background:C.card,border:"1px solid "+(C.border),borderRadius:6,padding:"4px 8px",color:C.text,cursor:"pointer"}}>✕</button>
         </div>
-        <div style={{background:C.redDim,border:`1px solid ${C.red}33`,borderRadius:14,padding:14,marginBottom:12}}>
+        <div style={{background:C.redDim,border:"1px solid "+(C.red)+"33",borderRadius:14,padding:14,marginBottom:12}}>
           <div style={{fontSize:11,color:C.textMuted,marginBottom:3}}>MONTO</div>
           <div style={{display:"flex",alignItems:"center",gap:6}}>
             <span style={{fontSize:20,color:C.textMuted}}>$</span>
@@ -816,11 +823,11 @@ function ChargeModal({ card, onClose, onAdd, cats }) {
               <div key={key}>
                 <div style={{fontSize:10,color:C.textMuted,fontWeight:700,marginBottom:4}}>{label.toUpperCase()}</div>
                 {type==="select"
-                  ? <select value={form[key]} onChange={e=>set(key,e.target.value)} style={{width:"100%",background:C.card,border:`1px solid ${C.border}`,borderRadius:9,padding:"9px 11px",color:C.text,fontSize:13}}>
+                  ? <select value={form[key]} onChange={e=>set(key,e.target.value)} style={{width:"100%",background:C.card,border:"1px solid "+(C.border),borderRadius:9,padding:"9px 11px",color:C.text,fontSize:13}}>
                       {cats.map(c=><option key={c}>{c}</option>)}
                     </select>
                   : <input type={type} value={form[key]} onChange={e=>set(key,e.target.value)} placeholder={label==="Descripción"?"Ej: Mercado Éxito":""}
-                      style={{width:"100%",background:C.card,border:`1px solid ${C.border}`,borderRadius:9,padding:"9px 11px",color:C.text,fontSize:13}}/>
+                      style={{width:"100%",background:C.card,border:"1px solid "+(C.border),borderRadius:9,padding:"9px 11px",color:C.text,fontSize:13}}/>
                 }
               </div>
             );
@@ -864,35 +871,35 @@ function CardEditModal({ card, onClose, onSave }) {
   const COLORS = ["#60A5FA","#FFD166","#FB923C","#A78BFA","#F472B6","#34D399","#F87171","#00D97E"];
   return (
     <div style={{position:"fixed",inset:0,background:"#000000BB",zIndex:500,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
-      <div onClick={e=>e.stopPropagation()} style={{background:C.surface,borderRadius:"22px 22px 0 0",width:"100%",maxWidth:480,padding:"18px 18px 36px",maxHeight:"90vh",overflowY:"auto",borderTop:`1px solid ${C.border}`,animation:"fa-slideUp .3s ease"}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:C.surface,borderRadius:"22px 22px 0 0",width:"100%",maxWidth:480,padding:"18px 18px 36px",maxHeight:"90vh",overflowY:"auto",borderTop:"1px solid "+(C.border),animation:"fa-slideUp .3s ease"}}>
         <div style={{width:32,height:3,background:C.border,borderRadius:2,margin:"0 auto 16px"}}/>
         <div style={{display:"flex",justifyContent:"space-between",marginBottom:14}}>
           <div style={{fontSize:16,fontWeight:800}}>{card?"Editar tarjeta":"Nueva tarjeta"}</div>
-          <button onClick={onClose} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:6,padding:"4px 8px",color:C.text,cursor:"pointer"}}>✕</button>
+          <button onClick={onClose} style={{background:C.card,border:"1px solid "+(C.border),borderRadius:6,padding:"4px 8px",color:C.text,cursor:"pointer"}}>✕</button>
         </div>
         <div style={{display:"grid",gap:10}}>
           {[["Nombre",form.name,"name","Ej: Visa Bancolombia"],["Banco",form.bank,"bank","Ej: Bancolombia"],["Últimos 4 dígitos",form.last4,"last4","0000"]].map(([label,val,key,ph])=>(
             <div key={key}>
               <div style={{fontSize:10,color:C.textMuted,fontWeight:700,marginBottom:4}}>{label.toUpperCase()}</div>
               <input value={val} onChange={e=>set(key,e.target.value)} placeholder={ph}
-                style={{width:"100%",background:C.card,border:`1px solid ${C.border}`,borderRadius:9,padding:"9px 11px",color:C.text,fontSize:13}}/>
+                style={{width:"100%",background:C.card,border:"1px solid "+(C.border),borderRadius:9,padding:"9px 11px",color:C.text,fontSize:13}}/>
             </div>
           ))}
           <div>
             <div style={{fontSize:10,color:C.textMuted,fontWeight:700,marginBottom:4}}>LÍMITE DE CRÉDITO</div>
             <input type="number" value={form.limit} onChange={e=>set("limit",parseFloat(e.target.value)||0)}
-              style={{width:"100%",background:C.card,border:`1px solid ${C.border}`,borderRadius:9,padding:"9px 11px",color:C.text,fontSize:13}}/>
+              style={{width:"100%",background:C.card,border:"1px solid "+(C.border),borderRadius:9,padding:"9px 11px",color:C.text,fontSize:13}}/>
           </div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
             <div>
               <div style={{fontSize:10,color:C.textMuted,fontWeight:700,marginBottom:4}}>DÍA DE CORTE</div>
               <input type="number" value={form.cutDay} onChange={e=>set("cutDay",parseInt(e.target.value)||1)} min="1" max="31"
-                style={{width:"100%",background:C.card,border:`1px solid ${C.border}`,borderRadius:9,padding:"9px 11px",color:C.text,fontSize:13}}/>
+                style={{width:"100%",background:C.card,border:"1px solid "+(C.border),borderRadius:9,padding:"9px 11px",color:C.text,fontSize:13}}/>
             </div>
             <div>
               <div style={{fontSize:10,color:C.textMuted,fontWeight:700,marginBottom:4}}>DÍA DE PAGO</div>
               <input type="number" value={form.payDay} onChange={e=>set("payDay",parseInt(e.target.value)||1)} min="1" max="31"
-                style={{width:"100%",background:C.card,border:`1px solid ${C.border}`,borderRadius:9,padding:"9px 11px",color:C.text,fontSize:13}}/>
+                style={{width:"100%",background:C.card,border:"1px solid "+(C.border),borderRadius:9,padding:"9px 11px",color:C.text,fontSize:13}}/>
             </div>
           </div>
           <div>
@@ -919,12 +926,12 @@ function Stats({monthTxs,totalIncome,totalExpense,transactions,filterMonth,categ
   const expByCat={},incByCat={};
   monthTxs.filter(t=>t.type==="expense").forEach(t=>{
     const cat=categories.expense.find(c=>c.id===t.category);
-    const lbl=cat?`${cat.icon} ${cat.label}`:t.category;
+    const lbl=cat?(cat.icon)+" "+(cat.label):t.category;
     expByCat[lbl]=(expByCat[lbl]||0)+t.amount;
   });
   monthTxs.filter(t=>t.type==="income").forEach(t=>{
     const cat=categories.income.find(c=>c.id===t.category);
-    const lbl=cat?`${cat.icon} ${cat.label}`:t.category;
+    const lbl=cat?(cat.icon)+" "+(cat.label):t.category;
     incByCat[lbl]=(incByCat[lbl]||0)+t.amount;
   });
 
@@ -959,26 +966,26 @@ function Stats({monthTxs,totalIncome,totalExpense,transactions,filterMonth,categ
 
       {/* KPI CARDS */}
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-        <div style={{background:`linear-gradient(135deg,${C.accentDim},${C.card})`,border:`1px solid ${C.accentText}33`,borderRadius:16,padding:14}}>
+        <div style={{background:"linear-gradient(135deg,"+(C.accentDim)+","+(C.card)+")",border:"1px solid "+(C.accentText)+"33",borderRadius:16,padding:14}}>
           <div style={{fontSize:11,color:C.accentText,fontWeight:700}}>INGRESOS</div>
           <div style={{fontSize:22,fontWeight:900,marginTop:4}}>{fmtCOP(totalIncome)}</div>
         </div>
-        <div style={{background:`linear-gradient(135deg,${C.redDim},${C.card})`,border:`1px solid ${C.red}33`,borderRadius:16,padding:14}}>
+        <div style={{background:"linear-gradient(135deg,"+(C.redDim)+","+(C.card)+")",border:"1px solid "+(C.red)+"33",borderRadius:16,padding:14}}>
           <div style={{fontSize:11,color:C.red,fontWeight:700}}>GASTOS</div>
           <div style={{fontSize:22,fontWeight:900,marginTop:4}}>{fmtCOP(totalExpense)}</div>
         </div>
-        <div style={{background:savings>=0?`linear-gradient(135deg,${C.accentDim},${C.card})`:`linear-gradient(135deg,${C.redDim},${C.card})`,border:"1px solid "+((savings>=0?C.accentText:C.red)+"33"),borderRadius:16,padding:14}}>
+        <div style={{background:savings>=0?"linear-gradient(135deg,"+(C.accentDim)+","+(C.card)+")":"linear-gradient(135deg,"+(C.redDim)+","+(C.card)+")",border:"1px solid "+((savings>=0?C.accentText:C.red)+"33"),borderRadius:16,padding:14}}>
           <div style={{fontSize:11,color:savings>=0?C.accentText:C.red,fontWeight:700}}>BALANCE</div>
           <div style={{fontSize:22,fontWeight:900,marginTop:4,color:savings>=0?C.accentText:C.red}}>{fmtCOP(savings)}</div>
         </div>
-        <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:16,padding:14}}>
+        <div style={{background:C.card,border:"1px solid "+(C.border),borderRadius:16,padding:14}}>
           <div style={{fontSize:11,color:C.yellow,fontWeight:700}}>TASA AHORRO</div>
           <div style={{fontSize:22,fontWeight:900,marginTop:4,color:savRate>=20?C.accentText:savRate>=10?C.yellow:C.red}}>{savRate}%</div>
         </div>
       </div>
 
       {/* BARRA PROGRESO AHORRO */}
-      <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:16,padding:16}}>
+      <div style={{background:C.card,border:"1px solid "+(C.border),borderRadius:16,padding:16}}>
         <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
           <span style={{fontSize:13,fontWeight:700}}>Salud Financiera</span>
           <span style={{fontSize:12,color:savRate>=20?C.accentText:savRate>=10?C.yellow:C.red,fontWeight:700}}>
@@ -988,7 +995,7 @@ function Stats({monthTxs,totalIncome,totalExpense,transactions,filterMonth,categ
         <div style={{display:"grid",gap:8}}>
           {[
             {label:"Ahorro",     pct:Math.min(100,savRate),   color:C.accentText, meta:"Meta: 20%"},
-            {label:"Gasto",      pct:Math.min(100,spendRate), color:spendRate>80?C.red:C.yellow, meta:`del ingreso`},
+            {label:"Gasto",      pct:Math.min(100,spendRate), color:spendRate>80?C.red:C.yellow, meta:"del ingreso"},
           ].map(item=>(
             <div key={item.label}>
               <div style={{display:"flex",justifyContent:"space-between",fontSize:12,marginBottom:4}}>
@@ -996,7 +1003,7 @@ function Stats({monthTxs,totalIncome,totalExpense,transactions,filterMonth,categ
                 <span style={{color:item.color,fontWeight:700}}>{item.pct}% <span style={{color:C.textMuted,fontWeight:400}}>{item.meta}</span></span>
               </div>
               <div style={{height:8,borderRadius:4,background:C.border}}>
-                <div style={{height:"100%",borderRadius:4,background:item.color,width:`${item.pct}%`,transition:"width 1s ease"}}/>
+                <div style={{height:"100%",borderRadius:4,background:item.color,width:(item.pct)+"%",transition:"width 1s ease"}}/>
               </div>
             </div>
           ))}
@@ -1010,7 +1017,7 @@ function Stats({monthTxs,totalIncome,totalExpense,transactions,filterMonth,categ
       </div>
 
       {/* GRÁFICO 6 MESES */}
-      <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:16,padding:16}}>
+      <div style={{background:C.card,border:"1px solid "+(C.border),borderRadius:16,padding:16}}>
         <div style={{fontSize:14,fontWeight:700,marginBottom:14}}>Evolución últimos 6 meses</div>
         <div style={{display:"flex",gap:6,alignItems:"flex-end",height:100,marginBottom:8}}>
           {last6.map((m,i)=>(
@@ -1035,7 +1042,7 @@ function Stats({monthTxs,totalIncome,totalExpense,transactions,filterMonth,categ
 
       {/* TOP GASTO DEL DÍA */}
       {topDay && (
-        <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:16,padding:16}}>
+        <div style={{background:C.card,border:"1px solid "+(C.border),borderRadius:16,padding:16}}>
           <div style={{fontSize:13,fontWeight:700,marginBottom:4}}>Día de mayor gasto</div>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
             <div>
@@ -1047,7 +1054,7 @@ function Stats({monthTxs,totalIncome,totalExpense,transactions,filterMonth,categ
       )}
 
       {/* DESGLOSE GASTOS */}
-      <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:16,padding:16}}>
+      <div style={{background:C.card,border:"1px solid "+(C.border),borderRadius:16,padding:16}}>
         <div style={{fontSize:14,fontWeight:700,marginBottom:12}}>Gastos por categoría</div>
         {Object.entries(expByCat).sort((a,b)=>b[1]-a[1]).map(([cat,amount])=>{
           const pct=totalExpense>0?Math.round((amount/totalExpense)*100):0;
@@ -1058,7 +1065,7 @@ function Stats({monthTxs,totalIncome,totalExpense,transactions,filterMonth,categ
                 <span style={{fontSize:13,fontWeight:700,color:C.red}}>{fmtCOP(amount)} <span style={{color:C.textMuted,fontWeight:400}}>{pct}%</span></span>
               </div>
               <div style={{height:6,borderRadius:3,background:C.border}}>
-                <div style={{height:"100%",borderRadius:3,background:`hsl(${360-pct*3.6},70%,60%)`,width:`${pct}%`,transition:"width .8s ease"}}/>
+                <div style={{height:"100%",borderRadius:3,background:"hsl("+(360-pct*3.6)+",70%,60%)",width:(pct)+"%",transition:"width .8s ease"}}/>
               </div>
             </div>
           );
@@ -1067,7 +1074,7 @@ function Stats({monthTxs,totalIncome,totalExpense,transactions,filterMonth,categ
       </div>
 
       {/* DESGLOSE INGRESOS */}
-      <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:16,padding:16}}>
+      <div style={{background:C.card,border:"1px solid "+(C.border),borderRadius:16,padding:16}}>
         <div style={{fontSize:14,fontWeight:700,marginBottom:12}}>Ingresos por categoría</div>
         {Object.entries(incByCat).sort((a,b)=>b[1]-a[1]).map(([cat,amount])=>{
           const pct=totalIncome>0?Math.round((amount/totalIncome)*100):0;
@@ -1078,7 +1085,7 @@ function Stats({monthTxs,totalIncome,totalExpense,transactions,filterMonth,categ
                 <span style={{fontSize:13,fontWeight:700,color:C.accentText}}>{fmtCOP(amount)} <span style={{color:C.textMuted,fontWeight:400}}>{pct}%</span></span>
               </div>
               <div style={{height:6,borderRadius:3,background:C.border}}>
-                <div style={{height:"100%",borderRadius:3,background:C.accentText,width:`${pct}%`,transition:"width .8s ease"}}/>
+                <div style={{height:"100%",borderRadius:3,background:C.accentText,width:(pct)+"%",transition:"width .8s ease"}}/>
               </div>
             </div>
           );
@@ -1115,7 +1122,7 @@ function AccountsManager({accounts, updateAccountBalance, showToast}) {
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
         <div style={{fontSize:12,color:C.textMuted,fontWeight:700}}>MIS CUENTAS</div>
         <button onClick={()=>setNewAcc({label:"",icon:"💵",color:C.accentText,initialBalance:0})}
-          style={{background:C.accentDim,border:`1px solid ${C.accentText}44`,color:C.accentText,borderRadius:8,padding:"5px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>
+          style={{background:C.accentDim,border:"1px solid "+(C.accentText)+"44",color:C.accentText,borderRadius:8,padding:"5px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>
           + Nueva cuenta
         </button>
       </div>
@@ -1123,13 +1130,13 @@ function AccountsManager({accounts, updateAccountBalance, showToast}) {
 
       {/* Nueva cuenta form */}
       {newAcc && (
-        <div style={{background:C.card,border:`1px solid ${C.accentText}44`,borderRadius:14,padding:14}}>
+        <div style={{background:C.card,border:"1px solid "+(C.accentText)+"44",borderRadius:14,padding:14}}>
           <div style={{fontSize:12,fontWeight:700,color:C.accentText,marginBottom:10}}>+ NUEVA CUENTA</div>
           <div style={{display:"grid",gap:8}}>
             <div>
               <div style={{fontSize:10,color:C.textMuted,marginBottom:4}}>NOMBRE</div>
               <input value={newAcc.label} onChange={e=>setNewAcc(a=>({...a,label:e.target.value}))} placeholder="Ej: Efectivo, Nequi..."
-                style={{width:"100%",background:C.bg,border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 10px",color:C.text,fontSize:13}}/>
+                style={{width:"100%",background:C.bg,border:"1px solid "+(C.border),borderRadius:8,padding:"8px 10px",color:C.text,fontSize:13}}/>
             </div>
             <div>
               <div style={{fontSize:10,color:C.textMuted,marginBottom:6}}>ÍCONO</div>
@@ -1155,20 +1162,20 @@ function AccountsManager({accounts, updateAccountBalance, showToast}) {
             <div>
               <div style={{fontSize:10,color:C.textMuted,marginBottom:4}}>SALDO INICIAL</div>
               <input type="number" value={newAcc.initialBalance} onChange={e=>setNewAcc(a=>({...a,initialBalance:parseFloat(e.target.value)||0}))} placeholder="0"
-                style={{width:"100%",background:C.bg,border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 10px",color:C.text,fontSize:13}}/>
+                style={{width:"100%",background:C.bg,border:"1px solid "+(C.border),borderRadius:8,padding:"8px 10px",color:C.text,fontSize:13}}/>
             </div>
             <div style={{display:"flex",gap:8}}>
               <button onClick={async()=>{
                 if(!newAcc.label)return;
                 const id=newAcc.label.toLowerCase().replace(/\s+/g,"-")+"-"+Date.now();
                 await updateAccountBalance(id, newAcc.initialBalance, {label:newAcc.label,icon:newAcc.icon,color:newAcc.color,isNew:true});
-                showToast(`${newAcc.label} creada ✓`);
+                showToast((newAcc.label)+" creada ✓");
                 setNewAcc(null);
               }} style={{flex:1,background:C.accent,border:"none",borderRadius:8,padding:"9px",color:"#000",fontWeight:700,fontSize:13,cursor:"pointer"}}>
                 Crear cuenta
               </button>
               <button onClick={()=>setNewAcc(null)}
-                style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:8,padding:"9px 12px",color:C.textSub,cursor:"pointer",fontSize:13}}>
+                style={{background:C.card,border:"1px solid "+(C.border),borderRadius:8,padding:"9px 12px",color:C.textSub,cursor:"pointer",fontSize:13}}>
                 Cancelar
               </button>
             </div>
@@ -1186,7 +1193,7 @@ function AccountsManager({accounts, updateAccountBalance, showToast}) {
                 <div>
                   <div style={{fontSize:10,color:C.textMuted,marginBottom:4}}>NOMBRE</div>
                   <input value={editForm.label} onChange={e=>setEditForm(f=>({...f,label:e.target.value}))}
-                    style={{width:"100%",background:C.bg,border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 10px",color:C.text,fontSize:13}}/>
+                    style={{width:"100%",background:C.bg,border:"1px solid "+(C.border),borderRadius:8,padding:"8px 10px",color:C.text,fontSize:13}}/>
                 </div>
                 <div>
                   <div style={{fontSize:10,color:C.textMuted,marginBottom:6}}>ÍCONO</div>
@@ -1202,11 +1209,11 @@ function AccountsManager({accounts, updateAccountBalance, showToast}) {
                 <div>
                   <div style={{fontSize:10,color:C.textMuted,marginBottom:4}}>SALDO INICIAL</div>
                   <input type="number" value={editForm.initialBalance} onChange={e=>setEditForm(f=>({...f,initialBalance:e.target.value}))}
-                    style={{width:"100%",background:C.bg,border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 10px",color:C.text,fontSize:13}}/>
+                    style={{width:"100%",background:C.bg,border:"1px solid "+(C.border),borderRadius:8,padding:"8px 10px",color:C.text,fontSize:13}}/>
                 </div>
                 <div style={{display:"flex",gap:8}}>
                   <button onClick={saveEdit} style={{flex:1,background:C.accent,border:"none",borderRadius:8,padding:"9px",color:"#000",fontWeight:700,fontSize:13,cursor:"pointer"}}>Guardar</button>
-                  <button onClick={()=>setEditId(null)} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:8,padding:"9px 12px",color:C.textSub,cursor:"pointer",fontSize:13}}>Cancelar</button>
+                  <button onClick={()=>setEditId(null)} style={{background:C.card,border:"1px solid "+(C.border),borderRadius:8,padding:"9px 12px",color:C.textSub,cursor:"pointer",fontSize:13}}>Cancelar</button>
                 </div>
               </div>
             </div>
@@ -1219,7 +1226,7 @@ function AccountsManager({accounts, updateAccountBalance, showToast}) {
                 <div style={{fontSize:11,color:C.textMuted}}>Inicial: {fmtCOP(acc.initialBalance)}</div>
               </div>
               <button onClick={()=>startEdit(acc)}
-                style={{background:C.accentDim,border:`1px solid ${C.accentText}33`,color:C.accentText,borderRadius:8,padding:"6px 10px",fontSize:11,fontWeight:700,cursor:"pointer",flexShrink:0}}>
+                style={{background:C.accentDim,border:"1px solid "+(C.accentText)+"33",color:C.accentText,borderRadius:8,padding:"6px 10px",fontSize:11,fontWeight:700,cursor:"pointer",flexShrink:0}}>
                 ✏️ Editar
               </button>
             </div>
@@ -1278,25 +1285,25 @@ function CategoriesManager({ categories, saveCategories, showToast }) {
         ))}
       </div>
 
-      <button onClick={()=>setEditCat("new")} style={{background:C.accentDim,border:`1px solid ${C.accentText}44`,color:C.accentText,borderRadius:9,padding:"9px",fontWeight:700,fontSize:12,cursor:"pointer"}}>+ Nueva categoría</button>
+      <button onClick={()=>setEditCat("new")} style={{background:C.accentDim,border:"1px solid "+(C.accentText)+"44",color:C.accentText,borderRadius:9,padding:"9px",fontWeight:700,fontSize:12,cursor:"pointer"}}>+ Nueva categoría</button>
 
       {editCat==="new" && (
         <CatForm onSave={addCategory} onCancel={()=>setEditCat(null)}/>
       )}
 
       {cats.map((cat,idx)=>(
-        <div key={cat.id||idx} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:14,overflow:"hidden"}}>
+        <div key={cat.id||idx} style={{background:C.card,border:"1px solid "+(C.border),borderRadius:14,overflow:"hidden"}}>
           <div style={{padding:"10px 12px",display:"flex",alignItems:"center",gap:8}}>
             <span style={{fontSize:20,flexShrink:0}}>{cat.icon}</span>
             <div style={{flex:1,minWidth:0}}>
               <div style={{fontSize:13,fontWeight:700}}>{cat.label}</div>
               <div style={{fontSize:10,color:C.textMuted}}>{(cat.subs||[]).length} subcategorías</div>
             </div>
-            <button onClick={()=>setEditCat(editCat===idx?null:idx)} style={{background:C.accentDim,color:C.accentText,border:`1px solid ${C.accentText}33`,borderRadius:6,padding:"4px 8px",fontSize:10,fontWeight:700,cursor:"pointer",flexShrink:0}}>✏️</button>
-            <button onClick={()=>deleteCategory(idx)} style={{background:C.redDim,color:C.red,border:`1px solid ${C.red}33`,borderRadius:6,padding:"4px 8px",fontSize:10,fontWeight:700,cursor:"pointer",flexShrink:0}}>🗑</button>
+            <button onClick={()=>setEditCat(editCat===idx?null:idx)} style={{background:C.accentDim,color:C.accentText,border:"1px solid "+(C.accentText)+"33",borderRadius:6,padding:"4px 8px",fontSize:10,fontWeight:700,cursor:"pointer",flexShrink:0}}>✏️</button>
+            <button onClick={()=>deleteCategory(idx)} style={{background:C.redDim,color:C.red,border:"1px solid "+(C.red)+"33",borderRadius:6,padding:"4px 8px",fontSize:10,fontWeight:700,cursor:"pointer",flexShrink:0}}>🗑</button>
           </div>
           {editCat===idx && (
-            <div style={{padding:"0 12px 12px",borderTop:`1px solid ${C.border}`}}>
+            <div style={{padding:"0 12px 12px",borderTop:"1px solid "+(C.border)}}>
               <CatForm initial={cat} onSave={(u)=>updateCategory(idx,u)} onCancel={()=>setEditCat(null)}/>
             </div>
           )}
@@ -1304,19 +1311,19 @@ function CategoriesManager({ categories, saveCategories, showToast }) {
           <div style={{padding:"0 12px 10px"}}>
             <div style={{display:"flex",flexWrap:"wrap",gap:4,marginBottom:6}}>
               {(cat.subs||[]).map((sub,si)=>(
-                <div key={si} style={{display:"flex",alignItems:"center",gap:3,background:C.bg,border:`1px solid ${C.border}`,borderRadius:100,padding:"3px 8px"}}>
+                <div key={si} style={{display:"flex",alignItems:"center",gap:3,background:C.bg,border:"1px solid "+(C.border),borderRadius:100,padding:"3px 8px"}}>
                   <span style={{fontSize:11,color:C.textSub}}>{sub}</span>
                   <button onClick={()=>deleteSub(idx,si)} style={{background:"none",border:"none",color:C.textMuted,cursor:"pointer",fontSize:11,lineHeight:1,padding:"0 1px"}}>✕</button>
                 </div>
               ))}
               <button onClick={()=>setEditSub(editSub?.catIdx===idx?null:{catIdx:idx,val:""})}
-                style={{background:"transparent",border:`1px dashed ${C.border}`,borderRadius:100,padding:"3px 8px",fontSize:11,color:C.textMuted,cursor:"pointer"}}>+ sub</button>
+                style={{background:"transparent",border:"1px dashed "+(C.border),borderRadius:100,padding:"3px 8px",fontSize:11,color:C.textMuted,cursor:"pointer"}}>+ sub</button>
             </div>
             {editSub?.catIdx===idx && (
               <div style={{display:"flex",gap:6}}>
                 <input value={editSub.val} onChange={e=>setEditSub(s=>({...s,val:e.target.value}))} placeholder="Nueva subcategoría..."
                   onKeyDown={e=>{if(e.key==="Enter"&&editSub.val){addSub(idx,editSub.val);setEditSub(null);}}}
-                  style={{flex:1,background:C.bg,border:`1px solid ${C.border}`,borderRadius:7,padding:"5px 8px",color:C.text,fontSize:12}}/>
+                  style={{flex:1,background:C.bg,border:"1px solid "+(C.border),borderRadius:7,padding:"5px 8px",color:C.text,fontSize:12}}/>
                 <button onClick={()=>{if(editSub.val)addSub(idx,editSub.val);setEditSub(null);}}
                   style={{background:C.accent,color:"#000",border:"none",borderRadius:7,padding:"5px 10px",fontWeight:700,fontSize:12,cursor:"pointer"}}>OK</button>
               </div>
@@ -1333,7 +1340,7 @@ function CatForm({ initial, onSave, onCancel }) {
   return (
     <div style={{display:"grid",gap:8,paddingTop:10}}>
       <input value={form.label} onChange={e=>setForm(f=>({...f,label:e.target.value}))} placeholder="Nombre de la categoría"
-        style={{width:"100%",background:C.bg,border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 10px",color:C.text,fontSize:13}}/>
+        style={{width:"100%",background:C.bg,border:"1px solid "+(C.border),borderRadius:8,padding:"8px 10px",color:C.text,fontSize:13}}/>
       <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
         {CAT_ICONS.map(ic=>(
           <button key={ic} onClick={()=>setForm(f=>({...f,icon:ic}))}
@@ -1346,7 +1353,7 @@ function CatForm({ initial, onSave, onCancel }) {
         <button onClick={()=>form.label&&onSave(form)} style={{flex:1,background:C.accent,border:"none",borderRadius:8,padding:"8px",color:"#000",fontWeight:700,fontSize:12,cursor:"pointer"}}>
           {initial?"Guardar":"Crear"}
         </button>
-        <button onClick={onCancel} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 10px",color:C.textSub,cursor:"pointer",fontSize:12}}>Cancelar</button>
+        <button onClick={onCancel} style={{background:C.card,border:"1px solid "+(C.border),borderRadius:8,padding:"8px 10px",color:C.textSub,cursor:"pointer",fontSize:12}}>Cancelar</button>
       </div>
     </div>
   );
@@ -1360,14 +1367,14 @@ function Sidebar({open,onClose,accounts,updateAccountBalance,settings,setSetting
   return(
     <>
       {open&&<div onClick={onClose} style={{position:"fixed",inset:0,background:"#00000088",zIndex:200}}/>}
-      <div style={{position:"fixed",top:0,right:0,bottom:0,width:Math.min(340,window.innerWidth-40),background:C.surface,borderLeft:`1px solid ${C.border}`,transform:open?"translateX(0)":"translateX(100%)",transition:"transform .3s cubic-bezier(.4,0,.2,1)",zIndex:300,display:"flex",flexDirection:"column",overflowY:"auto"}}>
-        <div style={{padding:"20px 16px 16px",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
+      <div style={{position:"fixed",top:0,right:0,bottom:0,width:Math.min(340,window.innerWidth-40),background:C.surface,borderLeft:"1px solid "+(C.border),transform:open?"translateX(0)":"translateX(100%)",transition:"transform .3s cubic-bezier(.4,0,.2,1)",zIndex:300,display:"flex",flexDirection:"column",overflowY:"auto"}}>
+        <div style={{padding:"20px 16px 16px",borderBottom:"1px solid "+(C.border),display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
           <div style={{fontSize:18,fontWeight:800}}>⚙ Configuración</div>
-          <button onClick={onClose} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:8,padding:"6px 10px",color:C.text,cursor:"pointer"}}>✕</button>
+          <button onClick={onClose} style={{background:C.card,border:"1px solid "+(C.border),borderRadius:8,padding:"6px 10px",color:C.text,cursor:"pointer"}}>✕</button>
         </div>
-        <div style={{display:"flex",borderBottom:`1px solid ${C.border}`,flexShrink:0,overflowX:"auto"}}>
+        <div style={{display:"flex",borderBottom:"1px solid "+(C.border),flexShrink:0,overflowX:"auto"}}>
           {[["accounts","Cuentas"],["cats","Categorías"],["notif","Notif"],["prefs","Prefs"]].map(([id,l])=>(
-            <button key={id} onClick={()=>setTab(id)} style={{flex:"0 0 auto",padding:"10px 10px",border:"none",background:"transparent",borderBottom:tab===id?`2px solid ${C.accent}`:"2px solid transparent",color:tab===id?C.accent:C.textSub,fontWeight:600,fontSize:11,cursor:"pointer",whiteSpace:"nowrap"}}>{l}</button>
+            <button key={id} onClick={()=>setTab(id)} style={{flex:"0 0 auto",padding:"10px 10px",border:"none",background:"transparent",borderBottom:tab===id?"2px solid "+(C.accent):"2px solid transparent",color:tab===id?C.accent:C.textSub,fontWeight:600,fontSize:11,cursor:"pointer",whiteSpace:"nowrap"}}>{l}</button>
           ))}
         </div>
         <div style={{flex:1,overflowY:"auto",padding:16}}>
@@ -1391,19 +1398,19 @@ function Sidebar({open,onClose,accounts,updateAccountBalance,settings,setSetting
                 {!isSupported&&<div style={{fontSize:12,color:C.textMuted}}>Tu navegador no soporta notificaciones. Instala la app en tu pantalla de inicio.</div>}
                 {isSupported&&permission!=="granted"&&(
                   <button onClick={async()=>{const r=await requestPermission();showToast(r==="granted"?"Notificaciones activadas ✓":"No se pudo activar","err");}}
-                    style={{width:"100%",background:C.accentDim,border:`1px solid ${C.accentText}44`,color:C.accentText,borderRadius:10,padding:10,fontWeight:700,fontSize:13,cursor:"pointer"}}>
+                    style={{width:"100%",background:C.accentDim,border:"1px solid "+(C.accentText)+"44",color:C.accentText,borderRadius:10,padding:10,fontWeight:700,fontSize:13,cursor:"pointer"}}>
                     Activar Notificaciones
                   </button>
                 )}
                 {permission==="granted"&&(
                   <button onClick={()=>sendLocal("Mi Suite Personal","¡Las notificaciones funcionan correctamente! 🎉")}
-                    style={{width:"100%",background:C.accentDim,border:`1px solid ${C.accentText}44`,color:C.accentText,borderRadius:10,padding:10,fontWeight:700,fontSize:13,cursor:"pointer"}}>
+                    style={{width:"100%",background:C.accentDim,border:"1px solid "+(C.accentText)+"44",color:C.accentText,borderRadius:10,padding:10,fontWeight:700,fontSize:13,cursor:"pointer"}}>
                     Probar notificación
                   </button>
                 )}
               </div>
               {/* Instrucciones iOS */}
-              <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:14,padding:14}}>
+              <div style={{background:C.card,border:"1px solid "+(C.border),borderRadius:14,padding:14}}>
                 <div style={{fontSize:13,fontWeight:700,marginBottom:8}}>📱 Para iOS (iPhone/iPad)</div>
                 <div style={{fontSize:12,color:C.textSub,lineHeight:1.6}}>
                   1. Abre la app en <b>Safari</b><br/>
@@ -1415,7 +1422,7 @@ function Sidebar({open,onClose,accounts,updateAccountBalance,settings,setSetting
                 </div>
               </div>
               {/* Instrucciones Android */}
-              <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:14,padding:14}}>
+              <div style={{background:C.card,border:"1px solid "+(C.border),borderRadius:14,padding:14}}>
                 <div style={{fontSize:13,fontWeight:700,marginBottom:8}}>🤖 Para Android</div>
                 <div style={{fontSize:12,color:C.textSub,lineHeight:1.6}}>
                   1. Abre en <b>Chrome</b><br/>
@@ -1430,11 +1437,11 @@ function Sidebar({open,onClose,accounts,updateAccountBalance,settings,setSetting
             <div style={{display:"grid",gap:12}}>
               <div style={{fontSize:12,color:C.textMuted,fontWeight:700}}>PRESUPUESTO MENSUAL</div>
               {categories.expense.map(cat=>(
-                <div key={cat.id} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:14,padding:"12px 14px",display:"flex",alignItems:"center",gap:10}}>
+                <div key={cat.id} style={{background:C.card,border:"1px solid "+(C.border),borderRadius:14,padding:"12px 14px",display:"flex",alignItems:"center",gap:10}}>
                   <span style={{fontSize:20,flexShrink:0}}>{cat.icon}</span>
                   <div style={{flex:1}}>
                     <div style={{fontSize:13,fontWeight:600,marginBottom:4}}>{cat.label}</div>
-                    <input type="number" placeholder="0" defaultValue={settings.budgets?.[cat.id]||""} onChange={e=>setSettings(s=>({...s,budgets:{...s.budgets,[cat.id]:parseFloat(e.target.value)||0}}))} style={{width:"100%",background:C.bg,border:`1px solid ${C.border}`,borderRadius:8,padding:"6px 10px",color:C.text,fontSize:13}}/>
+                    <input type="number" placeholder="0" defaultValue={settings.budgets?.[cat.id]||""} onChange={e=>setSettings(s=>({...s,budgets:{...s.budgets,[cat.id]:parseFloat(e.target.value)||0}}))} style={{width:"100%",background:C.bg,border:"1px solid "+(C.border),borderRadius:8,padding:"6px 10px",color:C.text,fontSize:13}}/>
                   </div>
                 </div>
               ))}
@@ -1443,9 +1450,9 @@ function Sidebar({open,onClose,accounts,updateAccountBalance,settings,setSetting
           )}
           {tab==="prefs"&&(
             <div style={{display:"grid",gap:14}}>
-              <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:14,padding:14}}>
+              <div style={{background:C.card,border:"1px solid "+(C.border),borderRadius:14,padding:14}}>
                 <div style={{fontSize:13,fontWeight:700,marginBottom:10}}>Moneda</div>
-                <select value={settings.currency} onChange={e=>setSettings(s=>({...s,currency:e.target.value}))} style={{width:"100%",background:C.bg,border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 10px",color:C.text,fontSize:13}}>
+                <select value={settings.currency} onChange={e=>setSettings(s=>({...s,currency:e.target.value}))} style={{width:"100%",background:C.bg,border:"1px solid "+(C.border),borderRadius:8,padding:"8px 10px",color:C.text,fontSize:13}}>
                   <option value="COP">🇨🇴 COP - Peso colombiano</option>
                   <option value="USD">🇺🇸 USD - Dólar</option>
                   <option value="EUR">🇪🇺 EUR - Euro</option>
@@ -1473,18 +1480,18 @@ function AddModal({onClose,onAdd,accounts,opts,categories=DEFAULT_CATEGORIES}){
   };
   return(
     <div style={{position:"fixed",inset:0,background:"#000000BB",zIndex:500,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
-      <div onClick={e=>e.stopPropagation()} style={{background:C.surface,borderRadius:"24px 24px 0 0",width:"100%",maxWidth:480,padding:"20px 20px 36px",animation:"fa-slideUp .3s cubic-bezier(.4,0,.2,1)",maxHeight:"92vh",overflowY:"auto",borderTop:`1px solid ${C.border}`}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:C.surface,borderRadius:"24px 24px 0 0",width:"100%",maxWidth:480,padding:"20px 20px 36px",animation:"fa-slideUp .3s cubic-bezier(.4,0,.2,1)",maxHeight:"92vh",overflowY:"auto",borderTop:"1px solid "+(C.border)}}>
         <div style={{width:36,height:4,background:C.border,borderRadius:2,margin:"0 auto 20px"}}/>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20}}>
           <div style={{fontSize:18,fontWeight:800}}>Nuevo Movimiento</div>
-          <button onClick={onClose} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:8,padding:"6px 10px",color:C.text,cursor:"pointer"}}>✕</button>
+          <button onClick={onClose} style={{background:C.card,border:"1px solid "+(C.border),borderRadius:8,padding:"6px 10px",color:C.text,cursor:"pointer"}}>✕</button>
         </div>
-        <div style={{display:"flex",background:C.card,borderRadius:14,padding:4,marginBottom:16,border:`1px solid ${C.border}`}}>
+        <div style={{display:"flex",background:C.card,borderRadius:14,padding:4,marginBottom:16,border:"1px solid "+(C.border)}}>
           {[["income","↑ Ingreso"],["expense","↓ Gasto"]].map(([t,l])=>(
             <button key={t} onClick={()=>{ setType(t); setForm(f=>({...f,category:"",subcategory:""})); }} style={{flex:1,padding:10,borderRadius:10,border:"none",cursor:"pointer",fontWeight:700,fontSize:14,background:type===t?(t==="income"?C.accentDim:C.redDim):"transparent",color:type===t?(t==="income"?C.accentText:C.red):C.textSub}}>{l}</button>
           ))}
         </div>
-        <div style={{background:C.card,borderRadius:16,padding:16,marginBottom:14,border:`1px solid ${C.border}`}}>
+        <div style={{background:C.card,borderRadius:16,padding:16,marginBottom:14,border:"1px solid "+(C.border)}}>
           <div style={{fontSize:12,color:C.textMuted,marginBottom:4}}>MONTO</div>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
             <span style={{fontSize:24,color:C.textMuted,fontWeight:300}}>$</span>
@@ -1493,25 +1500,25 @@ function AddModal({onClose,onAdd,accounts,opts,categories=DEFAULT_CATEGORIES}){
           </div>
         </div>
         <div style={{display:"grid",gap:10}}>
-          <MF label="Fecha"><input type="date" value={form.date} onChange={e=>set("date",e.target.value)} style={{width:"100%",background:C.card,border:`1px solid ${C.border}`,borderRadius:10,padding:"10px 12px",color:C.text,fontSize:14}}/></MF>
+          <MF label="Fecha"><input type="date" value={form.date} onChange={e=>set("date",e.target.value)} style={{width:"100%",background:C.card,border:"1px solid "+(C.border),borderRadius:10,padding:"10px 12px",color:C.text,fontSize:14}}/></MF>
           <MF label="Categoría">
-            <select value={form.category} onChange={e=>set("category",e.target.value)} style={{width:"100%",background:C.card,border:`1px solid ${C.border}`,borderRadius:10,padding:"10px 12px",color:form.category?C.text:C.textMuted,fontSize:14}}>
+            <select value={form.category} onChange={e=>set("category",e.target.value)} style={{width:"100%",background:C.card,border:"1px solid "+(C.border),borderRadius:10,padding:"10px 12px",color:form.category?C.text:C.textMuted,fontSize:14}}>
               <option value="">Seleccionar categoría</option>
               {cats.map(c=><option key={c.id} value={c.id}>{c.icon} {c.label}</option>)}
             </select>
           </MF>
           {selCat&&<MF label="Subcategoría">
-            <select value={form.subcategory} onChange={e=>set("subcategory",e.target.value)} style={{width:"100%",background:C.card,border:`1px solid ${C.border}`,borderRadius:10,padding:"10px 12px",color:form.subcategory?C.text:C.textMuted,fontSize:14}}>
+            <select value={form.subcategory} onChange={e=>set("subcategory",e.target.value)} style={{width:"100%",background:C.card,border:"1px solid "+(C.border),borderRadius:10,padding:"10px 12px",color:form.subcategory?C.text:C.textMuted,fontSize:14}}>
               <option value="">Seleccionar subcategoría</option>
               {selCat.subs.map(s=><option key={s} value={s}>{s}</option>)}
             </select>
           </MF>}
           <MF label="Cuenta">
-            <select value={form.account} onChange={e=>set("account",e.target.value)} style={{width:"100%",background:C.card,border:`1px solid ${C.border}`,borderRadius:10,padding:"10px 12px",color:C.text,fontSize:14}}>
+            <select value={form.account} onChange={e=>set("account",e.target.value)} style={{width:"100%",background:C.card,border:"1px solid "+(C.border),borderRadius:10,padding:"10px 12px",color:C.text,fontSize:14}}>
               {accounts.map(a=><option key={a.id} value={a.id}>{a.icon} {a.label}</option>)}
             </select>
           </MF>
-          <MF label="Descripción (opcional)"><input type="text" value={form.note} onChange={e=>set("note",e.target.value)} placeholder="Ej: Pago mensual Netflix" style={{width:"100%",background:C.card,border:`1px solid ${C.border}`,borderRadius:10,padding:"10px 12px",color:C.text,fontSize:14}}/></MF>
+          <MF label="Descripción (opcional)"><input type="text" value={form.note} onChange={e=>set("note",e.target.value)} placeholder="Ej: Pago mensual Netflix" style={{width:"100%",background:C.card,border:"1px solid "+(C.border),borderRadius:10,padding:"10px 12px",color:C.text,fontSize:14}}/></MF>
         </div>
         <button onClick={submit} disabled={!form.amount||!form.category||!form.account} style={{width:"100%",marginTop:20,padding:14,borderRadius:14,border:"none",background:(!form.amount||!form.category||!form.account)?C.border:C.accent,color:(!form.amount||!form.category||!form.account)?C.textMuted:"#000",fontWeight:800,fontSize:16,cursor:(!form.amount||!form.category||!form.account)?"not-allowed":"pointer"}}>Registrar Movimiento</button>
       </div>
@@ -1526,14 +1533,14 @@ function LoanModal({onClose,onAdd,accounts}){
   const ok=form.debtor&&form.amount&&form.account;
   return(
     <div style={{position:"fixed",inset:0,background:"#000000BB",zIndex:500,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
-      <div onClick={e=>e.stopPropagation()} style={{background:C.surface,borderRadius:"24px 24px 0 0",width:"100%",maxWidth:480,padding:"20px 20px 36px",animation:"fa-slideUp .3s cubic-bezier(.4,0,.2,1)",maxHeight:"90vh",overflowY:"auto",borderTop:`1px solid ${C.orange}66`}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:C.surface,borderRadius:"24px 24px 0 0",width:"100%",maxWidth:480,padding:"20px 20px 36px",animation:"fa-slideUp .3s cubic-bezier(.4,0,.2,1)",maxHeight:"90vh",overflowY:"auto",borderTop:"1px solid "+(C.orange)+"66"}}>
         <div style={{width:36,height:4,background:C.border,borderRadius:2,margin:"0 auto 20px"}}/>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
           <div style={{fontSize:18,fontWeight:800}}>🤝 Registrar Préstamo</div>
-          <button onClick={onClose} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:8,padding:"6px 10px",color:C.text,cursor:"pointer"}}>✕</button>
+          <button onClick={onClose} style={{background:C.card,border:"1px solid "+(C.border),borderRadius:8,padding:"6px 10px",color:C.text,cursor:"pointer"}}>✕</button>
         </div>
         <div style={{fontSize:12,color:C.textMuted,marginBottom:20}}>Se registrará como gasto en <span style={{color:C.orange,fontWeight:700}}>Préstamos</span> y aparecerá en Cuentas por Cobrar</div>
-        <div style={{background:C.orangeDim,border:`1px solid ${C.orange}44`,borderRadius:16,padding:16,marginBottom:16}}>
+        <div style={{background:C.orangeDim,border:"1px solid "+(C.orange)+"44",borderRadius:16,padding:16,marginBottom:16}}>
           <div style={{fontSize:12,color:C.textMuted,marginBottom:4}}>MONTO DEL PRÉSTAMO</div>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
             <span style={{fontSize:22,color:C.textMuted}}>$</span>
@@ -1542,19 +1549,19 @@ function LoanModal({onClose,onAdd,accounts}){
           </div>
         </div>
         <div style={{display:"grid",gap:10}}>
-          <MF label="Nombre del deudor"><input type="text" value={form.debtor} onChange={e=>set("debtor",e.target.value)} placeholder="Ej: Carlos Rodríguez" style={{width:"100%",background:C.card,border:`1px solid ${C.border}`,borderRadius:10,padding:"10px 12px",color:C.text,fontSize:14}}/></MF>
-          <MF label="Fecha del préstamo"><input type="date" value={form.date} onChange={e=>set("date",e.target.value)} style={{width:"100%",background:C.card,border:`1px solid ${C.border}`,borderRadius:10,padding:"10px 12px",color:C.text,fontSize:14}}/></MF>
+          <MF label="Nombre del deudor"><input type="text" value={form.debtor} onChange={e=>set("debtor",e.target.value)} placeholder="Ej: Carlos Rodríguez" style={{width:"100%",background:C.card,border:"1px solid "+(C.border),borderRadius:10,padding:"10px 12px",color:C.text,fontSize:14}}/></MF>
+          <MF label="Fecha del préstamo"><input type="date" value={form.date} onChange={e=>set("date",e.target.value)} style={{width:"100%",background:C.card,border:"1px solid "+(C.border),borderRadius:10,padding:"10px 12px",color:C.text,fontSize:14}}/></MF>
           <MF label="Tipo">
-            <select value={form.subcategory} onChange={e=>set("subcategory",e.target.value)} style={{width:"100%",background:C.card,border:`1px solid ${C.border}`,borderRadius:10,padding:"10px 12px",color:C.text,fontSize:14}}>
+            <select value={form.subcategory} onChange={e=>set("subcategory",e.target.value)} style={{width:"100%",background:C.card,border:"1px solid "+(C.border),borderRadius:10,padding:"10px 12px",color:C.text,fontSize:14}}>
               <option>Préstamo personal</option><option>Préstamo familiar</option><option>Préstamo laboral</option><option>Auxilio de emergencia</option>
             </select>
           </MF>
           <MF label="Cuenta origen">
-            <select value={form.account} onChange={e=>set("account",e.target.value)} style={{width:"100%",background:C.card,border:`1px solid ${C.border}`,borderRadius:10,padding:"10px 12px",color:C.text,fontSize:14}}>
+            <select value={form.account} onChange={e=>set("account",e.target.value)} style={{width:"100%",background:C.card,border:"1px solid "+(C.border),borderRadius:10,padding:"10px 12px",color:C.text,fontSize:14}}>
               {accounts.map(a=><option key={a.id} value={a.id}>{a.icon} {a.label}</option>)}
             </select>
           </MF>
-          <MF label="Nota (opcional)"><input type="text" value={form.note} onChange={e=>set("note",e.target.value)} placeholder="Ej: Para auxilio médico" style={{width:"100%",background:C.card,border:`1px solid ${C.border}`,borderRadius:10,padding:"10px 12px",color:C.text,fontSize:14}}/></MF>
+          <MF label="Nota (opcional)"><input type="text" value={form.note} onChange={e=>set("note",e.target.value)} placeholder="Ej: Para auxilio médico" style={{width:"100%",background:C.card,border:"1px solid "+(C.border),borderRadius:10,padding:"10px 12px",color:C.text,fontSize:14}}/></MF>
         </div>
         <button onClick={()=>ok&&onAdd({...form,amount:parseFloat(form.amount)})} disabled={!ok} style={{width:"100%",marginTop:20,padding:14,borderRadius:14,border:"none",background:ok?C.orange:C.border,color:ok?"#fff":C.textMuted,fontWeight:800,fontSize:16,cursor:ok?"pointer":"not-allowed"}}>Registrar Préstamo</button>
       </div>
@@ -1572,13 +1579,13 @@ function PayModal({onClose,loan,onPay,accounts}){
   const ok=form.amount&&amt>0;
   return(
     <div style={{position:"fixed",inset:0,background:"#000000BB",zIndex:500,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
-      <div onClick={e=>e.stopPropagation()} style={{background:C.surface,borderRadius:"24px 24px 0 0",width:"100%",maxWidth:480,padding:"20px 20px 36px",animation:"fa-slideUp .3s cubic-bezier(.4,0,.2,1)",maxHeight:"90vh",overflowY:"auto",borderTop:`1px solid ${C.accentText}66`}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:C.surface,borderRadius:"24px 24px 0 0",width:"100%",maxWidth:480,padding:"20px 20px 36px",animation:"fa-slideUp .3s cubic-bezier(.4,0,.2,1)",maxHeight:"90vh",overflowY:"auto",borderTop:"1px solid "+(C.accentText)+"66"}}>
         <div style={{width:36,height:4,background:C.border,borderRadius:2,margin:"0 auto 20px"}}/>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
           <div style={{fontSize:18,fontWeight:800}}>💸 Registrar Cobro</div>
-          <button onClick={onClose} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:8,padding:"6px 10px",color:C.text,cursor:"pointer"}}>✕</button>
+          <button onClick={onClose} style={{background:C.card,border:"1px solid "+(C.border),borderRadius:8,padding:"6px 10px",color:C.text,cursor:"pointer"}}>✕</button>
         </div>
-        <div style={{background:C.card,border:`1px solid ${C.orange}44`,borderRadius:14,padding:14,marginBottom:16}}>
+        <div style={{background:C.card,border:"1px solid "+(C.orange)+"44",borderRadius:14,padding:14,marginBottom:16}}>
           <div style={{fontSize:12,color:C.textMuted,marginBottom:2}}>PRÉSTAMO A</div>
           <div style={{fontSize:16,fontWeight:800}}>{loan.debtor}</div>
           <div style={{display:"flex",justifyContent:"space-between",marginTop:8}}>
@@ -1591,11 +1598,11 @@ function PayModal({onClose,loan,onPay,accounts}){
           <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
             {[.25,.5,.75,1].map((f,i)=>{
               const v=Math.round(loan.balance*f);
-              return <button key={i} onClick={()=>set("amount",v.toString())} style={{padding:"6px 12px",borderRadius:100,border:`1px solid ${C.border}`,background:amt===v?C.accentDim:C.card,color:amt===v?C.accentText:C.textSub,cursor:"pointer",fontSize:12,fontWeight:600}}>{["25%","50%","75%","Total"][i]}</button>;
+              return <button key={i} onClick={()=>set("amount",v.toString())} style={{padding:"6px 12px",borderRadius:100,border:"1px solid "+(C.border),background:amt===v?C.accentDim:C.card,color:amt===v?C.accentText:C.textSub,cursor:"pointer",fontSize:12,fontWeight:600}}>{["25%","50%","75%","Total"][i]}</button>;
             })}
           </div>
         </div>
-        <div style={{background:C.accentDim,border:`1px solid ${C.accentText}44`,borderRadius:16,padding:16,marginBottom:14}}>
+        <div style={{background:C.accentDim,border:"1px solid "+(C.accentText)+"44",borderRadius:16,padding:16,marginBottom:14}}>
           <div style={{fontSize:12,color:C.textMuted,marginBottom:4}}>MONTO A COBRAR{isTotal&&<span style={{color:C.accentText,fontWeight:700}}> · ¡Pago total!</span>}</div>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
             <span style={{fontSize:22,color:C.textMuted}}>$</span>
@@ -1604,15 +1611,15 @@ function PayModal({onClose,loan,onPay,accounts}){
           </div>
         </div>
         <div style={{display:"grid",gap:10}}>
-          <MF label="Fecha del cobro"><input type="date" value={form.date} onChange={e=>set("date",e.target.value)} style={{width:"100%",background:C.card,border:`1px solid ${C.border}`,borderRadius:10,padding:"10px 12px",color:C.text,fontSize:14}}/></MF>
+          <MF label="Fecha del cobro"><input type="date" value={form.date} onChange={e=>set("date",e.target.value)} style={{width:"100%",background:C.card,border:"1px solid "+(C.border),borderRadius:10,padding:"10px 12px",color:C.text,fontSize:14}}/></MF>
           <MF label="Cuenta destino (¿dónde entra el dinero?)">
-            <select value={form.account} onChange={e=>set("account",e.target.value)} style={{width:"100%",background:C.card,border:`1px solid ${C.border}`,borderRadius:10,padding:"10px 12px",color:C.text,fontSize:14}}>
+            <select value={form.account} onChange={e=>set("account",e.target.value)} style={{width:"100%",background:C.card,border:"1px solid "+(C.border),borderRadius:10,padding:"10px 12px",color:C.text,fontSize:14}}>
               {accounts.map(a=><option key={a.id} value={a.id}>{a.icon} {a.label}</option>)}
             </select>
           </MF>
-          <MF label="Nota (opcional)"><input type="text" value={form.note} onChange={e=>set("note",e.target.value)} placeholder="Ej: Segundo abono acordado" style={{width:"100%",background:C.card,border:`1px solid ${C.border}`,borderRadius:10,padding:"10px 12px",color:C.text,fontSize:14}}/></MF>
+          <MF label="Nota (opcional)"><input type="text" value={form.note} onChange={e=>set("note",e.target.value)} placeholder="Ej: Segundo abono acordado" style={{width:"100%",background:C.card,border:"1px solid "+(C.border),borderRadius:10,padding:"10px 12px",color:C.text,fontSize:14}}/></MF>
         </div>
-        {ok&&<div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:12,padding:"10px 14px",marginTop:14,fontSize:13,color:C.textSub}}>
+        {ok&&<div style={{background:C.card,border:"1px solid "+(C.border),borderRadius:12,padding:"10px 14px",marginTop:14,fontSize:13,color:C.textSub}}>
           Saldo restante: <span style={{fontWeight:800,color:remaining===0?C.accentText:C.orange}}>{fmtCOP(remaining)}</span>
         </div>}
         <button onClick={()=>ok&&onPay(loan,form)} disabled={!ok} style={{width:"100%",marginTop:16,padding:14,borderRadius:14,border:"none",background:ok?C.accentText:C.border,color:ok?"#000":C.textMuted,fontWeight:800,fontSize:16,cursor:ok?"pointer":"not-allowed"}}>
@@ -1624,32 +1631,106 @@ function PayModal({onClose,loan,onPay,accounts}){
 }
 
 // ─── MICRO COMPONENTS ─────────────────────────────────────────────────────────
-function TxRow({tx,onDelete,showDivider=false,compact=false,categories=DEFAULT_CATEGORIES}){
+function TxRow({tx,onDelete,onEdit,showDivider=false,compact=false,categories=DEFAULT_CATEGORIES}){
   const allCats=[...categories.income,...categories.expense];
   const cat=allCats.find(c=>c.id===tx.category)||{icon:"📦",label:tx.category};
   const acc=ACCOUNTS_DEF.find(a=>a.id===tx.account)||{icon:"💰",label:tx.account};
   const isLoan=tx.category==="loans_out"||tx.category==="loan_pay";
   return(
-    <div className="fa-tx-row" style={{padding:compact?"10px 14px":"12px 14px",borderBottom:showDivider?`1px solid ${C.border}`:"none",display:"flex",alignItems:"center",gap:12,transition:"background .15s"}}>
+    <div className="fa-tx-row" style={{padding:compact?"10px 14px":"12px 14px",borderBottom:showDivider?"1px solid "+(C.border):"none",display:"flex",alignItems:"center",gap:12,transition:"background .15s"}}>
       <div style={{width:36,height:36,borderRadius:10,background:tx.type==="income"?C.accentDim:(isLoan?C.orangeDim:C.redDim),display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>{cat.icon}</div>
       <div style={{flex:1,minWidth:0}}>
         <div style={{fontSize:14,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:6}}>
           {tx.note||cat.label}
           {isLoan&&<span style={{fontSize:9,background:C.orangeDim,color:C.orange,borderRadius:100,padding:"1px 6px",fontWeight:700,flexShrink:0}}>PRÉSTAMO</span>}
         </div>
-        <div style={{fontSize:11,color:C.textMuted}}>{cat.label}{tx.subcategory?` · ${tx.subcategory}`:""} · {acc.icon} {acc.label}</div>
+        <div style={{fontSize:11,color:C.textMuted}}>{cat.label}{tx.subcategory?" · "+(tx.subcategory):""} · {acc.icon} {acc.label}</div>
       </div>
       <div style={{textAlign:"right",flexShrink:0}}>
         <div style={{fontSize:15,fontWeight:800,color:tx.type==="income"?C.accentText:(isLoan?C.orange:C.red)}}>{tx.type==="income"?"+":"-"}{fmtCOP(tx.amount)}</div>
         {!compact&&<div style={{fontSize:11,color:C.textMuted}}>{tx.date}</div>}
       </div>
-      {onDelete&&<button onClick={onDelete} style={{background:"none",border:"none",color:C.textMuted,cursor:"pointer",fontSize:16,padding:"4px",opacity:.5,flexShrink:0}}>🗑</button>}
+      {onEdit&&<button onClick={onEdit} style={{background:"none",border:"none",color:C.accentText,cursor:"pointer",fontSize:13,padding:"4px",opacity:.7,flexShrink:0}}>✏️</button>}
+      {onDelete&&<button onClick={onDelete} style={{background:"none",border:"none",color:C.textMuted,cursor:"pointer",fontSize:14,padding:"4px",opacity:.5,flexShrink:0}}>🗑</button>}
+    </div>
+  );
+}
+
+function EditTxModal({tx,onClose,onSave,accounts,categories=DEFAULT_CATEGORIES}){
+  const [form,setForm]=useState({
+    date:tx.date, type:tx.type, category:tx.category,
+    subcategory:tx.subcategory||"", account:tx.account,
+    amount:tx.amount, note:tx.note||""
+  });
+  const set=(k,v)=>setForm(f=>({...f,[k]:v,...(k==="category"?{subcategory:""}:{})}));
+  const cats=categories[form.type]||[];
+  const cat=cats.find(c=>c.id===form.category);
+  return(
+    <div style={{position:"fixed",inset:0,background:"#000000CC",zIndex:500,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:C.surface,borderRadius:"20px 20px 0 0",width:"100%",maxWidth:480,padding:"16px 16px 36px",maxHeight:"90vh",overflowY:"auto",borderTop:"1px solid "+C.accent+"55"}}>
+        <div style={{width:32,height:3,background:C.border,borderRadius:2,margin:"0 auto 14px"}}/>
+        <div style={{display:"flex",justifyContent:"space-between",marginBottom:14}}>
+          <div style={{fontSize:16,fontWeight:800}}>✏️ Editar movimiento</div>
+          <button onClick={onClose} style={{background:C.card,border:"1px solid "+C.border,borderRadius:6,padding:"4px 8px",color:C.text,cursor:"pointer"}}>✕</button>
+        </div>
+        <div style={{display:"grid",gap:10}}>
+          <div>
+            <div style={{fontSize:10,color:C.textMuted,fontWeight:700,marginBottom:4}}>TIPO</div>
+            <div style={{display:"flex",gap:8}}>
+              {["income","expense"].map(t=>(
+                <button key={t} onClick={()=>set("type",t)} style={{flex:1,padding:"8px",borderRadius:9,border:"1px solid "+(form.type===t?C.accent:C.border),background:form.type===t?C.accentDim:"transparent",color:form.type===t?C.accent:C.textSub,cursor:"pointer",fontWeight:700,fontSize:12}}>
+                  {t==="income"?"💰 Ingreso":"💸 Gasto"}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <div style={{fontSize:10,color:C.textMuted,fontWeight:700,marginBottom:4}}>MONTO</div>
+            <input type="number" value={form.amount} onChange={e=>set("amount",parseFloat(e.target.value)||0)}
+              style={{width:"100%",background:C.card,border:"1px solid "+C.border,borderRadius:9,padding:"9px 11px",color:C.text,fontSize:16,fontWeight:800}}/>
+          </div>
+          <div>
+            <div style={{fontSize:10,color:C.textMuted,fontWeight:700,marginBottom:4}}>CATEGORÍA</div>
+            <select value={form.category} onChange={e=>set("category",e.target.value)} style={{width:"100%",background:C.card,border:"1px solid "+C.border,borderRadius:9,padding:"9px 11px",color:C.text,fontSize:13}}>
+              {cats.map(c=><option key={c.id} value={c.id}>{c.icon} {c.label}</option>)}
+            </select>
+          </div>
+          {cat?.subs?.length>0&&(
+            <div>
+              <div style={{fontSize:10,color:C.textMuted,fontWeight:700,marginBottom:4}}>SUBCATEGORÍA</div>
+              <select value={form.subcategory} onChange={e=>set("subcategory",e.target.value)} style={{width:"100%",background:C.card,border:"1px solid "+C.border,borderRadius:9,padding:"9px 11px",color:C.text,fontSize:13}}>
+                <option value="">Sin subcategoría</option>
+                {cat.subs.map(s=><option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+          )}
+          <div>
+            <div style={{fontSize:10,color:C.textMuted,fontWeight:700,marginBottom:4}}>CUENTA</div>
+            <select value={form.account} onChange={e=>set("account",e.target.value)} style={{width:"100%",background:C.card,border:"1px solid "+C.border,borderRadius:9,padding:"9px 11px",color:C.text,fontSize:13}}>
+              {accounts.map(a=><option key={a.id} value={a.id}>{a.icon} {a.label}</option>)}
+            </select>
+          </div>
+          <div>
+            <div style={{fontSize:10,color:C.textMuted,fontWeight:700,marginBottom:4}}>FECHA</div>
+            <input type="date" value={form.date} onChange={e=>set("date",e.target.value)} style={{width:"100%",background:C.card,border:"1px solid "+C.border,borderRadius:9,padding:"9px 11px",color:C.text,fontSize:13}}/>
+          </div>
+          <div>
+            <div style={{fontSize:10,color:C.textMuted,fontWeight:700,marginBottom:4}}>DESCRIPCIÓN</div>
+            <input value={form.note} onChange={e=>set("note",e.target.value)} placeholder="Opcional..."
+              style={{width:"100%",background:C.card,border:"1px solid "+C.border,borderRadius:9,padding:"9px 11px",color:C.text,fontSize:13}}/>
+          </div>
+        </div>
+        <button onClick={()=>onSave(tx.id,form)}
+          style={{width:"100%",marginTop:14,padding:13,borderRadius:12,border:"none",background:C.accent,color:"#000",fontWeight:800,fontSize:15,cursor:"pointer"}}>
+          Guardar cambios
+        </button>
+      </div>
     </div>
   );
 }
 
 function Pill({color,label,value,icon}){return(<div style={{flex:"1 1 0",minWidth:0,overflow:"hidden"}}><div style={{fontSize:9,color,fontWeight:700,marginBottom:2,whiteSpace:"nowrap"}}>{icon} {label.toUpperCase()}</div><div style={{fontSize:13,fontWeight:800,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{value}</div></div>);}
 function SectionHeader({title,action,onAction}){return(<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10,width:"100%",overflow:"hidden"}}><div style={{fontSize:14,fontWeight:700,flex:1,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{title}</div>{action&&<button onClick={onAction} style={{fontSize:12,color:C.accentText,background:"none",border:"none",cursor:"pointer",fontWeight:600,flexShrink:0,marginLeft:8,whiteSpace:"nowrap"}}>{action} →</button>}</div>);}
-function StatCard({label,value,color,icon}){return(<div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:14,padding:"12px 10px",textAlign:"center"}}><div style={{fontSize:18,color,marginBottom:4}}>{icon}</div><div style={{fontSize:12,color:C.textMuted,marginBottom:4}}>{label}</div><div style={{fontSize:15,fontWeight:800,color}}>{value}</div></div>);}
+function StatCard({label,value,color,icon}){return(<div style={{background:C.card,border:"1px solid "+(C.border),borderRadius:14,padding:"12px 10px",textAlign:"center"}}><div style={{fontSize:18,color,marginBottom:4}}>{icon}</div><div style={{fontSize:12,color:C.textMuted,marginBottom:4}}>{label}</div><div style={{fontSize:15,fontWeight:800,color}}>{value}</div></div>);}
 function MF({label,children}){return(<div><div style={{fontSize:11,color:C.textMuted,fontWeight:700,marginBottom:4,paddingLeft:2}}>{label.toUpperCase()}</div>{children}</div>);}
 function EmptyState({label}){return(<div style={{textAlign:"center",padding:"24px 16px",color:C.textMuted,fontSize:13}}><div style={{fontSize:28,marginBottom:8}}>📭</div>{label}</div>);}

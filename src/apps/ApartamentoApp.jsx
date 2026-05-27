@@ -119,7 +119,7 @@ export default function ApartamentoApp({ onBack }) {
   const [yStr, mStr] = calMonth.toISOString().slice(0,7).split("-");
 
   return (
-    <div style={{fontFamily:"-apple-system,BlinkMacSystemFont,sans-serif",background:C.bg,width:"100vw",height:"100vh",overflow:"hidden",color:C.text,display:"flex",flexDirection:"column"}}>
+    <div style={{fontFamily:"-apple-system,BlinkMacSystemFont,sans-serif",background:C.bg,position:"absolute",top:0,left:0,right:0,bottom:0,overflow:"hidden",color:C.text,display:"flex",flexDirection:"column"}}>
       <style>{`
         *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
         input,select,textarea{outline:none;font-family:inherit;font-size:16px}
@@ -138,7 +138,7 @@ export default function ApartamentoApp({ onBack }) {
 
       {/* TOP BAR */}
       <div style={{background:C.surface,borderBottom:"1px solid "+(C.border),
-        paddingTop:`max(14px,calc(env(safe-area-inset-top)+8px))`,
+        paddingTop:"max(14px,calc(env(safe-area-inset-top) + 8px))",
         paddingBottom:"14px",paddingLeft:"16px",paddingRight:"16px",
         display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
         <button onClick={onBack} style={{background:C.card,border:"1px solid "+(C.border),borderRadius:8,padding:"6px 10px",color:C.textSub,cursor:"pointer",fontSize:12,fontWeight:600,flexShrink:0}}>← Suite</button>
@@ -156,7 +156,7 @@ export default function ApartamentoApp({ onBack }) {
       </div>
 
       {/* BOTTOM NAV */}
-      <div style={{position:"fixed",bottom:0,left:0,right:0,background:C.surface,borderTop:"1px solid "+(C.border),display:"flex",zIndex:50,paddingBottom:"max(env(safe-area-inset-bottom),6px)"}}>
+      <div style={{position:"fixed",bottom:0,left:0,right:0,background:C.surface,borderTop:"1px solid "+(C.border),display:"flex",zIndex:50,paddingBottom:"max(env(safe-area-inset-bottom), 6px)"}}>
         {nav.map(n=>(
           <button key={n.id} onClick={()=>setView(n.id)} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:2,padding:"9px 0",border:"none",background:"transparent",color:view===n.id?C.accent:C.textMuted,cursor:"pointer",fontSize:9,fontWeight:600}}>
             <span style={{fontSize:18}}>{n.icon}</span>{n.label}
@@ -328,7 +328,7 @@ function RoomsView({rooms,reservations,getRoomStatus,setModal,updateReservationS
       </div>
 
       {room && (
-        <div style={{background:`linear-gradient(135deg,${room.color}11,${C.card})`,border:"1px solid "+((room.color)+"44"),borderRadius:18,padding:16}}>
+        <div style={{background:"linear-gradient(135deg,"+(room.color)+"11,"+(C.card)+")",border:"1px solid "+((room.color)+"44"),borderRadius:18,padding:16}}>
           <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:14}}>
             <div style={{width:48,height:48,borderRadius:14,background:room.color+"22",border:"1px solid "+((room.color)+"44"),display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>🛏️</div>
             <div style={{flex:1}}>
@@ -393,7 +393,7 @@ function CalendarView({reservations,rooms,calMonth,setCalMonth,setModal}) {
   const today=td();
 
   const getDayRes=(day)=>{
-    const dateStr=`${year}-${String(month+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+    const dateStr=(year)+"-"+(String(month+1).padStart(2,"0"))+"-"+(String(day).padStart(2,"0"));
     return reservations.filter(r=>r.checkIn<=dateStr&&r.checkOut>dateStr);
   };
 
@@ -423,7 +423,7 @@ function CalendarView({reservations,rooms,calMonth,setCalMonth,setModal}) {
         <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2}}>
           {cells.map((day,i)=>{
             if(!day)return<div key={i}/>;
-            const dateStr=`${year}-${String(month+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+            const dateStr=(year)+"-"+(String(month+1).padStart(2,"0"))+"-"+(String(day).padStart(2,"0"));
             const dayRes=getDayRes(day);
             const isToday=dateStr===today;
             const roomColors=dayRes.map(r=>rooms.find(rm=>rm.id===r.roomId)?.color||C.accent).slice(0,3);
@@ -445,10 +445,10 @@ function CalendarView({reservations,rooms,calMonth,setCalMonth,setModal}) {
       {/* RESERVAS DEL MES */}
       <div>
         <div style={{fontSize:12,fontWeight:700,color:C.textMuted,marginBottom:8}}>RESERVAS DE {MONTHS[month].toUpperCase()}</div>
-        {reservations.filter(r=>r.checkIn.startsWith(`${year}-${String(month+1).padStart(2,"0")}`)).length===0&&
+        {reservations.filter(r=>r.checkIn.startsWith((year)+"-"+(String(month+1).padStart(2,"0")))).length===0&&
           <div style={{textAlign:"center",padding:16,color:C.textMuted,fontSize:12,background:C.card,borderRadius:12,border:"1px solid "+(C.border)}}>Sin reservas este mes</div>}
         <div style={{display:"grid",gap:8}}>
-          {reservations.filter(r=>r.checkIn.startsWith(`${year}-${String(month+1).padStart(2,"0")}`)).sort((a,b)=>a.checkIn.localeCompare(b.checkIn)).map(res=>{
+          {reservations.filter(r=>r.checkIn.startsWith((year)+"-"+(String(month+1).padStart(2,"0")))).sort((a,b)=>a.checkIn.localeCompare(b.checkIn)).map(res=>{
             const room=rooms.find(r=>r.id===res.roomId);const sc=STATUS_CONFIG[res.status]||STATUS_CONFIG.available;
             return(
               <button key={res.id} onClick={()=>setModal({type:"viewReservation",data:res})} className="hr"

@@ -146,6 +146,22 @@ export function useFinanzData() {
     await supabase.from('transactions').delete().eq('id', id)
   }
 
+  async function updateTransaction(id, updates) {
+    setTransactions(prev => prev.map(t => t.id !== id ? t : { ...t, ...updates }))
+    if (!onlineRef.current) return
+    const { error } = await supabase.from('transactions').update({
+      date:        updates.date,
+      type:        updates.type,
+      category:    updates.category,
+      subcategory: updates.subcategory || null,
+      account:     updates.account,
+      amount:      updates.amount,
+      note:        updates.note || null,
+    }).eq('id', id)
+    if (error) console.error('[updateTransaction]', error.message)
+    else console.log('[updateTransaction] ✅', id)
+  }
+
   async function addLoan(data) {
     const loanId = 'L'+Date.now()
     const newLoan = { id:loanId, debtor:data.debtor, amount:data.amount, balance:data.amount, date:data.date, account:data.account, note:data.note||'', status:'active', payments:[] }
@@ -183,7 +199,7 @@ export function useFinanzData() {
 
   return {
     transactions, loans, accountBalances, loading, online,
-    addTransaction, deleteTransaction, addLoan, addPayment,
+    addTransaction, deleteTransaction, updateTransaction, addLoan, addPayment,
     updateAccountBalance, reload:loadAll
   }
 }

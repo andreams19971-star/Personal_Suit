@@ -154,40 +154,27 @@ export default function FlotaTracker({ onBack }) {
   const marcarPagado = async (carroId, pagoId) => {
     const carro = cars.find(c=>c.id===carroId);
     const pago  = carro?.pagos?.find(p=>p.id===pagoId);
+    if (!pago) { showToast("Registro no encontrado","err"); return; }
 
-    // Si el pagoId no existe (carro mensual sin registro), crear primero
-    if (!pago) {
-      const today = new Date().toISOString().slice(0,10);
-      const monto = carro?.valor_mensual || 500000;
-      await addWorkDay(carroId, today);
-      showToast("Pago registrado ✓");
-      return;
-    }
+    const nowPaid = await togglePayment(carroId, pagoId);
 
-    const isPaid = !pago?.pagado;
-    togglePayment(carroId, pagoId);
-
-    if (isPaid) {
+    if (nowPaid) {
       try {
-        const { supabase } = await import('../supabase.js');
-        const tx = {
-          id:          "flota-"+Date.now(),
-          date:        pago.fecha,
-          type:        "income",
-          category:    "flota_inc",
+        const { supabase: sb } = await import('../supabase.js');
+        await sb.from('transactions').insert([{
+          id: "flota-"+Date.now(),
+          date: pago.fecha, type: "income",
+          category: "flota_inc",
           subcategory: carro?.nombre||"Flota",
-          account:     "cash",
-          amount:      pago.monto,
-          note:        "Cobro "+(carro?.nombre)+" · "+(pago.fecha),
-          loan_id:     null,
-        };
-        const { error } = await supabase.from('transactions').insert([tx]);
-        if (error) console.error('[FlotaTracker] Error en FinanzApp:', error.message);
-        else console.log('[FlotaTracker] ✅ Ingreso en FinanzApp');
-      } catch(e) { console.error('[FlotaTracker] sync error:', e); }
-      showToast("Pago registrado ✓ — ingreso en FinanzApp");
+          account: "cash", amount: pago.monto,
+          note: "Cobro "+(carro?.nombre||"")+" · "+pago.fecha,
+          loan_id: null,
+        }]);
+        console.log('[FlotaTracker] ✅ Ingreso en FinanzApp');
+      } catch(e) { console.error('[FlotaTracker]', e); }
+      showToast("✓ Pagado — ingreso en FinanzApp");
     } else {
-      showToast("Pago desmarcado");
+      showToast("Marcado como pendiente");
     }
   };
   const agregarGasto      = (carroId, gasto)  => { addExpense(carroId, gasto);     showToast("Gasto registrado ✓");  setModal(null); };
@@ -202,7 +189,7 @@ export default function FlotaTracker({ onBack }) {
   const [yStr, mStr] = filterMonth.split("-");
 
   return (
-    <div style={{fontFamily:"-apple-system,BlinkMacSystemFont,sans-serif",background:C.bg,width:"100vw",height:"100vh",overflow:"hidden",color:C.text,display:"flex",flexDirection:"column"}}>
+    <div style={{fontFamily:"-apple-system,BlinkMacSystemFont,sans-serif",background:C.bg,position:"absolute",top:0,left:0,right:0,bottom:0,overflow:"hidden",color:C.text,display:"flex",flexDirection:"column"}}>
       <style>{`
         *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
         input,select,textarea{outline:none;font-family:inherit}
@@ -217,21 +204,21 @@ export default function FlotaTracker({ onBack }) {
 
       {/* TOP BAR */}
       <div style={{background:C.surface,borderBottom:"1px solid "+C.border,paddingTop:"max(13px,calc(env(safe-area-inset-top) + 8px))",paddingBottom:"13px",paddingLeft:"16px",paddingRight:"16px",display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
-        <button onClick={onBack} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:8,padding:"6px 12px",color:C.textSub,cursor:"pointer",fontSize:13,fontWeight:600}}>← Suite</button>
+        <button onClick={onBack} style={{background:C.card,border:"1px solid "+(C.border),borderRadius:8,padding:"6px 12px",color:C.textSub,cursor:"pointer",fontSize:13,fontWeight:600}}>← Suite</button>
         <div style={{fontSize:16,fontWeight:800,flex:1}}>🚗 FlotaTracker</div>
-        <div style={{display:"flex",alignItems:"center",gap:4,background:C.card,borderRadius:8,padding:"5px 10px",border:`1px solid ${C.border}`}}>
+        <div style={{display:"flex",alignItems:"center",gap:4,background:C.card,borderRadius:8,padding:"5px 10px",border:"1px solid "+(C.border)}}>
           <button onClick={()=>{const d=new Date(filterMonth+"-01");d.setMonth(d.getMonth()-1);setFilterMonth(d.toISOString().slice(0,7));}} style={{background:"none",border:"none",color:C.textSub,cursor:"pointer",fontSize:14,lineHeight:1}}>‹</button>
           <span style={{fontSize:11,fontWeight:700,minWidth:55,textAlign:"center"}}>{MONTHS[parseInt(mStr)-1]} {yStr}</span>
           <button onClick={()=>{const d=new Date(filterMonth+"-01");d.setMonth(d.getMonth()+1);if(d<=new Date())setFilterMonth(d.toISOString().slice(0,7));}} style={{background:"none",border:"none",color:C.textSub,cursor:"pointer",fontSize:14,lineHeight:1}}>›</button>
         </div>
-        <button onClick={()=>setSidebar(true)} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:8,padding:"7px 10px",color:C.textSub,cursor:"pointer",fontSize:14}}>⚙</button>
+        <button onClick={()=>setSidebar(true)} style={{background:C.card,border:"1px solid "+(C.border),borderRadius:8,padding:"7px 10px",color:C.textSub,cursor:"pointer",fontSize:14}}>⚙</button>
       </div>
 
       {/* CONTENT */}
       <div style={{flex:1,overflowY:"auto",paddingBottom:58}}>
         {loading && (
           <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:200,gap:14}}>
-            <div style={{width:32,height:32,border:`3px solid ${C.border}`,borderTop:`3px solid ${C.accent}`,borderRadius:"50%",animation:"ft-spin .8s linear infinite"}}/>
+            <div style={{width:32,height:32,border:"3px solid "+(C.border),borderTop:"3px solid "+(C.accent),borderRadius:"50%",animation:"ft-spin .8s linear infinite"}}/>
             <div style={{fontSize:13,color:C.textMuted}}>Cargando datos...</div>
           </div>
         )}
@@ -243,7 +230,7 @@ export default function FlotaTracker({ onBack }) {
       </div>
 
       {/* BOTTOM NAV */}
-      <div style={{position:"fixed",bottom:0,left:0,right:0,background:C.surface,borderTop:`1px solid ${C.border}`,display:"flex",zIndex:50}}>
+      <div style={{position:"fixed",bottom:0,left:0,right:0,background:C.surface,borderTop:"1px solid "+(C.border),display:"flex",zIndex:50}}>
         {nav.map(n=>(
           <button key={n.id} onClick={()=>setView(n.id)} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:2,padding:"8px 0",border:"none",background:"transparent",color:view===n.id?"#fff":C.textMuted,cursor:"pointer",fontSize:9,fontWeight:600,borderTop:view===n.id?"2px solid "+(n.id==="dashboard"?C.green:n.id.startsWith("carro_")?C.car1:C.green):"2px solid transparent"}}>
             <span style={{fontSize:18}}>{n.icon}</span>{n.label}
@@ -258,10 +245,10 @@ export default function FlotaTracker({ onBack }) {
       {/* SIDEBAR CONFIGURACIÓN */}
       {sidebar && <>
         <div onClick={()=>setSidebar(false)} style={{position:"fixed",inset:0,background:"#0009",zIndex:200}}/>
-        <div style={{position:"fixed",top:0,right:0,bottom:0,width:Math.min(320,window.innerWidth-40),background:C.surface,borderLeft:`1px solid ${C.border}`,zIndex:300,display:"flex",flexDirection:"column",overflowY:"auto"}}>
-          <div style={{padding:"18px 16px",borderBottom:`1px solid ${C.border}`,display:"flex",justifyContent:"space-between",alignItems:"center",flexShrink:0}}>
+        <div style={{position:"fixed",top:0,right:0,bottom:0,width:Math.min(320,window.innerWidth-40),background:C.surface,borderLeft:"1px solid "+(C.border),zIndex:300,display:"flex",flexDirection:"column",overflowY:"auto"}}>
+          <div style={{padding:"18px 16px",borderBottom:"1px solid "+(C.border),display:"flex",justifyContent:"space-between",alignItems:"center",flexShrink:0}}>
             <div style={{fontWeight:800,fontSize:16}}>⚙ Configuración</div>
-            <button onClick={()=>setSidebar(false)} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:6,padding:"4px 8px",color:C.text,cursor:"pointer"}}>✕</button>
+            <button onClick={()=>setSidebar(false)} style={{background:C.card,border:"1px solid "+(C.border),borderRadius:6,padding:"4px 8px",color:C.text,cursor:"pointer"}}>✕</button>
           </div>
           <div style={{padding:16,display:"grid",gap:14,overflowY:"auto"}}>
             {/* ESTADO CONEXIÓN */}
@@ -274,7 +261,7 @@ export default function FlotaTracker({ onBack }) {
             </div>
             {/* CONFIG CARROS */}
             {cars.map(carro=>(
-              <CarroConfig key={carro.id} carro={carro} onSave={(updates)=>{updateCar(carro.id,updates);showToast(`${carro.nombre} actualizado ✓`);}}/>
+              <CarroConfig key={carro.id} carro={carro} onSave={(updates)=>{updateCar(carro.id,updates);showToast((carro.nombre)+" actualizado ✓");}}/>
             ))}
           </div>
         </div>
@@ -293,22 +280,22 @@ function Dashboard({carros,getStats,totalEsperado,totalCobrado,totalPendiente,to
     <div style={{padding:14,display:"grid",gap:14}} className="fu">
 
       {/* HERO */}
-      <div style={{background:`linear-gradient(135deg,#0A1628,${C.card})`,border:`1px solid ${C.car1}44`,borderRadius:20,padding:20,position:"relative",overflow:"hidden"}}>
-        <div style={{position:"absolute",top:-30,right:-30,width:120,height:120,borderRadius:"50%",background:`${C.car1}0D`}}/>
+      <div style={{background:"linear-gradient(135deg,#0A1628,"+(C.card)+")",border:"1px solid "+(C.car1)+"44",borderRadius:20,padding:20,position:"relative",overflow:"hidden"}}>
+        <div style={{position:"absolute",top:-30,right:-30,width:120,height:120,borderRadius:"50%",background:(C.car1)+"0D"}}/>
         <div style={{fontSize:11,color:C.car1,fontWeight:700,letterSpacing:1,marginBottom:4}}>INGRESOS DEL MES</div>
         <div style={{fontSize:34,fontWeight:900,letterSpacing:-1,marginBottom:2}}>{fmt(totalCobrado)}</div>
         <div style={{fontSize:13,color:C.textSub,marginBottom:16}}>de {fmt(totalEsperado)} esperados</div>
 
         {/* BARRA PROGRESO */}
         <div style={{height:8,borderRadius:4,background:C.border,marginBottom:6}}>
-          <div style={{height:"100%",borderRadius:4,background:`linear-gradient(90deg,${C.car1},${C.car2})`,width:`${pctCobrado}%`,transition:"width 1s ease"}}/>
+          <div style={{height:"100%",borderRadius:4,background:"linear-gradient(90deg,"+(C.car1)+","+(C.car2)+")",width:(pctCobrado)+"%",transition:"width 1s ease"}}/>
         </div>
         <div style={{display:"flex",justifyContent:"space-between",fontSize:11}}>
           <span style={{color:C.car1,fontWeight:700}}>{pctCobrado}% cobrado</span>
           <span style={{color:totalPendiente>0?C.yellow:C.green,fontWeight:700}}>{fmt(totalPendiente)} pendiente</span>
         </div>
 
-        <div style={{display:"flex",gap:12,marginTop:16,paddingTop:14,borderTop:`1px solid ${C.car1}22`}}>
+        <div style={{display:"flex",gap:12,marginTop:16,paddingTop:14,borderTop:"1px solid "+(C.car1)+"22"}}>
           {[[C.green,"💰","Cobrado",fmt(totalCobrado)],[C.red,"🔧","Gastos",fmt(totalGastos)],[totalNeto>=0?C.green:C.red,"=","Neto",fmt(totalNeto)]].map(([color,icon,label,val])=>(
             <div key={label} style={{flex:1}}>
               <div style={{fontSize:9,color,fontWeight:700,marginBottom:2}}>{icon} {label.toUpperCase()}</div>
@@ -328,9 +315,9 @@ function Dashboard({carros,getStats,totalEsperado,totalCobrado,totalPendiente,to
         const valMensual= carro.valor_mensual || CARRO2_MENSUAL;
         return (
           <button key={carro.id} onClick={()=>setView("carro_"+carro.id)} className="bp"
-            style={{background:`linear-gradient(135deg,${carDim},${C.card})`,border:`1px solid ${carColor}44`,borderRadius:18,padding:18,textAlign:"left",cursor:"pointer",color:C.text,width:"100%",boxSizing:"border-box"}}>
+            style={{background:"linear-gradient(135deg,"+(carDim)+","+(C.card)+")",border:"1px solid "+(carColor)+"44",borderRadius:18,padding:18,textAlign:"left",cursor:"pointer",color:C.text,width:"100%",boxSizing:"border-box"}}>
             <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:14}}>
-              <div style={{width:48,height:48,borderRadius:14,background:carColor+"22",border:`1px solid ${carColor}44`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,flexShrink:0}}>{carro.icon||"🚗"}</div>
+              <div style={{width:48,height:48,borderRadius:14,background:carColor+"22",border:"1px solid "+(carColor)+"44",display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,flexShrink:0}}>{carro.icon||"🚗"}</div>
               <div style={{flex:1,minWidth:0}}>
                 <div style={{fontSize:16,fontWeight:800}}>{carro.nombre}</div>
                 <div style={{fontSize:11,color:C.textSub}}>{carro.conductor} · {carro.placa}</div>
@@ -370,7 +357,7 @@ function Dashboard({carros,getStats,totalEsperado,totalCobrado,totalPendiente,to
             )}
 
             <div style={{height:6,borderRadius:3,background:C.border}}>
-              <div style={{height:"100%",borderRadius:3,background:carro.color,width:`${pct}%`,transition:"width 1s ease"}}/>
+              <div style={{height:"100%",borderRadius:3,background:carro.color,width:(pct)+"%",transition:"width 1s ease"}}/>
             </div>
             <div style={{display:"flex",justifyContent:"space-between",marginTop:4,fontSize:10,color:C.textMuted}}>
               <span>{pct}% del mes cobrado</span>
@@ -381,7 +368,7 @@ function Dashboard({carros,getStats,totalEsperado,totalCobrado,totalPendiente,to
       })}
 
       {/* TIP FINANCIERO */}
-      <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:14,padding:14}}>
+      <div style={{background:C.card,border:"1px solid "+(C.border),borderRadius:14,padding:14}}>
         <div style={{fontSize:11,color:C.yellow,fontWeight:700,marginBottom:6}}>💡 RESUMEN DEL MES</div>
         <div style={{display:"grid",gap:6}}>
           <div style={{display:"flex",justifyContent:"space-between",fontSize:13}}>
@@ -420,9 +407,9 @@ function CarroView({carro,stats,pagos,filterMonth,marcarPagado,eliminarPago,setM
     <div style={{padding:14,display:"grid",gap:14}} className="fu">
 
       {/* HEADER CARRO */}
-      <div style={{background:`linear-gradient(135deg,${carro.colorDim},${C.card})`,border:`1px solid ${carro.color}44`,borderRadius:20,padding:18}}>
+      <div style={{background:"linear-gradient(135deg,"+(carro.colorDim)+","+(C.card)+")",border:"1px solid "+(carro.color)+"44",borderRadius:20,padding:18}}>
         <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:16}}>
-          <div style={{width:56,height:56,borderRadius:16,background:carro.color+"22",border:`1px solid ${carro.color}44`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:28,flexShrink:0}}>{carro.icon}</div>
+          <div style={{width:56,height:56,borderRadius:16,background:carro.color+"22",border:"1px solid "+(carro.color)+"44",display:"flex",alignItems:"center",justifyContent:"center",fontSize:28,flexShrink:0}}>{carro.icon}</div>
           <div>
             <div style={{fontSize:20,fontWeight:900}}>{carro.nombre}</div>
             <div style={{fontSize:12,color:C.textSub}}>{carro.modelo} · {carro.placa}</div>
@@ -449,7 +436,7 @@ function CarroView({carro,stats,pagos,filterMonth,marcarPagado,eliminarPago,setM
               <span style={{fontSize:14,fontWeight:800,color:carro.color}}>{fmt(stats.cobrado)} / {fmt(stats.esperadoMes)}</span>
             </div>
             <div style={{height:8,borderRadius:4,background:C.border}}>
-              <div style={{height:"100%",borderRadius:4,background:carro.color,width:`${Math.min(100,Math.round((stats.cobrado/Math.max(stats.esperadoMes,1))*100))}%`,transition:"width 1s ease"}}/>
+              <div style={{height:"100%",borderRadius:4,background:carro.color,width:(Math.min(100,Math.round((stats.cobrado/Math.max(stats.esperadoMes,1))*100)))+"%",transition:"width 1s ease"}}/>
             </div>
           </>
         ) : (
@@ -470,7 +457,7 @@ function CarroView({carro,stats,pagos,filterMonth,marcarPagado,eliminarPago,setM
       {/* BOTÓN AGREGAR */}
       {carro.tipo==="diario" && (
         <button onClick={()=>setModal({type:"dia",carroId:carro.id})} className="bp"
-          style={{background:carro.color+"22",border:`1px solid ${carro.color}44`,borderRadius:12,padding:12,color:carro.color,fontWeight:700,fontSize:14,cursor:"pointer"}}>
+          style={{background:carro.color+"22",border:"1px solid "+(carro.color)+"44",borderRadius:12,padding:12,color:carro.color,fontWeight:700,fontSize:14,cursor:"pointer"}}>
           + Agregar día de trabajo
         </button>
       )}
@@ -482,7 +469,7 @@ function CarroView({carro,stats,pagos,filterMonth,marcarPagado,eliminarPago,setM
         </div>
 
         {pagosOrdenados.length===0 && (
-          <div style={{textAlign:"center",padding:28,color:C.textMuted,fontSize:13,background:C.card,borderRadius:14,border:`1px solid ${C.border}`}}>
+          <div style={{textAlign:"center",padding:28,color:C.textMuted,fontSize:13,background:C.card,borderRadius:14,border:"1px solid "+(C.border)}}>
             📭 Sin registros este mes
           </div>
         )}
@@ -501,7 +488,7 @@ function CarroView({carro,stats,pagos,filterMonth,marcarPagado,eliminarPago,setM
 
                 <div style={{flex:1}}>
                   <div style={{fontSize:13,fontWeight:700,color:C.text}}>{fmt(pago.monto)}</div>
-                  <div style={{fontSize:10,color:C.textMuted}}>{pago.fecha}{pago.nota?` · ${pago.nota}`:""}</div>
+                  <div style={{fontSize:10,color:C.textMuted}}>{pago.fecha}{pago.nota?" · "+(pago.nota):""}</div>
                 </div>
 
                 {/* TOGGLE PAGADO */}
@@ -527,15 +514,15 @@ function CarroView({carro,stats,pagos,filterMonth,marcarPagado,eliminarPago,setM
           <button onClick={()=>setModal({type:"gasto",carroId:carro.id})} style={{fontSize:11,color:C.red,background:"none",border:"none",cursor:"pointer",fontWeight:700}}>+ Agregar</button>
         </div>
         {(carro.gastos||[]).filter(g=>g.fecha.startsWith(filterMonth)).length===0 && (
-          <div style={{textAlign:"center",padding:16,color:C.textMuted,fontSize:12,background:C.card,borderRadius:12,border:`1px solid ${C.border}`}}>Sin gastos este mes</div>
+          <div style={{textAlign:"center",padding:16,color:C.textMuted,fontSize:12,background:C.card,borderRadius:12,border:"1px solid "+(C.border)}}>Sin gastos este mes</div>
         )}
         <div style={{display:"grid",gap:8}}>
           {(carro.gastos||[]).filter(g=>g.fecha.startsWith(filterMonth)).map(g=>(
-            <div key={g.id} style={{background:C.card,border:`1px solid ${C.red}22`,borderRadius:12,padding:"10px 14px",display:"flex",alignItems:"center",gap:10}}>
+            <div key={g.id} style={{background:C.card,border:"1px solid "+(C.red)+"22",borderRadius:12,padding:"10px 14px",display:"flex",alignItems:"center",gap:10}}>
               <div style={{width:36,height:36,borderRadius:9,background:C.redDim,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>🔧</div>
               <div style={{flex:1}}>
                 <div style={{fontSize:13,fontWeight:600}}>{g.categoria}</div>
-                <div style={{fontSize:10,color:C.textMuted}}>{g.fecha}{g.nota?` · ${g.nota}`:""}</div>
+                <div style={{fontSize:10,color:C.textMuted}}>{g.fecha}{g.nota?" · "+(g.nota):""}</div>
               </div>
               <div style={{fontSize:14,fontWeight:800,color:C.red}}>-{fmt(g.monto)}</div>
             </div>
@@ -559,7 +546,7 @@ function GastosView({carros,filterMonth,setModal,totalGastos}) {
 
   return (
     <div style={{padding:14,display:"grid",gap:14}} className="fu">
-      <div style={{background:`linear-gradient(135deg,${C.redDim},${C.card})`,border:`1px solid ${C.red}44`,borderRadius:18,padding:18}}>
+      <div style={{background:"linear-gradient(135deg,"+(C.redDim)+","+(C.card)+")",border:"1px solid "+(C.red)+"44",borderRadius:18,padding:18}}>
         <div style={{fontSize:11,color:C.red,fontWeight:700,marginBottom:3}}>TOTAL GASTOS DEL MES</div>
         <div style={{fontSize:30,fontWeight:900}}>{fmt(totalGastos)}</div>
         <div style={{display:"flex",gap:12,marginTop:12}}>
@@ -577,7 +564,7 @@ function GastosView({carros,filterMonth,setModal,totalGastos}) {
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
         {carros.map(c=>(
           <button key={c.id} onClick={()=>setModal({type:"gasto",carroId:c.id})} className="bp"
-            style={{background:c.colorDim,border:`1px solid ${c.color}44`,borderRadius:12,padding:12,color:c.color,fontWeight:700,fontSize:13,cursor:"pointer"}}>
+            style={{background:c.colorDim,border:"1px solid "+(c.color)+"44",borderRadius:12,padding:12,color:c.color,fontWeight:700,fontSize:13,cursor:"pointer"}}>
             + Gasto {c.nombre}
           </button>
         ))}
@@ -587,11 +574,11 @@ function GastosView({carros,filterMonth,setModal,totalGastos}) {
 
       <div style={{display:"grid",gap:8}}>
         {allGastos.map(g=>(
-          <div key={g.id} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:14,padding:"12px 14px",display:"flex",alignItems:"center",gap:12}}>
+          <div key={g.id} style={{background:C.card,border:"1px solid "+(C.border),borderRadius:14,padding:"12px 14px",display:"flex",alignItems:"center",gap:12}}>
             <div style={{width:40,height:40,borderRadius:10,background:g.carroColor+"22",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>{g.carroIcon}</div>
             <div style={{flex:1}}>
               <div style={{fontSize:13,fontWeight:700}}>{g.categoria}</div>
-              <div style={{fontSize:10,color:C.textMuted}}>{g.carroNombre} · {g.fecha}{g.nota?` · ${g.nota}`:""}</div>
+              <div style={{fontSize:10,color:C.textMuted}}>{g.carroNombre} · {g.fecha}{g.nota?" · "+(g.nota):""}</div>
             </div>
             <div style={{fontSize:14,fontWeight:800,color:C.red}}>-{fmt(g.monto)}</div>
           </div>
@@ -609,7 +596,7 @@ function GastoModal({carroId,carros,onClose,onAdd}) {
   const cats = ["Gasolina","Aceite","Llantas","SOAT","Revisión técnica","Lavado","Mantenimiento","Repuestos","Seguro","Parqueadero","Otro"];
   return (
     <ModalWrap title={"Gasto — "+(carro?.nombre)} onClose={onClose} color={C.red}>
-      <div style={{background:C.redDim,border:`1px solid ${C.red}33`,borderRadius:12,padding:14}}>
+      <div style={{background:C.redDim,border:"1px solid "+(C.red)+"33",borderRadius:12,padding:14}}>
         <div style={{fontSize:11,color:C.textMuted,marginBottom:3}}>MONTO</div>
         <div style={{display:"flex",alignItems:"center",gap:6}}>
           <span style={{fontSize:18,color:C.textMuted}}>$</span>
@@ -638,7 +625,7 @@ function DiaModal({carroId, onClose, onAdd, cars}) {
   const valor = carro?.valor_diario || CARRO1_DIARIO;
   return (
     <ModalWrap title="Agregar Día de Trabajo" onClose={onClose} color={C.car1}>
-      <div style={{background:C.car1Dim,border:`1px solid ${C.car1}33`,borderRadius:12,padding:14,textAlign:"center"}}>
+      <div style={{background:C.car1Dim,border:"1px solid "+(C.car1)+"33",borderRadius:12,padding:14,textAlign:"center"}}>
         <div style={{fontSize:11,color:C.textMuted,marginBottom:2}}>VALOR DEL DÍA</div>
         <div style={{fontSize:28,fontWeight:900,color:C.car1}}>{fmt(valor)}</div>
       </div>
@@ -666,7 +653,7 @@ function CarroConfig({carro, onSave}) {
   const set = (k,v) => setForm(f=>({...f,[k]:v}));
 
   return (
-    <div style={{background:C.card,border:`1px solid ${carro.color}44`,borderRadius:14,overflow:"hidden"}}>
+    <div style={{background:C.card,border:"1px solid "+(carro.color)+"44",borderRadius:14,overflow:"hidden"}}>
       <button onClick={()=>setOpen(o=>!o)} style={{width:"100%",background:"none",border:"none",padding:"12px 14px",display:"flex",alignItems:"center",gap:10,cursor:"pointer",color:C.text}}>
         <span style={{fontSize:22}}>{carro.icon}</span>
         <div style={{flex:1,textAlign:"left"}}>
@@ -676,7 +663,7 @@ function CarroConfig({carro, onSave}) {
         <span style={{color:carro.color,fontSize:16}}>{open?"▲":"▼"}</span>
       </button>
       {open && (
-        <div style={{padding:"0 14px 14px",display:"grid",gap:10,borderTop:`1px solid ${C.border}`}}>
+        <div style={{padding:"0 14px 14px",display:"grid",gap:10,borderTop:"1px solid "+(C.border)}}>
           <div style={{height:10}}/>
           {[["Nombre",   "nombre",    "text",   "Ej: Mi Carro"],
             ["Placa",    "placa",     "text",   "Ej: ABC-123"],
@@ -686,7 +673,7 @@ function CarroConfig({carro, onSave}) {
             <div key={key}>
               <div style={{fontSize:10,color:C.textMuted,fontWeight:700,marginBottom:4}}>{label.toUpperCase()}</div>
               <input type={type} value={form[key]} onChange={e=>set(key,e.target.value)} placeholder={ph}
-                style={{width:"100%",background:C.bg,border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 10px",color:C.text,fontSize:13}}/>
+                style={{width:"100%",background:C.bg,border:"1px solid "+(C.border),borderRadius:8,padding:"8px 10px",color:C.text,fontSize:13}}/>
             </div>
           ))}
           <div>
@@ -701,14 +688,14 @@ function CarroConfig({carro, onSave}) {
             <div>
               <div style={{fontSize:10,color:C.textMuted,fontWeight:700,marginBottom:4}}>VALOR POR DÍA (COP)</div>
               <input type="number" value={form.valor_diario} onChange={e=>set("valor_diario",parseFloat(e.target.value)||0)}
-                style={{width:"100%",background:C.bg,border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 10px",color:C.text,fontSize:13}}/>
+                style={{width:"100%",background:C.bg,border:"1px solid "+(C.border),borderRadius:8,padding:"8px 10px",color:C.text,fontSize:13}}/>
             </div>
           )}
           {form.tipo==="mensual" && (
             <div>
               <div style={{fontSize:10,color:C.textMuted,fontWeight:700,marginBottom:4}}>VALOR MENSUAL (COP)</div>
               <input type="number" value={form.valor_mensual} onChange={e=>set("valor_mensual",parseFloat(e.target.value)||0)}
-                style={{width:"100%",background:C.bg,border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 10px",color:C.text,fontSize:13}}/>
+                style={{width:"100%",background:C.bg,border:"1px solid "+(C.border),borderRadius:8,padding:"8px 10px",color:C.text,fontSize:13}}/>
             </div>
           )}
           <button onClick={()=>{onSave(form);setOpen(false);}}
@@ -724,11 +711,11 @@ function CarroConfig({carro, onSave}) {
 function ModalWrap({title,onClose,color,children}) {
   return (
     <div style={{position:"fixed",inset:0,background:"#0009",zIndex:500,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
-      <div onClick={e=>e.stopPropagation()} style={{background:C.surface,borderRadius:"20px 20px 0 0",width:"100%",maxWidth:480,padding:"16px 16px 32px",maxHeight:"88vh",overflowY:"auto",borderTop:`1px solid ${color}55`,animation:"su .3s ease"}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:C.surface,borderRadius:"20px 20px 0 0",width:"100%",maxWidth:480,padding:"16px 16px 32px",maxHeight:"88vh",overflowY:"auto",borderTop:"1px solid "+(color)+"55",animation:"su .3s ease"}}>
         <div style={{width:32,height:3,background:C.border,borderRadius:2,margin:"0 auto 16px"}}/>
         <div style={{display:"flex",justifyContent:"space-between",marginBottom:16}}>
           <div style={{fontSize:16,fontWeight:800}}>{title}</div>
-          <button onClick={onClose} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:6,padding:"4px 8px",color:C.text,cursor:"pointer"}}>✕</button>
+          <button onClick={onClose} style={{background:C.card,border:"1px solid "+(C.border),borderRadius:6,padding:"4px 8px",color:C.text,cursor:"pointer"}}>✕</button>
         </div>
         <div style={{display:"grid",gap:10}}>{children}</div>
       </div>
@@ -737,5 +724,5 @@ function ModalWrap({title,onClose,color,children}) {
 }
 
 function MF({label,children}){return(<div><div style={{fontSize:10,color:C.textMuted,fontWeight:700,marginBottom:4}}>{label.toUpperCase()}</div>{children}</div>);}
-const inp={width:"100%",background:C.card,border:`1px solid ${C.border}`,borderRadius:9,padding:"9px 11px",color:C.text,fontSize:13};
+const inp={width:"100%",background:C.card,border:"1px solid "+(C.border),borderRadius:9,padding:"9px 11px",color:C.text,fontSize:13};
 const btn={width:"100%",marginTop:4,padding:13,borderRadius:12,border:"none",fontWeight:800,fontSize:15,cursor:"pointer"};

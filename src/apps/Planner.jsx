@@ -128,14 +128,14 @@ export default function Planner({ onBack }) {
   ];
 
   const viewTitle = {
-    today:    `☀️ ${new Date(selDate+"T12:00").toLocaleDateString("es-CO",{weekday:"long",day:"numeric",month:"short"})}`,
+    today:    "☀️ "+(new Date(selDate+"T12:00").toLocaleDateString("es-CO",{weekday:"long",day:"numeric",month:"short")+")}",
     calendar: "📅 Calendario",
     goals:    "🎯 Metas",
     notes:    "📝 Notas",
   };
 
   return (
-    <div style={{ fontFamily:"-apple-system,BlinkMacSystemFont,sans-serif", background:C.bg, width:"100vw", height:"100vh", overflow:"hidden", color:C.text, display:"flex", flexDirection:"column" }}>
+    <div style={{ fontFamily:"-apple-system,BlinkMacSystemFont,sans-serif", background:C.bg, position:"absolute", top:0, left:0, right:0, bottom:0, overflow:"hidden", color:C.text, display:"flex", flexDirection:"column" }}>
       <style>{`
         *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
         input,select,textarea{outline:none;font-family:inherit;font-size:16px}
@@ -148,17 +148,17 @@ export default function Planner({ onBack }) {
 
       {loading && (
         <div style={{position:"absolute",inset:0,background:C.bg,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",zIndex:50,gap:14}}>
-          <div style={{width:32,height:32,border:`3px solid ${C.border}`,borderTop:`3px solid ${C.accent}`,borderRadius:"50%",animation:"pl-spin .8s linear infinite"}}/>
+          <div style={{width:32,height:32,border:"3px solid "+(C.border),borderTop:"3px solid "+(C.accent),borderRadius:"50%",animation:"pl-spin .8s linear infinite"}}/>
           <div style={{fontSize:14,color:C.textMuted}}>Cargando...</div>
         </div>
       )}
 
       {/* TOP BAR */}
-      <div style={{background:C.surface,borderBottom:`1px solid ${C.border}`,paddingTop:`max(14px,calc(env(safe-area-inset-top)+8px))`,paddingBottom:"14px",paddingLeft:"16px",paddingRight:"16px",display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
-        <button onClick={onBack} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:8,padding:"6px 10px",color:C.textSub,cursor:"pointer",fontSize:12,fontWeight:600,flexShrink:0}}>← Suite</button>
+      <div style={{background:C.surface,borderBottom:"1px solid "+(C.border),paddingTop:"max(14px,calc(env(safe-area-inset-top) + 8px))",paddingBottom:"14px",paddingLeft:"16px",paddingRight:"16px",display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
+        <button onClick={onBack} style={{background:C.card,border:"1px solid "+(C.border),borderRadius:8,padding:"6px 10px",color:C.textSub,cursor:"pointer",fontSize:12,fontWeight:600,flexShrink:0}}>← Suite</button>
         <div style={{fontSize:15,fontWeight:800,flex:1,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{viewTitle[view]||""}</div>
         {(view==="today"||view==="calendar") && (
-          <button onClick={()=>setShowCatManager(true)} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:8,padding:"6px 8px",color:C.textMuted,cursor:"pointer",fontSize:12,flexShrink:0}}>⚙</button>
+          <button onClick={()=>setShowCatManager(true)} style={{background:C.card,border:"1px solid "+(C.border),borderRadius:8,padding:"6px 8px",color:C.textMuted,cursor:"pointer",fontSize:12,flexShrink:0}}>⚙</button>
         )}
         <button onClick={()=>{ if(view==="today"||view==="calendar") setShowTaskModal(true); else if(view==="goals") setShowGoalModal(true); else setShowNoteModal(true); }}
           style={{background:C.accent,color:"#000",border:"none",borderRadius:8,padding:"7px 12px",fontWeight:700,fontSize:12,cursor:"pointer",flexShrink:0}}>+ Agregar</button>
@@ -173,7 +173,7 @@ export default function Planner({ onBack }) {
       </div>
 
       {/* BOTTOM NAV */}
-      <div style={{position:"fixed",bottom:0,left:0,right:0,background:C.surface,borderTop:`1px solid ${C.border}`,display:"flex",zIndex:50,paddingBottom:"max(env(safe-area-inset-bottom),6px)"}}>
+      <div style={{position:"fixed",bottom:0,left:0,right:0,background:C.surface,borderTop:"1px solid "+(C.border),display:"flex",zIndex:50,paddingBottom:"max(env(safe-area-inset-bottom), 6px)"}}>
         {nav.map(n=>(
           <button key={n.id} onClick={()=>setView(n.id)} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:2,padding:"9px 0",border:"none",background:"transparent",color:view===n.id?C.accent:C.textMuted,cursor:"pointer",fontSize:9,fontWeight:600}}>
             <span style={{fontSize:18}}>{n.icon}</span>{n.label}
@@ -299,7 +299,7 @@ function TaskRow({ task, onToggle, onDelete, taskCats, muted, accent }) {
 
 function EmptyPlanner({msg,sub}) {
   return (
-    <div style={{textAlign:"center",padding:"20px 16px",color:C.textMuted,background:C.card,borderRadius:12,border:`1px solid ${C.border}`}}>
+    <div style={{textAlign:"center",padding:"20px 16px",color:C.textMuted,background:C.card,borderRadius:12,border:"1px solid "+(C.border)}}>
       <div style={{fontSize:14,marginBottom:4}}>{msg}</div>
       {sub&&<div style={{fontSize:11}}>{sub}</div>}
     </div>
@@ -318,20 +318,20 @@ function CalendarView({ tasks, aptReservations=[], calDate, setCalDate, selDate,
 
   return (
     <div style={{ padding: 14, display: "grid", gap: 14, boxSizing:"border-box" }} className="fu">
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: "12px 16px" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: C.card, border: "1px solid "+(C.border), borderRadius: 14, padding: "12px 16px" }}>
         <button onClick={() => setCalDate(new Date(year, month - 1))} style={{ background: "none", border: "none", color: C.textSub, cursor: "pointer", fontSize: 20 }}>‹</button>
         <span style={{ fontWeight: 800, fontSize: 16 }}>{MONTHS[month]} {year}</span>
         <button onClick={() => setCalDate(new Date(year, month + 1))} style={{ background: "none", border: "none", color: C.textSub, cursor: "pointer", fontSize: 20 }}>›</button>
       </div>
 
-      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: 12 }}>
+      <div style={{ background: C.card, border: "1px solid "+(C.border), borderRadius: 14, padding: 12 }}>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 4, marginBottom: 8 }}>
           {DAYS.map(d => <div key={d} style={{ textAlign: "center", fontSize: 10, fontWeight: 700, color: C.textMuted }}>{d}</div>)}
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 4 }}>
           {cells.map((day, i) => {
             if (!day) return <div key={i} />;
-            const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+            const dateStr = (year)+"-"+(String(month + 1).padStart(2, "0"))+"-"+(String(day).padStart(2, "0"));
             const count = tasks.filter(t => t.date === dateStr).length;
             const hasApt = aptReservations.some(r => r.checkIn <= dateStr && r.checkOut > dateStr);
             const isToday = dateStr === td();
@@ -388,7 +388,7 @@ function HabitsView({ habits, toggleHabit, deleteHabit }) {
 
   return (
     <div style={{ padding: 14, display: "grid", gap: 14 }} className="fu">
-      <div style={{ background: `linear-gradient(135deg,${C.accentDim},${C.card})`, border: `1px solid ${C.accent}33`, borderRadius: 16, padding: 16 }}>
+      <div style={{ background: "linear-gradient(135deg,"+(C.accentDim)+","+(C.card)+")", border: "1px solid "+(C.accent)+"33", borderRadius: 16, padding: 16 }}>
         <div style={{ fontSize: 11, color: C.accentText, fontWeight: 700, marginBottom: 4 }}>RACHA TOTAL HOY</div>
         <div style={{ fontSize: 26, fontWeight: 900 }}>{habits.filter(h => h.completions[td()]).length}/{habits.length} hábitos</div>
         <div style={{ fontSize: 12, color: C.textMuted, marginTop: 4 }}>completados hoy</div>
@@ -397,9 +397,9 @@ function HabitsView({ habits, toggleHabit, deleteHabit }) {
       {habits.map(h => {
         const streak = (() => { let s = 0; for (let i = 0; i < 30; i++) { const d = new Date(); d.setDate(d.getDate() - i); if (h.completions[d.toISOString().slice(0,10)]) s++; else break; } return s; })();
         return (
-          <div key={h.id} style={{ background: C.card, border: `1px solid ${h.color}33`, borderRadius: 16, padding: 16 }}>
+          <div key={h.id} style={{ background: C.card, border: "1px solid "+(h.color)+"33", borderRadius: 16, padding: 16 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
-              <div style={{ width: 44, height: 44, borderRadius: 12, background: h.color + "22", border: `1px solid ${h.color}44`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>{h.icon}</div>
+              <div style={{ width: 44, height: 44, borderRadius: 12, background: h.color + "22", border: "1px solid "+(h.color)+"44", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>{h.icon}</div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 14, fontWeight: 700 }}>{h.name}</div>
                 <div style={{ fontSize: 11, color: h.color, fontWeight: 600 }}>🔥 {streak} días seguidos</div>
@@ -438,9 +438,9 @@ function GoalsView({ goals, updateGoalProgress, deleteGoal }) {
         const daysLeft = Math.max(0, Math.round((new Date(g.deadline) - new Date()) / 86400000));
         const isEditing = editId === g.id;
         return (
-          <div key={g.id} style={{ background: C.card, border: `1px solid ${g.color}33`, borderRadius: 18, padding: 16 }}>
+          <div key={g.id} style={{ background: C.card, border: "1px solid "+(g.color)+"33", borderRadius: 18, padding: 16 }}>
             <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 14 }}>
-              <div style={{ width: 46, height: 46, borderRadius: 12, background: g.color + "22", border: `1px solid ${g.color}44`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>{g.icon}</div>
+              <div style={{ width: 46, height: 46, borderRadius: 12, background: g.color + "22", border: "1px solid "+(g.color)+"44", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>{g.icon}</div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 15, fontWeight: 800 }}>{g.title}</div>
                 <div style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>{daysLeft} días restantes · vence {new Date(g.deadline + "T12:00").toLocaleDateString("es-CO", { day: "numeric", month: "short" })}</div>
@@ -456,19 +456,19 @@ function GoalsView({ goals, updateGoalProgress, deleteGoal }) {
               <span style={{ fontWeight: 700 }}>{g.current} / {g.target}</span>
             </div>
             <div style={{ height: 10, borderRadius: 5, background: C.border, marginBottom: 12 }}>
-              <div style={{ height: "100%", borderRadius: 5, background: g.color, width: `${pct}%`, transition: "width 1s ease" }} />
+              <div style={{ height: "100%", borderRadius: 5, background: g.color, width: (pct)+"%", transition: "width 1s ease" }} />
             </div>
 
             {isEditing ? (
               <div style={{ display: "flex", gap: 8 }}>
-                <input type="number" value={editVal} onChange={e => setEditVal(e.target.value)} placeholder="Nuevo valor actual" style={{ flex: 1, background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, padding: "7px 10px", color: C.text, fontSize: 13 }} />
+                <input type="number" value={editVal} onChange={e => setEditVal(e.target.value)} placeholder="Nuevo valor actual" style={{ flex: 1, background: C.bg, border: "1px solid "+(C.border), borderRadius: 8, padding: "7px 10px", color: C.text, fontSize: 13 }} />
                 <button onClick={() => { updateGoalProgress(g.id, parseFloat(editVal) || 0); setEditId(null); }} style={{ background: g.color, color: "#000", border: "none", borderRadius: 8, padding: "7px 12px", fontWeight: 700, cursor: "pointer", fontSize: 12 }}>OK</button>
                 <button onClick={() => setEditId(null)} style={{ background: C.border, color: C.text, border: "none", borderRadius: 8, padding: "7px 10px", cursor: "pointer", fontSize: 12 }}>✕</button>
               </div>
             ) : (
               <div style={{ display: "flex", gap: 8 }}>
-                <button onClick={() => { setEditId(g.id); setEditVal(g.current.toString()); }} style={{ flex: 1, background: g.color + "22", border: `1px solid ${g.color}44`, color: g.color, borderRadius: 8, padding: "8px", fontWeight: 700, cursor: "pointer", fontSize: 12 }}>✏️ Actualizar progreso</button>
-                <button onClick={() => deleteGoal(g.id)} style={{ background: C.redDim, border: `1px solid ${C.red}33`, color: C.red, borderRadius: 8, padding: "8px 12px", cursor: "pointer", fontSize: 12 }}>🗑</button>
+                <button onClick={() => { setEditId(g.id); setEditVal(g.current.toString()); }} style={{ flex: 1, background: g.color + "22", border: "1px solid "+(g.color)+"44", color: g.color, borderRadius: 8, padding: "8px", fontWeight: 700, cursor: "pointer", fontSize: 12 }}>✏️ Actualizar progreso</button>
+                <button onClick={() => deleteGoal(g.id)} style={{ background: C.redDim, border: "1px solid "+(C.red)+"33", color: C.red, borderRadius: 8, padding: "8px 12px", cursor: "pointer", fontSize: 12 }}>🗑</button>
               </div>
             )}
           </div>
@@ -485,7 +485,7 @@ function NotesView({ notes, deleteNote }) {
   return (
     <div style={{ padding: 14, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }} className="fu">
       {notes.map(n => (
-        <div key={n.id} style={{ background: n.color + "15", border: `1px solid ${n.color}33`, borderRadius: 14, padding: 14, position: "relative" }}>
+        <div key={n.id} style={{ background: n.color + "15", border: "1px solid "+(n.color)+"33", borderRadius: 14, padding: 14, position: "relative" }}>
           <button onClick={() => deleteNote(n.id)} style={{ position: "absolute", top: 8, right: 8, background: "none", border: "none", color: C.textMuted, cursor: "pointer", fontSize: 13, opacity: .6 }}>✕</button>
           <div style={{ fontSize: 13, fontWeight: 700, color: n.color, marginBottom: 6, paddingRight: 20 }}>{n.title}</div>
           <div style={{ fontSize: 12, color: C.textSub, lineHeight: 1.5 }}>{n.content}</div>
@@ -504,17 +504,17 @@ function TaskModal({ onClose, onAdd, defaultDate, taskCats=DEFAULT_TASK_CATS }) 
   const cat = taskCats.find(c=>c.id===form.category)||taskCats[0];
   return (
     <div style={{position:"fixed",inset:0,background:"#000000BB",zIndex:500,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
-      <div onClick={e=>e.stopPropagation()} style={{background:C.surface,borderRadius:"22px 22px 0 0",width:"100%",maxWidth:480,padding:"16px 16px 36px",maxHeight:"90vh",overflowY:"auto",borderTop:`1px solid ${C.accent}55`,animation:"su .3s ease"}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:C.surface,borderRadius:"22px 22px 0 0",width:"100%",maxWidth:480,padding:"16px 16px 36px",maxHeight:"90vh",overflowY:"auto",borderTop:"1px solid "+(C.accent)+"55",animation:"su .3s ease"}}>
         <div style={{width:32,height:3,background:C.border,borderRadius:2,margin:"0 auto 14px"}}/>
         <div style={{display:"flex",justifyContent:"space-between",marginBottom:14}}>
           <div style={{fontSize:16,fontWeight:800}}>Nueva Tarea</div>
-          <button onClick={onClose} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:6,padding:"4px 8px",color:C.text,cursor:"pointer"}}>✕</button>
+          <button onClick={onClose} style={{background:C.card,border:"1px solid "+(C.border),borderRadius:6,padding:"4px 8px",color:C.text,cursor:"pointer"}}>✕</button>
         </div>
         <div style={{display:"grid",gap:10}}>
           <div>
             <div style={lbl2}>TÍTULO</div>
             <input value={form.title} onChange={e=>set("title",e.target.value)} placeholder="¿Qué hay que hacer?"
-              style={{width:"100%",background:C.card,border:`1px solid ${C.border}`,borderRadius:9,padding:"9px 11px",color:C.text,fontSize:13}}/>
+              style={{width:"100%",background:C.card,border:"1px solid "+(C.border),borderRadius:9,padding:"9px 11px",color:C.text,fontSize:13}}/>
           </div>
           <div>
             <div style={lbl2}>CATEGORÍA</div>
@@ -555,12 +555,12 @@ function TaskModal({ onClose, onAdd, defaultDate, taskCats=DEFAULT_TASK_CATS }) 
           <div>
             <div style={lbl2}>FECHA</div>
             <input type="date" value={form.date} onChange={e=>set("date",e.target.value)}
-              style={{width:"100%",background:C.card,border:`1px solid ${C.border}`,borderRadius:9,padding:"9px 11px",color:C.text,fontSize:13}}/>
+              style={{width:"100%",background:C.card,border:"1px solid "+(C.border),borderRadius:9,padding:"9px 11px",color:C.text,fontSize:13}}/>
           </div>
           <div>
             <div style={lbl2}>NOTA</div>
             <input value={form.note} onChange={e=>set("note",e.target.value)} placeholder="Opcional..."
-              style={{width:"100%",background:C.card,border:`1px solid ${C.border}`,borderRadius:9,padding:"9px 11px",color:C.text,fontSize:13}}/>
+              style={{width:"100%",background:C.card,border:"1px solid "+(C.border),borderRadius:9,padding:"9px 11px",color:C.text,fontSize:13}}/>
           </div>
         </div>
         <button onClick={()=>form.title&&onAdd(form)}
@@ -586,38 +586,38 @@ function TaskCatManager({ taskCats, saveTaskCats, onClose }) {
 
   return (
     <div style={{position:"fixed",inset:0,background:"#0009",zIndex:500,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
-      <div onClick={e=>e.stopPropagation()} style={{background:C.surface,borderRadius:"22px 22px 0 0",width:"100%",maxWidth:480,padding:"16px 16px 36px",maxHeight:"90vh",overflowY:"auto",borderTop:`1px solid ${C.accent}55`,animation:"su .3s ease"}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:C.surface,borderRadius:"22px 22px 0 0",width:"100%",maxWidth:480,padding:"16px 16px 36px",maxHeight:"90vh",overflowY:"auto",borderTop:"1px solid "+(C.accent)+"55",animation:"su .3s ease"}}>
         <div style={{width:32,height:3,background:C.border,borderRadius:2,margin:"0 auto 14px"}}/>
         <div style={{display:"flex",justifyContent:"space-between",marginBottom:14}}>
           <div style={{fontSize:16,fontWeight:800}}>⚙ Categorías de tareas</div>
-          <button onClick={onClose} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:6,padding:"4px 8px",color:C.text,cursor:"pointer"}}>✕</button>
+          <button onClick={onClose} style={{background:C.card,border:"1px solid "+(C.border),borderRadius:6,padding:"4px 8px",color:C.text,cursor:"pointer"}}>✕</button>
         </div>
-        <button onClick={()=>setNewCat({label:"",icon:"📦"})} style={{width:"100%",background:C.accentDim,border:`1px solid ${C.accent}44`,color:C.accent,borderRadius:9,padding:9,fontWeight:700,fontSize:12,cursor:"pointer",marginBottom:10}}>+ Nueva categoría</button>
+        <button onClick={()=>setNewCat({label:"",icon:"📦"})} style={{width:"100%",background:C.accentDim,border:"1px solid "+(C.accent)+"44",color:C.accent,borderRadius:9,padding:9,fontWeight:700,fontSize:12,cursor:"pointer",marginBottom:10}}>+ Nueva categoría</button>
         {newCat&&(
-          <div style={{background:C.card,border:`1px solid ${C.accent}44`,borderRadius:12,padding:12,marginBottom:10,display:"grid",gap:8}}>
+          <div style={{background:C.card,border:"1px solid "+(C.accent)+"44",borderRadius:12,padding:12,marginBottom:10,display:"grid",gap:8}}>
             <input value={newCat.label} onChange={e=>setNewCat(n=>({...n,label:e.target.value}))} placeholder="Nombre"
-              style={{width:"100%",background:C.bg,border:`1px solid ${C.border}`,borderRadius:8,padding:"7px 10px",color:C.text,fontSize:13}}/>
+              style={{width:"100%",background:C.bg,border:"1px solid "+(C.border),borderRadius:8,padding:"7px 10px",color:C.text,fontSize:13}}/>
             <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
               {icons.map(ic=><button key={ic} onClick={()=>setNewCat(n=>({...n,icon:ic}))} style={{width:30,height:30,borderRadius:7,border:"1px solid "+(newCat.icon===ic?C.accent:C.border),background:newCat.icon===ic?C.accentDim:"transparent",cursor:"pointer",fontSize:15}}>{ic}</button>)}
             </div>
             <div style={{display:"flex",gap:6}}>
               <button onClick={()=>newCat.label&&addCat(newCat)} style={{flex:1,background:C.accent,border:"none",borderRadius:8,padding:"7px",color:"#000",fontWeight:700,fontSize:12,cursor:"pointer"}}>Crear</button>
-              <button onClick={()=>setNewCat(null)} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:8,padding:"7px 10px",color:C.textSub,cursor:"pointer",fontSize:12}}>Cancelar</button>
+              <button onClick={()=>setNewCat(null)} style={{background:C.card,border:"1px solid "+(C.border),borderRadius:8,padding:"7px 10px",color:C.textSub,cursor:"pointer",fontSize:12}}>Cancelar</button>
             </div>
           </div>
         )}
         <div style={{display:"grid",gap:8}}>
           {taskCats.map((cat,idx)=>(
-            <div key={cat.id||idx} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:12,overflow:"hidden"}}>
+            <div key={cat.id||idx} style={{background:C.card,border:"1px solid "+(C.border),borderRadius:12,overflow:"hidden"}}>
               <div style={{padding:"10px 12px",display:"flex",alignItems:"center",gap:8}}>
                 <span style={{fontSize:18,flexShrink:0}}>{cat.icon}</span>
                 <span style={{flex:1,fontWeight:700,fontSize:13}}>{cat.label}</span>
-                <button onClick={()=>setEditIdx(editIdx===idx?null:idx)} style={{background:C.accentDim,color:C.accent,border:`1px solid ${C.accent}33`,borderRadius:6,padding:"3px 7px",fontSize:10,fontWeight:700,cursor:"pointer"}}>✏️</button>
-                <button onClick={()=>deleteCat(idx)} style={{background:C.redDim,color:C.red,border:`1px solid ${C.red}33`,borderRadius:6,padding:"3px 7px",fontSize:10,fontWeight:700,cursor:"pointer"}}>🗑</button>
+                <button onClick={()=>setEditIdx(editIdx===idx?null:idx)} style={{background:C.accentDim,color:C.accent,border:"1px solid "+(C.accent)+"33",borderRadius:6,padding:"3px 7px",fontSize:10,fontWeight:700,cursor:"pointer"}}>✏️</button>
+                <button onClick={()=>deleteCat(idx)} style={{background:C.redDim,color:C.red,border:"1px solid "+(C.red)+"33",borderRadius:6,padding:"3px 7px",fontSize:10,fontWeight:700,cursor:"pointer"}}>🗑</button>
               </div>
               {editIdx===idx&&(
-                <div style={{padding:"0 12px 10px",borderTop:`1px solid ${C.border}`,display:"grid",gap:6}}>
-                  <input defaultValue={cat.label} onBlur={e=>updateCat(idx,{label:e.target.value})} style={{width:"100%",background:C.bg,border:`1px solid ${C.border}`,borderRadius:7,padding:"6px 9px",color:C.text,fontSize:12,marginTop:8}}/>
+                <div style={{padding:"0 12px 10px",borderTop:"1px solid "+(C.border),display:"grid",gap:6}}>
+                  <input defaultValue={cat.label} onBlur={e=>updateCat(idx,{label:e.target.value})} style={{width:"100%",background:C.bg,border:"1px solid "+(C.border),borderRadius:7,padding:"6px 9px",color:C.text,fontSize:12,marginTop:8}}/>
                   <div style={{display:"flex",gap:3,flexWrap:"wrap"}}>
                     {icons.map(ic=><button key={ic} onClick={()=>updateCat(idx,{icon:ic})} style={{width:27,height:27,borderRadius:6,border:"1px solid "+(cat.icon===ic?C.accent:C.border),background:cat.icon===ic?C.accentDim:"transparent",cursor:"pointer",fontSize:13}}>{ic}</button>)}
                   </div>
@@ -626,19 +626,19 @@ function TaskCatManager({ taskCats, saveTaskCats, onClose }) {
               <div style={{padding:"0 12px 10px"}}>
                 <div style={{display:"flex",flexWrap:"wrap",gap:4,marginBottom:4}}>
                   {(cat.subs||[]).map((s,si)=>(
-                    <div key={si} style={{display:"flex",alignItems:"center",gap:2,background:C.bg,border:`1px solid ${C.border}`,borderRadius:100,padding:"2px 7px"}}>
+                    <div key={si} style={{display:"flex",alignItems:"center",gap:2,background:C.bg,border:"1px solid "+(C.border),borderRadius:100,padding:"2px 7px"}}>
                       <span style={{fontSize:10,color:C.textSub}}>{s}</span>
                       <button onClick={()=>delSub(idx,si)} style={{background:"none",border:"none",color:C.textMuted,cursor:"pointer",fontSize:10,padding:"0 1px"}}>✕</button>
                     </div>
                   ))}
                   <button onClick={()=>setEditSub(editSub?.idx===idx?null:{idx,val:""})}
-                    style={{background:"transparent",border:`1px dashed ${C.border}`,borderRadius:100,padding:"2px 7px",fontSize:10,color:C.textMuted,cursor:"pointer"}}>+ sub</button>
+                    style={{background:"transparent",border:"1px dashed "+(C.border),borderRadius:100,padding:"2px 7px",fontSize:10,color:C.textMuted,cursor:"pointer"}}>+ sub</button>
                 </div>
                 {editSub?.idx===idx&&(
                   <div style={{display:"flex",gap:5}}>
                     <input value={editSub.val} onChange={e=>setEditSub(s=>({...s,val:e.target.value}))} placeholder="Nueva subcategoría..."
                       onKeyDown={e=>{if(e.key==="Enter"&&editSub.val)addSub(idx,editSub.val);}}
-                      style={{flex:1,background:C.bg,border:`1px solid ${C.border}`,borderRadius:7,padding:"4px 8px",color:C.text,fontSize:11}}/>
+                      style={{flex:1,background:C.bg,border:"1px solid "+(C.border),borderRadius:7,padding:"4px 8px",color:C.text,fontSize:11}}/>
                     <button onClick={()=>{if(editSub.val)addSub(idx,editSub.val);}} style={{background:C.accent,color:"#000",border:"none",borderRadius:7,padding:"4px 9px",fontWeight:700,fontSize:11,cursor:"pointer"}}>OK</button>
                   </div>
                 )}
@@ -688,7 +688,7 @@ function GoalModal({ onClose, onAdd }) {
           {["🎯","✈️","📚","⚖️","💰","🏠","🚗","💪","🌎","🎵"].map(ic => <button key={ic} onClick={() => set("icon", ic)} style={{ width: 34, height: 34, borderRadius: 8, border: "1px solid "+(form.icon === ic ? C.accent : C.border), background: form.icon === ic ? C.accentDim : "transparent", cursor: "pointer", fontSize: 16 }}>{ic}</button>)}
         </div>
         <div style={{ display: "flex", gap: 8 }}>
-          {colors.map(c => <button key={c} onClick={() => set("color", c)} style={{ width: 28, height: 28, borderRadius: "50%", background: c, border: form.color === c ? `3px solid #fff` : "2px solid transparent", cursor: "pointer" }} />)}
+          {colors.map(c => <button key={c} onClick={() => set("color", c)} style={{ width: 28, height: 28, borderRadius: "50%", background: c, border: form.color === c ? "3px solid #fff" : "2px solid transparent", cursor: "pointer" }} />)}
         </div>
       </MF>
       <MF label="Meta total"><input type="number" value={form.target} onChange={e => set("target", e.target.value)} placeholder="Ej: 5000000" style={inp} /></MF>
@@ -720,11 +720,11 @@ function NoteModal({ onClose, onAdd }) {
 function Modal({ title, onClose, accent, children }) {
   return (
     <div style={{ position: "fixed", inset: 0, background: "#0009", zIndex: 500, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: C.surface, borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 480, padding: "16px 16px 32px", maxHeight: "88vh", overflowY: "auto", borderTop: `1px solid ${accent}55`, animation: "su .3s ease" }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: C.surface, borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 480, padding: "16px 16px 32px", maxHeight: "88vh", overflowY: "auto", borderTop: "1px solid "+(accent)+"55", animation: "su .3s ease" }}>
         <div style={{ width: 32, height: 3, background: C.border, borderRadius: 2, margin: "0 auto 16px" }} />
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
           <div style={{ fontSize: 16, fontWeight: 800 }}>{title}</div>
-          <button onClick={onClose} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 6, padding: "4px 8px", color: C.text, cursor: "pointer" }}>✕</button>
+          <button onClick={onClose} style={{ background: C.card, border: "1px solid "+(C.border), borderRadius: 6, padding: "4px 8px", color: C.text, cursor: "pointer" }}>✕</button>
         </div>
         <div style={{ display: "grid", gap: 10 }}>{children}</div>
       </div>
