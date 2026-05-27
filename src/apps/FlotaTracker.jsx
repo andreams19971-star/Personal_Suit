@@ -190,7 +190,7 @@ export default function FlotaTracker({ onBack }) {
 
   return (
     <div style={{fontFamily:"-apple-system,BlinkMacSystemFont,sans-serif",background:C.bg,position:"absolute",top:0,left:0,right:0,bottom:0,overflow:"hidden",color:C.text,display:"flex",flexDirection:"column"}}>
-      <style>{`
+      <style dangerouslySetInnerHTML={{__html:`
         *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
         input,select,textarea{outline:none;font-family:inherit}
         ::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:#232D45;border-radius:2px}
@@ -200,7 +200,7 @@ export default function FlotaTracker({ onBack }) {
         .fu{animation:fu .3s ease both}
         .ft-row:hover{background:#1C2438!important}
         .bp:active{transform:scale(.97)}
-      `}</style>
+      `}}/>
 
       {/* TOP BAR */}
       <div style={{background:C.surface,borderBottom:"1px solid "+C.border,paddingTop:"max(13px,calc(env(safe-area-inset-top) + 8px))",paddingBottom:"13px",paddingLeft:"16px",paddingRight:"16px",display:"flex",alignItems:"center",gap:10,flexShrink:0}}>

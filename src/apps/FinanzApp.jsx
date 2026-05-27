@@ -191,7 +191,7 @@ export default function FinanzApp({ onBack }){
       display:"flex",
       flexDirection:"column",
     }}>
-      <style>{`
+      <style dangerouslySetInnerHTML={{__html:`
         .fa-scroll::-webkit-scrollbar{display:none}
         @keyframes fa-slideUp{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}
         @keyframes fa-fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
@@ -202,7 +202,7 @@ export default function FinanzApp({ onBack }){
         .fa-btn:active{transform:scale(.96)}
         @media(max-width:640px){.fa-desktop{display:none!important}}
         @media(min-width:641px){.fa-mobile{display:none!important}}
-      `}</style>
+      `}}/>
       {loading && (
         <div style={{position:"absolute",inset:0,background:C.bg,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",zIndex:50,gap:14}}>
           <div style={{width:36,height:36,border:"3px solid "+(C.border),borderTop:"3px solid "+(C.accent),borderRadius:"50%",animation:"fa-spin .8s linear infinite"}}/>

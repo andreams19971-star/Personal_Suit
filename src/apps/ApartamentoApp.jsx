@@ -120,7 +120,7 @@ export default function ApartamentoApp({ onBack }) {
 
   return (
     <div style={{fontFamily:"-apple-system,BlinkMacSystemFont,sans-serif",background:C.bg,position:"absolute",top:0,left:0,right:0,bottom:0,overflow:"hidden",color:C.text,display:"flex",flexDirection:"column"}}>
-      <style>{`
+      <style dangerouslySetInnerHTML={{__html:`
         *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
         input,select,textarea{outline:none;font-family:inherit;font-size:16px}
         ::-webkit-scrollbar{display:none}*{scrollbar-width:none}
@@ -128,7 +128,7 @@ export default function ApartamentoApp({ onBack }) {
         @keyframes ap-fu{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
         @keyframes ap-spin{to{transform:rotate(360deg)}}
         .ap-fu{animation:ap-fu .3s ease both}.bp:active{transform:scale(.97)}
-      `}</style>
+      `}}/>
       {loading && (
         <div style={{position:"absolute",inset:0,background:C.bg,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",zIndex:50,gap:14}}>
           <div style={{width:32,height:32,border:"3px solid "+C.border,borderTop:"3px solid "+C.accent,borderRadius:"50%",animation:"ap-spin .8s linear infinite"}}/>

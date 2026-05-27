@@ -136,7 +136,7 @@ export default function Planner({ onBack }) {
 
   return (
     <div style={{ fontFamily:"-apple-system,BlinkMacSystemFont,sans-serif", background:C.bg, position:"absolute", top:0, left:0, right:0, bottom:0, overflow:"hidden", color:C.text, display:"flex", flexDirection:"column" }}>
-      <style>{`
+      <style dangerouslySetInnerHTML={{__html:`
         *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
         input,select,textarea{outline:none;font-family:inherit;font-size:16px}
         ::-webkit-scrollbar{width:0}
@@ -144,7 +144,7 @@ export default function Planner({ onBack }) {
         @keyframes fu{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
         @keyframes pl-spin{to{transform:rotate(360deg)}}
         .fu{animation:fu .3s ease both}.bp:active{transform:scale(.96)}.hr:hover{background:#1C2438!important}
-      `}</style>
+      `}}/>
 
       {loading && (
         <div style={{position:"absolute",inset:0,background:C.bg,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",zIndex:50,gap:14}}>
