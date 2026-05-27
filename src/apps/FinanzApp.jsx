@@ -209,21 +209,16 @@ export default function FinanzApp({ onBack }){
           <div style={{fontSize:14,color:C.textMuted}}>Cargando datos...</div>
         </div>
       )}
-      <div style={{display:"flex",flex:1,overflow:"hidden",minHeight:0}}>
-        <DesktopNav view={view} setView={setView} setSidebarOpen={setSidebarOpen} loans={loans}/>
-        <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden",minWidth:0}}>
-          <TopBar view={view} filterMonth={filterMonth} setFilterMonth={setFilterMonth} setSidebarOpen={setSidebarOpen} openAddModal={openAddModal} onBack={onBack}/>
-          <div className="fa-scroll" style={{flex:1,overflowY:"auto",overflowX:"hidden",paddingBottom:80,minHeight:0,width:"100%",position:"relative"}}>
-            {view==="dashboard" && <Dashboard transactions={transactions} accounts={computedAccounts} loans={loans} totalIncome={totalIncome} totalExpense={totalExpense} netBalance={netBalance} filterMonth={filterMonth} setView={setView} setSelAccount={setSelAccount} monthTxs={monthTxs} categories={categories}/>}
-            {view==="movements" && <Movements transactions={transactions} filterMonth={filterMonth} deleteTransaction={deleteTransaction} openAddModal={openAddModal} loans={loans} categories={categories} setEditTx={setEditTx}/>}
-            {view==="accounts"  && <AccountsView accounts={computedAccounts} transactions={transactions} selAccount={selAccount} setSelAccount={setSelAccount} filterMonth={filterMonth} showToast={showToast} categories={categories}/>}
-            {view==="cards"     && <CardsView cards={cards} addCharge={addCharge} deleteCharge={deleteCharge} markPaid={markPaid} saveCard={saveCard} addCard={addCard} filterMonth={filterMonth} showToast={showToast}/>}
-            {view==="loans"     && <LoansView loans={loans} transactions={transactions} setShowLoanModal={setShowLoanModal} setShowPayModal={setShowPayModal} accounts={computedAccounts} showToast={showToast} categories={categories}/>}
-            {view==="stats"     && <Stats monthTxs={monthTxs} totalIncome={totalIncome} totalExpense={totalExpense} transactions={transactions} filterMonth={filterMonth} categories={categories}/>}
-          </div>
-        </div>
-        <Sidebar open={sidebarOpen} onClose={()=>setSidebarOpen(false)} accounts={computedAccounts} updateAccountBalance={updateAccountBalance} settings={settings} setSettings={setSettings} showToast={showToast} categories={categories} saveCategories={saveCategories}/>
+      <TopBar view={view} filterMonth={filterMonth} setFilterMonth={setFilterMonth} setSidebarOpen={setSidebarOpen} openAddModal={openAddModal} onBack={onBack}/>
+      <div className="fa-scroll" style={{flex:1,overflowY:"auto",overflowX:"hidden",paddingBottom:80,minHeight:0,position:"relative"}}>
+        {view==="dashboard" && <Dashboard transactions={transactions} accounts={computedAccounts} loans={loans} totalIncome={totalIncome} totalExpense={totalExpense} netBalance={netBalance} filterMonth={filterMonth} setView={setView} setSelAccount={setSelAccount} monthTxs={monthTxs} categories={categories}/>}
+        {view==="movements" && <Movements transactions={transactions} filterMonth={filterMonth} deleteTransaction={deleteTransaction} openAddModal={openAddModal} loans={loans} categories={categories} setEditTx={setEditTx}/>}
+        {view==="accounts"  && <AccountsView accounts={computedAccounts} transactions={transactions} selAccount={selAccount} setSelAccount={setSelAccount} filterMonth={filterMonth} showToast={showToast} categories={categories}/>}
+        {view==="cards"     && <CardsView cards={cards} addCharge={addCharge} deleteCharge={deleteCharge} markPaid={markPaid} saveCard={saveCard} addCard={addCard} filterMonth={filterMonth} showToast={showToast}/>}
+        {view==="loans"     && <LoansView loans={loans} transactions={transactions} setShowLoanModal={setShowLoanModal} setShowPayModal={setShowPayModal} accounts={computedAccounts} showToast={showToast} categories={categories}/>}
+        {view==="stats"     && <Stats monthTxs={monthTxs} totalIncome={totalIncome} totalExpense={totalExpense} transactions={transactions} filterMonth={filterMonth} categories={categories}/>}
       </div>
+      <Sidebar open={sidebarOpen} onClose={()=>setSidebarOpen(false)} accounts={computedAccounts} updateAccountBalance={updateAccountBalance} settings={settings} setSettings={setSettings} showToast={showToast} categories={categories} saveCategories={saveCategories}/>
       <MobileNav view={view} setView={setView} openAddModal={openAddModal} loans={loans}/>
       <button onClick={()=>openAddModal()} className="fa-btn fa-mobile" style={{position:"fixed",bottom:82,right:20,width:54,height:54,borderRadius:"50%",background:C.accent,border:"none",cursor:"pointer",fontSize:24,boxShadow:"0 8px 24px "+(C.accent)+"66",zIndex:100,display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
       {editTx     && <EditTxModal tx={editTx} onClose={()=>setEditTx(null)} onSave={updateTransaction} accounts={accounts} categories={categories}/>}
