@@ -208,41 +208,12 @@ export default function FinanzApp({ onBack }){
       </div>
       <Sidebar open={sidebarOpen} onClose={()=>setSidebarOpen(false)} accounts={computedAccounts} updateAccountBalance={updateAccountBalance} settings={settings} setSettings={setSettings} showToast={showToast} categories={categories} saveCategories={saveCategories}/>
       <MobileNav view={view} setView={setView} openAddModal={openAddModal} loans={loans}/>
-      <button onClick={()=>openAddModal()} className="fa-btn fa-mobile" style={{position:"fixed",bottom:82,right:20,width:54,height:54,borderRadius:"50%",background:C.accent,border:"none",cursor:"pointer",fontSize:24,boxShadow:"0 8px 24px "+(C.accent)+"66",zIndex:100,display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
+      <button onClick={()=>openAddModal()} style={{position:"fixed",bottom:82,right:20,width:54,height:54,borderRadius:"50%",background:C.accent,border:"none",cursor:"pointer",fontSize:24,boxShadow:"0 8px 24px "+(C.accent)+"66",zIndex:100,display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
       {editTx     && <EditTxModal tx={editTx} onClose={()=>setEditTx(null)} onSave={updateTransaction} accounts={accounts} categories={categories}/>}
       {showAddModal  && <AddModal  onClose={()=>{ setShowAddModal(false); setAddModalOpts({}); }} onAdd={addTransaction} accounts={accounts} opts={addModalOpts} categories={categories}/>}
       {showLoanModal && <LoanModal onClose={()=>setShowLoanModal(false)} onAdd={addLoan} accounts={accounts}/>}
       {showPayModal  && <PayModal  onClose={()=>setShowPayModal(null)} loan={showPayModal} onPay={addPayment} accounts={accounts}/>}
       {toast && <div style={{position:"fixed",bottom:96,left:"50%",transform:"translateX(-50%)",background:toast.type==="error"?C.red:C.accent,color:toast.type==="error"?"#fff":"#000",padding:"10px 20px",borderRadius:100,fontWeight:700,fontSize:14,zIndex:9999,animation:"fa-toastIn .3s ease",whiteSpace:"nowrap",boxShadow:"0 8px 24px #0006"}}>{toast.msg}</div>}
-    </div>
-  );
-}
-
-// ─── DESKTOP NAV ──────────────────────────────────────────────────────────────
-function DesktopNav({view,setView,setSidebarOpen,loans}){
-  const badge=loans.filter(l=>l.status==="active").length;
-  const items=[
-    {id:"dashboard",icon:"⬡",label:"Inicio"},
-    {id:"movements",icon:"↕",label:"Movimientos"},
-    {id:"accounts", icon:"◈",label:"Cuentas"},
-    {id:"cards",    icon:"💳",label:"Tarjetas"},
-    {id:"loans",    icon:"🤝",label:"Por Cobrar",badge},
-    {id:"stats",    icon:"◉",label:"Estadísticas"},
-  ];
-  return(
-    <div className="fa-desktop" style={{width:220,background:C.surface,borderRight:"1px solid "+(C.border),display:"flex",flexDirection:"column",padding:"24px 16px",flexShrink:0}}>
-      <div style={{marginBottom:32}}>
-        <div style={{fontSize:20,fontWeight:800,color:C.accent,letterSpacing:-1}}>💰 FinanzApp</div>
-        <div style={{fontSize:11,color:C.textMuted,marginTop:2}}>Control financiero total</div>
-      </div>
-      {items.map(item=>(
-        <button key={item.id} onClick={()=>setView(item.id)} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",borderRadius:12,border:"none",cursor:"pointer",marginBottom:4,background:view===item.id?C.accentDim:"transparent",color:view===item.id?C.accent:C.textSub,fontWeight:view===item.id?700:500,fontSize:14,transition:"all .2s",textAlign:"left",position:"relative"}}>
-          <span style={{fontSize:18}}>{item.icon}</span>{item.label}
-          {item.badge>0&&<span style={{marginLeft:"auto",background:C.orange,color:"#fff",borderRadius:100,fontSize:10,fontWeight:700,padding:"1px 7px"}}>{item.badge}</span>}
-        </button>
-      ))}
-      <div style={{flex:1}}/>
-      <button onClick={()=>setSidebarOpen(true)} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",borderRadius:12,border:"1px solid "+(C.border),cursor:"pointer",background:"transparent",color:C.textSub,fontSize:14,fontWeight:500}}>⚙ Configuración</button>
     </div>
   );
 }
@@ -289,7 +260,7 @@ function MobileNav({view,setView,openAddModal,loans}){
     {id:"stats",    icon:"◉",label:"Stats"},
   ];
   return(
-    <div className="fa-mobile" style={{
+    <div style={{
       position:"fixed",bottom:0,left:0,right:0,zIndex:90,
       background:C.surface,borderTop:"1px solid "+(C.border),
       display:"flex",
