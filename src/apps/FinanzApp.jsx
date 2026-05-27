@@ -213,7 +213,7 @@ export default function FinanzApp({ onBack }){
         <DesktopNav view={view} setView={setView} setSidebarOpen={setSidebarOpen} loans={loans}/>
         <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden",minWidth:0}}>
           <TopBar view={view} filterMonth={filterMonth} setFilterMonth={setFilterMonth} setSidebarOpen={setSidebarOpen} openAddModal={openAddModal} onBack={onBack}/>
-          <div className="fa-scroll" style={{flex:1,overflowY:"auto",paddingBottom:80,minHeight:0,width:"100%",position:"relative"}}>
+          <div className="fa-scroll" style={{flex:1,overflowY:"auto",overflowX:"hidden",paddingBottom:80,minHeight:0,width:"100%",position:"relative"}}>
             {view==="dashboard" && <Dashboard transactions={transactions} accounts={computedAccounts} loans={loans} totalIncome={totalIncome} totalExpense={totalExpense} netBalance={netBalance} filterMonth={filterMonth} setView={setView} setSelAccount={setSelAccount} monthTxs={monthTxs} categories={categories}/>}
             {view==="movements" && <Movements transactions={transactions} filterMonth={filterMonth} deleteTransaction={deleteTransaction} openAddModal={openAddModal} loans={loans} categories={categories} setEditTx={setEditTx}/>}
             {view==="accounts"  && <AccountsView accounts={computedAccounts} transactions={transactions} selAccount={selAccount} setSelAccount={setSelAccount} filterMonth={filterMonth} showToast={showToast} categories={categories}/>}
@@ -338,7 +338,7 @@ function Dashboard({transactions,accounts,loans,totalIncome,totalExpense,netBala
   });
   const maxDay=Math.max(...last7.map(d=>d.total),1);
   return(
-    <div style={{padding:"16px",display:"grid",gap:14,boxSizing:"border-box"}} className="fa-fade-up">
+    <div style={{padding:"16px",display:"grid",gap:14,boxSizing:"border-box",overflow:"hidden"}} className="fa-fade-up">
       <div style={{background:"linear-gradient(135deg,"+(C.accentDim)+","+(C.card)+")",border:"1px solid "+(C.accentText)+"33",borderRadius:20,padding:20,position:"relative",overflow:"hidden"}}>
         <div style={{position:"absolute",top:-30,right:-30,width:120,height:120,borderRadius:"50%",background:(C.accent)+"11",pointerEvents:"none"}}/>
         <div style={{fontSize:12,color:C.accentText,fontWeight:700,marginBottom:4}}>PATRIMONIO TOTAL</div>
@@ -352,7 +352,7 @@ function Dashboard({transactions,accounts,loans,totalIncome,totalExpense,netBala
       </div>
       <div>
         <SectionHeader title="Mis Cuentas" action="Ver todas" onAction={()=>setView("accounts")}/>
-        <div style={{display:"flex",gap:10,overflowX:"auto",paddingBottom:6,paddingRight:16,marginRight:-16}}>
+        <div style={{display:"flex",gap:10,overflowX:"auto",paddingBottom:6,paddingLeft:16,paddingRight:16,marginLeft:-16,marginRight:-16}}>
           {accounts.map(acc=>(
             <button key={acc.id} onClick={()=>{setSelAccount(acc.id);setView("accounts");}} className="fa-btn"
               style={{background:C.card,border:"1px solid "+(C.border),borderRadius:14,padding:"12px 14px",minWidth:110,maxWidth:140,flexShrink:0,cursor:"pointer",textAlign:"left"}}>
@@ -442,7 +442,7 @@ function Movements({transactions,filterMonth,deleteTransaction,openAddModal,loan
   filtered.forEach(t=>{(grouped[t.date]=grouped[t.date]||[]).push(t);});
   const sortedDates=Object.keys(grouped).sort((a,b)=>b.localeCompare(a));
   return(
-    <div style={{padding:"16px",display:"grid",gap:12,boxSizing:"border-box"}} className="fa-fade-up">
+    <div style={{padding:"16px",display:"grid",gap:12,boxSizing:"border-box",overflow:"hidden"}} className="fa-fade-up">
       <div style={{position:"relative"}}>
         <span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",color:C.textMuted}}>🔍</span>
         <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar..."
@@ -478,7 +478,7 @@ function AccountsView({accounts,transactions,selAccount,setSelAccount,filterMont
   const totalIn=accTxs.filter(t=>t.type==="income").reduce((s,t)=>s+t.amount,0);
   const totalOut=accTxs.filter(t=>t.type==="expense").reduce((s,t)=>s+t.amount,0);
   return(
-    <div style={{padding:"16px",display:"grid",gap:16,boxSizing:"border-box"}} className="fa-fade-up">
+    <div style={{padding:"16px",display:"grid",gap:16,boxSizing:"border-box",overflow:"hidden"}} className="fa-fade-up">
       <div style={{display:"flex",gap:10,overflowX:"auto",paddingBottom:4}}>
         {accounts.map(a=>(
           <button key={a.id} onClick={()=>setSelAccount(a.id)} style={{padding:"10px 14px",borderRadius:14,border:active!==a.id?"1px solid "+(C.border):"none",cursor:"pointer",background:active===a.id?C.accent:C.card,color:active===a.id?"#000":C.textSub,fontWeight:700,fontSize:13,flexShrink:0,display:"flex",alignItems:"center",gap:6}}>
@@ -529,7 +529,7 @@ function LoansView({loans,transactions,setShowLoanModal,setShowPayModal,accounts
   );
 
   return(
-    <div style={{padding:"16px",display:"grid",gap:16,boxSizing:"border-box"}} className="fa-fade-up">
+    <div style={{padding:"16px",display:"grid",gap:16,boxSizing:"border-box",overflow:"hidden"}} className="fa-fade-up">
       <div style={{background:"linear-gradient(135deg,"+(C.orangeDim)+","+(C.card)+")",border:"1px solid "+(C.orange)+"44",borderRadius:20,padding:20,position:"relative",overflow:"hidden"}}>
         <div style={{position:"absolute",top:-20,right:-20,width:100,height:100,borderRadius:"50%",background:(C.orange)+"11"}}/>
         <div style={{fontSize:12,color:C.orange,fontWeight:700,marginBottom:4}}>TOTAL POR COBRAR</div>
@@ -603,7 +603,7 @@ function LoanDetail({loan,transactions,onBack,setShowPayModal,accounts,categorie
   const pct=Math.round(((loan.amount-loan.balance)/loan.amount)*100);
   const loanTx=transactions.filter(t=>t.loanId===loan.id);
   return(
-    <div style={{padding:"16px",display:"grid",gap:16,boxSizing:"border-box"}} className="fa-fade-up">
+    <div style={{padding:"16px",display:"grid",gap:16,boxSizing:"border-box",overflow:"hidden"}} className="fa-fade-up">
       <button onClick={onBack} style={{display:"flex",alignItems:"center",gap:6,background:"none",border:"none",color:C.orange,cursor:"pointer",fontWeight:600,fontSize:14,padding:0}}>← Volver a Préstamos</button>
       <div style={{background:"linear-gradient(135deg,"+(C.orangeDim)+","+(C.card)+")",border:"1px solid "+(C.orange)+"44",borderRadius:20,padding:20}}>
         <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:16}}>
@@ -690,7 +690,7 @@ function CardsView({ cards, addCharge, deleteCharge, markPaid, saveCard, addCard
   const monthCharges = (card?.charges || []).filter(ch => ch.date?.startsWith(filterMonth));
 
   return (
-    <div style={{padding:"16px",display:"grid",gap:14,boxSizing:"border-box"}} className="fa-fade-up">
+    <div style={{padding:"16px",display:"grid",gap:14,boxSizing:"border-box",overflow:"hidden"}} className="fa-fade-up">
 
       {/* RESUMEN GLOBAL */}
       <div style={{background:"linear-gradient(135deg,"+(C.redDim)+","+(C.card)+")",border:"1px solid "+(C.red)+"44",borderRadius:18,padding:18,position:"relative",overflow:"hidden"}}>
@@ -962,7 +962,7 @@ function Stats({monthTxs,totalIncome,totalExpense,transactions,filterMonth,categ
   const MONTHS_SHORT = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
 
   return(
-    <div style={{padding:"16px",display:"grid",gap:14,boxSizing:"border-box"}} className="fa-fade-up">
+    <div style={{padding:"16px",display:"grid",gap:14,boxSizing:"border-box",overflow:"hidden"}} className="fa-fade-up">
 
       {/* KPI CARDS */}
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
