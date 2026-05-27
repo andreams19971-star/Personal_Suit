@@ -128,7 +128,7 @@ export default function Planner({ onBack }) {
   ];
 
   const viewTitle = {
-    today:    "☀️ "+(new Date(selDate+"T12:00").toLocaleDateString("es-CO",{weekday:"long",day:"numeric",month:"short")+")}",
+    today:    "☀️ " + new Date(selDate+"T12:00").toLocaleDateString("es-CO",{weekday:"long",day:"numeric",month:"short"}),
     calendar: "📅 Calendario",
     goals:    "🎯 Metas",
     notes:    "📝 Notas",
