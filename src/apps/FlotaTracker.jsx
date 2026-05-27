@@ -1,5 +1,14 @@
 import { useState } from "react";
 import { useFlotaData } from "../hooks/useFlotaData.js";
+import { supabase } from "../supabase.js";
+
+const ACCOUNTS = [
+  {id:"cash",        label:"Efectivo",    icon:"💵"},
+  {id:"nequi",       label:"Nequi",       icon:"💜"},
+  {id:"bbva",        label:"BBVA",        icon:"🔵"},
+  {id:"daviplata",   label:"Daviplata",   icon:"🔴"},
+  {id:"bancolombia", label:"Bancolombia", icon:"🟡"},
+];
 
 // ─── COLORES ──────────────────────────────────────────────────────────────────
 const C = {
@@ -160,13 +169,13 @@ export default function FlotaTracker({ onBack }) {
 
     if (nowPaid) {
       try {
-        const { supabase: sb } = await import('../supabase.js');
-        await sb.from('transactions').insert([{
+        await supabase.from('transactions').insert([{
           id: "flota-"+Date.now(),
           date: pago.fecha, type: "income",
           category: "flota_inc",
           subcategory: carro?.nombre||"Flota",
-          account: "cash", amount: pago.monto,
+          account: pago.account || "cash",
+          amount: pago.monto,
           note: "Cobro "+(carro?.nombre||"")+" · "+pago.fecha,
           loan_id: null,
         }]);
@@ -177,8 +186,33 @@ export default function FlotaTracker({ onBack }) {
       showToast("Marcado como pendiente");
     }
   };
-  const agregarGasto      = (carroId, gasto)  => { addExpense(carroId, gasto);     showToast("Gasto registrado ✓");  setModal(null); };
-  const agregarPagoDiario = (carroId, fecha)  => { addWorkDay(carroId, fecha);     showToast("Día agregado ✓");      setModal(null); };
+  const agregarGasto = async (carroId, gasto) => {
+    addExpense(carroId, gasto);
+    showToast("Gasto registrado ✓");
+    setModal(null);
+    // Sincronizar con FinanzApp como egreso
+    try {
+      const carro = cars.find(c=>c.id===carroId);
+      await supabase.from('transactions').insert([{
+        id: "flota-exp-"+Date.now(),
+        date: gasto.fecha,
+        type: "expense",
+        category: "transport",
+        subcategory: gasto.categoria,
+        account: gasto.account || "cash",
+        amount: gasto.monto,
+        note: "Gasto "+(carro?.nombre||"Flota")+" · "+gasto.categoria,
+        loan_id: null,
+      }]);
+      console.log('[FlotaTracker] ✅ Gasto sincronizado con FinanzApp');
+    } catch(e) { console.error('[FlotaTracker] sync gasto:', e); }
+  };
+
+  const agregarPagoDiario = (carroId, fecha, account) => {
+    addWorkDay(carroId, fecha, account);
+    showToast("Día agregado ✓");
+    setModal(null);
+  };
 
   const nav = [
     {id:"dashboard", icon:"📊", label:"Resumen"},
@@ -190,17 +224,6 @@ export default function FlotaTracker({ onBack }) {
 
   return (
     <div style={{fontFamily:"-apple-system,BlinkMacSystemFont,sans-serif",background:C.bg,position:"absolute",top:0,left:0,right:0,bottom:0,overflow:"hidden",color:C.text,display:"flex",flexDirection:"column"}}>
-      <style dangerouslySetInnerHTML={{__html:`
-        *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-        input,select,textarea{outline:none;font-family:inherit}
-        ::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:#232D45;border-radius:2px}
-        @keyframes su{from{transform:translateY(60px);opacity:0}to{transform:translateY(0);opacity:1}}
-        @keyframes fu{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-        @keyframes ft-spin{to{transform:rotate(360deg)}}
-        .fu{animation:fu .3s ease both}
-        .ft-row:hover{background:#1C2438!important}
-        .bp:active{transform:scale(.97)}
-      `}}/>
 
       {/* TOP BAR */}
       <div style={{background:C.surface,borderBottom:"1px solid "+C.border,paddingTop:"max(13px,calc(env(safe-area-inset-top) + 8px))",paddingBottom:"13px",paddingLeft:"16px",paddingRight:"16px",display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
@@ -239,8 +262,8 @@ export default function FlotaTracker({ onBack }) {
       </div>
 
       {/* MODALS */}
-      {modal?.type==="gasto"    && <GastoModal carroId={modal.carroId} carros={cars} onClose={()=>setModal(null)} onAdd={agregarGasto}/>}
-      {modal?.type==="dia"      && <DiaModal   carroId={modal.carroId} onClose={()=>setModal(null)} onAdd={agregarPagoDiario} cars={cars}/>}
+      {modal?.type==="gasto" && <GastoModal carroId={modal.carroId} carros={cars} onClose={()=>setModal(null)} onAdd={agregarGasto} accounts={ACCOUNTS}/>}
+      {modal?.type==="dia"   && <DiaModal   carroId={modal.carroId} onClose={()=>setModal(null)} onAdd={agregarPagoDiario} cars={cars} accounts={ACCOUNTS}/>}
 
       {/* SIDEBAR CONFIGURACIÓN */}
       {sidebar && <>
@@ -589,9 +612,9 @@ function GastosView({carros,filterMonth,setModal,totalGastos}) {
 }
 
 // ─── MODALS ───────────────────────────────────────────────────────────────────
-function GastoModal({carroId,carros,onClose,onAdd}) {
+function GastoModal({carroId,carros,onClose,onAdd,accounts}) {
   const carro = carros.find(c=>c.id===carroId);
-  const [form,setForm] = useState({fecha:td(),categoria:"Gasolina",monto:"",nota:""});
+  const [form,setForm] = useState({fecha:td(),categoria:"Gasolina",monto:"",nota:"",account:"cash"});
   const set = (k,v) => setForm(f=>({...f,[k]:v}));
   const cats = ["Gasolina","Aceite","Llantas","SOAT","Revisión técnica","Lavado","Mantenimiento","Repuestos","Seguro","Parqueadero","Otro"];
   return (
@@ -609,6 +632,16 @@ function GastoModal({carroId,carros,onClose,onAdd}) {
           {cats.map(c=><option key={c}>{c}</option>)}
         </select>
       </MF>
+      <MF label="Cuenta">
+        <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+          {(accounts||[]).map(a=>(
+            <button key={a.id} onClick={()=>set("account",a.id)}
+              style={{flex:"1 1 auto",padding:"8px 4px",borderRadius:9,border:"1px solid "+(form.account===a.id?C.red:C.border),background:form.account===a.id?C.redDim:"transparent",color:form.account===a.id?C.red:C.textSub,cursor:"pointer",fontSize:11,fontWeight:600,textAlign:"center"}}>
+              {a.icon} {a.label}
+            </button>
+          ))}
+        </div>
+      </MF>
       <MF label="Fecha"><input type="date" value={form.fecha} onChange={e=>set("fecha",e.target.value)} style={inp}/></MF>
       <MF label="Nota (opcional)"><input value={form.nota} onChange={e=>set("nota",e.target.value)} placeholder="Detalles..." style={inp}/></MF>
       <button onClick={()=>form.monto&&onAdd(carroId,{...form,monto:parseFloat(form.monto)})}
@@ -619,8 +652,9 @@ function GastoModal({carroId,carros,onClose,onAdd}) {
   );
 }
 
-function DiaModal({carroId, onClose, onAdd, cars}) {
+function DiaModal({carroId, onClose, onAdd, cars, accounts}) {
   const [fecha, setFecha] = useState(td());
+  const [account, setAccount] = useState("cash");
   const carro = cars?.find(c=>c.id===carroId);
   const valor = carro?.valor_diario || CARRO1_DIARIO;
   return (
@@ -632,7 +666,17 @@ function DiaModal({carroId, onClose, onAdd, cars}) {
       <MF label="Fecha del día trabajado">
         <input type="date" value={fecha} onChange={e=>setFecha(e.target.value)} style={inp}/>
       </MF>
-      <button onClick={()=>onAdd(carroId,fecha)} style={{...btn,background:C.car1,color:"#fff"}}>
+      <MF label="Cuenta donde recibes el pago">
+        <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+          {(accounts||[]).map(a=>(
+            <button key={a.id} onClick={()=>setAccount(a.id)}
+              style={{flex:"1 1 auto",padding:"8px 4px",borderRadius:9,border:"1px solid "+(account===a.id?C.car1:C.border),background:account===a.id?C.car1Dim:"transparent",color:account===a.id?C.car1:C.textSub,cursor:"pointer",fontSize:11,fontWeight:600,textAlign:"center"}}>
+              {a.icon} {a.label}
+            </button>
+          ))}
+        </div>
+      </MF>
+      <button onClick={()=>onAdd(carroId, fecha, account)} style={{...btn,background:C.car1,color:"#fff"}}>
         Agregar Día
       </button>
     </ModalWrap>

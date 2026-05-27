@@ -110,21 +110,26 @@ export function useFlotaData() {
   }
 
   // ── Agregar día de trabajo ──
-  async function addWorkDay(carId, fecha) {
+  async function addWorkDay(carId, fecha, account='cash') {
     const car = cars.find(c => c.id === carId)
-    const row = { id:'P'+Date.now(), car_id:carId, fecha, monto:car?.valor_diario||70000, pagado:false, nota:'' }
+    const row = { id:'P'+Date.now(), car_id:carId, fecha, monto:car?.valor_diario||70000, pagado:false, nota:'', account }
     setPayments(prev => ({...prev, [carId]: [row, ...(prev[carId]||[])]}))
     if (!onlineRef.current) return
     const { error } = await supabase.from('car_payments').insert([row])
     if (error) console.error('[addWorkDay]', error.message)
+    else console.log('[addWorkDay] ✅', fecha, account)
   }
 
   // ── Agregar gasto ──
   async function addExpense(carId, gasto) {
-    const row = { ...gasto, id:'E'+Date.now(), car_id:carId }
+    const row = { ...gasto, id:'E'+Date.now(), car_id:carId, account:gasto.account||'cash' }
     setExpenses(prev => ({...prev, [carId]: [row, ...(prev[carId]||[])]}))
     if (!onlineRef.current) return
-    const { error } = await supabase.from('car_expenses').insert([row])
+    const { error } = await supabase.from('car_expenses').insert([{
+      id: row.id, car_id: carId, fecha: gasto.fecha,
+      category: gasto.categoria, amount: gasto.monto,
+      note: gasto.nota||'', account: gasto.account||'cash'
+    }])
     if (error) console.error('[addExpense]', error.message)
   }
 

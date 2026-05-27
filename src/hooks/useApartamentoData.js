@@ -53,7 +53,8 @@ export function useApartamentoData() {
         id: r.id, roomId: r.room_id, guest: r.guest, phone: r.phone||'',
         checkIn: r.check_in, checkOut: r.check_out, nights: r.nights||1,
         platform: r.platform||'Directo', status: r.status||'reserved',
-        notes: r.notes||'', total: r.total||0, paid: r.paid||0
+        notes: r.notes||'', total: r.total||0, paid: r.paid||0,
+        gender: r.gender||null,
       })))
 
       setExpenses((er.data||[]).map(e => ({
@@ -79,7 +80,8 @@ export function useApartamentoData() {
       id: newRes.id, room_id: newRes.roomId, guest: newRes.guest,
       phone: newRes.phone||'', check_in: newRes.checkIn, check_out: newRes.checkOut,
       nights: newRes.nights, platform: newRes.platform||'Directo',
-      status: newRes.status, notes: newRes.notes||'', total: 0, paid: 0
+      status: newRes.status, notes: newRes.notes||'', total: 0, paid: 0,
+      gender: newRes.gender||null,
     }])
     if (error) console.error('[addReservation]', error.message)
     else console.log('[addReservation] ✅')

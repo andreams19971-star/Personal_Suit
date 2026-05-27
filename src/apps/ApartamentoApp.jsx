@@ -70,6 +70,35 @@ export default function ApartamentoApp({ onBack }) {
   const showToast = (m, t="ok") => { setToast({m,t}); setTimeout(()=>setToast(null),2200); };
 
   const addReservation = async (res) => {
+    const activeRes = reservations.filter(r =>
+      r.status !== "blocked" && r.status !== "cancelled"
+    );
+
+    // ── Validación 1: Solapamiento de fechas en la misma habitación ──
+    const overlap = activeRes.find(r =>
+      r.roomId === res.roomId &&
+      r.checkIn  < res.checkOut &&
+      r.checkOut > res.checkIn
+    );
+    if (overlap) {
+      showToast("❌ Esa habitación ya está reservada del " + overlap.checkIn + " al " + overlap.checkOut, "err");
+      return;
+    }
+
+    // ── Validación 2: No mezclar géneros ──
+    if (res.gender) {
+      const activeGuests = activeRes.filter(r =>
+        r.checkIn < res.checkOut &&
+        r.checkOut > res.checkIn &&
+        r.gender && r.gender !== res.gender
+      );
+      if (activeGuests.length > 0) {
+        const otherGender = res.gender === "M" ? "mujeres" : "hombres";
+        showToast("❌ Ya hay " + otherGender + " hospedados en esas fechas", "err");
+        return;
+      }
+    }
+
     await dbAddRes(res);
     showToast("Reserva creada ✓");
     setModal(null);
@@ -120,15 +149,6 @@ export default function ApartamentoApp({ onBack }) {
 
   return (
     <div style={{fontFamily:"-apple-system,BlinkMacSystemFont,sans-serif",background:C.bg,position:"absolute",top:0,left:0,right:0,bottom:0,overflow:"hidden",color:C.text,display:"flex",flexDirection:"column"}}>
-      <style dangerouslySetInnerHTML={{__html:`
-        *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-        input,select,textarea{outline:none;font-family:inherit;font-size:16px}
-        ::-webkit-scrollbar{display:none}*{scrollbar-width:none}
-        @keyframes ap-su{from{transform:translateY(60px);opacity:0}to{transform:translateY(0);opacity:1}}
-        @keyframes ap-fu{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-        @keyframes ap-spin{to{transform:rotate(360deg)}}
-        .ap-fu{animation:ap-fu .3s ease both}.bp:active{transform:scale(.97)}
-      `}}/>
       {loading && (
         <div style={{position:"absolute",inset:0,background:C.bg,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",zIndex:50,gap:14}}>
           <div style={{width:32,height:32,border:"3px solid "+C.border,borderTop:"3px solid "+C.accent,borderRadius:"50%",animation:"ap-spin .8s linear infinite"}}/>
@@ -165,7 +185,7 @@ export default function ApartamentoApp({ onBack }) {
       </div>
 
       {/* MODALS */}
-      {modal?.type==="newReservation" && <ReservationModal rooms={rooms} onClose={()=>setModal(null)} onAdd={addReservation} editData={modal.data}/>}
+      {modal?.type==="newReservation" && <ReservationModal rooms={rooms} reservations={reservations} onClose={()=>setModal(null)} onAdd={addReservation} editData={modal.data}/>}
       {modal?.type==="viewReservation"&& <ReservationDetailModal res={modal.data} rooms={rooms} onClose={()=>setModal(null)} onStatusChange={updateReservationStatus} onDelete={deleteReservation}/>}
       {modal?.type==="addExpense"     && <ExpenseModal onClose={()=>setModal(null)} onAdd={addExpense} rooms={rooms}/>}
       {modal?.type==="editRoom"       && <RoomEditModal rooms={rooms} onClose={()=>setModal(null)} onSave={updateRoom}/>}
@@ -512,35 +532,125 @@ function FinancesView({reservations,expenses,totalExpenses,setModal,deleteExpens
 }
 
 // ─── MODALS ───────────────────────────────────────────────────────────────────
-function ReservationModal({rooms,onClose,onAdd,editData}) {
-  const [form,setForm]=useState({roomId:editData?.roomId||rooms[0]?.id||"",guest:"",phone:"",checkIn:td(),checkOut:"",platform:"Directo",notes:""});
+function ReservationModal({rooms, reservations=[], onClose, onAdd, editData}) {
+  const [form,setForm]=useState({
+    roomId:   editData?.roomId||rooms[0]?.id||"",
+    guest:    "", phone:"", checkIn:td(), checkOut:"",
+    platform: "Directo", notes:"", gender:"",
+  });
   const set=(k,v)=>setForm(f=>({...f,[k]:v}));
-  const nights=form.checkIn&&form.checkOut?Math.max(0,Math.round((new Date(form.checkOut)-new Date(form.checkIn))/86400000)):0;
-  const ok=form.guest&&form.checkIn&&form.checkOut&&nights>0;
+
+  const nights = form.checkIn&&form.checkOut
+    ? Math.max(0,Math.round((new Date(form.checkOut)-new Date(form.checkIn))/86400000))
+    : 0;
+
+  // ── Live conflict detection ──
+  const activeRes = reservations.filter(r => r.status!=="blocked" && r.status!=="cancelled");
+
+  const roomConflict = nights>0 ? activeRes.find(r =>
+    r.roomId === form.roomId &&
+    r.checkIn  < form.checkOut &&
+    r.checkOut > form.checkIn
+  ) : null;
+
+  const genderConflict = (nights>0 && form.gender) ? activeRes.find(r =>
+    r.checkIn  < form.checkOut &&
+    r.checkOut > form.checkIn &&
+    r.gender && r.gender !== form.gender
+  ) : null;
+
+  const hasConflict = !!roomConflict || !!genderConflict;
+  const ok = form.guest && form.checkIn && form.checkOut && nights>0 && form.gender && !hasConflict;
+
   return(
     <ModalWrap title="Nueva Reserva" onClose={onClose}>
-      <div><div style={lbl}>HABITACIÓN</div>
+
+      {/* HABITACIÓN */}
+      <div>
+        <div style={lbl}>HABITACIÓN</div>
         <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-          {rooms.map(r=><button key={r.id} onClick={()=>set("roomId",r.id)} style={{flex:1,padding:"8px 6px",borderRadius:9,border:"1px solid "+(form.roomId===r.id?r.color:C.border),background:form.roomId===r.id?r.color+"22":"transparent",color:form.roomId===r.id?r.color:C.textSub,cursor:"pointer",fontSize:11,fontWeight:600}}>{r.name}</button>)}
+          {rooms.map(r=>{
+            const conflict = nights>0 && activeRes.some(res =>
+              res.roomId===r.id && res.checkIn<form.checkOut && res.checkOut>form.checkIn
+            );
+            return (
+              <button key={r.id} onClick={()=>set("roomId",r.id)}
+                style={{flex:1,padding:"8px 6px",borderRadius:9,
+                  border:"1px solid "+(conflict?C.red:form.roomId===r.id?r.color:C.border),
+                  background:conflict?C.redDim:form.roomId===r.id?r.color+"22":"transparent",
+                  color:conflict?C.red:form.roomId===r.id?r.color:C.textSub,
+                  cursor:"pointer",fontSize:11,fontWeight:600}}>
+                {conflict?"🚫 ":""}{r.name}
+              </button>
+            );
+          })}
         </div>
       </div>
+
+      {/* GÉNERO */}
+      <div>
+        <div style={lbl}>GÉNERO DEL HUÉSPED</div>
+        <div style={{display:"flex",gap:8}}>
+          {[["M","👨 Masculino","#60A5FA"],["F","👩 Femenino","#F472B6"]].map(([val,label,color])=>(
+            <button key={val} onClick={()=>set("gender",val)}
+              style={{flex:1,padding:"10px 8px",borderRadius:10,border:"1px solid "+(form.gender===val?color:C.border),background:form.gender===val?color+"22":"transparent",color:form.gender===val?color:C.textSub,cursor:"pointer",fontSize:12,fontWeight:700}}>
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* DATOS */}
       {[["Nombre del huésped","guest","text","María García"],["Teléfono","phone","tel","300..."]].map(([label,key,type,ph])=>(
-        <div key={key}><div style={lbl}>{label.toUpperCase()}</div><input type={type} value={form[key]} onChange={e=>set(key,e.target.value)} placeholder={ph} style={inp}/></div>
+        <div key={key}><div style={lbl}>{label.toUpperCase()}</div>
+          <input type={type} value={form[key]} onChange={e=>set(key,e.target.value)} placeholder={ph} style={inp}/>
+        </div>
       ))}
+
+      {/* FECHAS */}
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
         <div><div style={lbl}>CHECK-IN</div><input type="date" value={form.checkIn} onChange={e=>set("checkIn",e.target.value)} style={inp}/></div>
         <div><div style={lbl}>CHECK-OUT</div><input type="date" value={form.checkOut} onChange={e=>set("checkOut",e.target.value)} style={inp}/></div>
       </div>
-      {nights>0&&<div style={{background:C.accentDim,border:"1px solid "+((C.accent)+"44"),borderRadius:10,padding:"10px 14px",fontSize:13,textAlign:"center"}}>
-        <span style={{color:C.accent,fontWeight:800}}>{nights} noches</span><span style={{color:C.textMuted}}> · Empresa</span>
-      </div>}
+
+      {/* RESUMEN / CONFLICTOS */}
+      {nights>0 && !hasConflict && (
+        <div style={{background:C.accentDim,border:"1px solid "+(C.accent+"44"),borderRadius:10,padding:"10px 14px",fontSize:13,textAlign:"center"}}>
+          <span style={{color:C.accent,fontWeight:800}}>{nights} noche{nights!==1?"s":""}</span>
+          <span style={{color:C.textMuted}}> · Empresa</span>
+        </div>
+      )}
+      {roomConflict && (
+        <div style={{background:C.redDim,border:"1px solid "+(C.red+"44"),borderRadius:10,padding:"10px 14px",fontSize:12,color:C.red,fontWeight:600}}>
+          🚫 Habitación ocupada del <strong>{roomConflict.checkIn}</strong> al <strong>{roomConflict.checkOut}</strong> por {roomConflict.guest}
+        </div>
+      )}
+      {genderConflict && !roomConflict && (
+        <div style={{background:C.redDim,border:"1px solid "+(C.red+"44"),borderRadius:10,padding:"10px 14px",fontSize:12,color:C.red,fontWeight:600}}>
+          🚫 Ya hay {genderConflict.gender==="M"?"hombres":"mujeres"} hospedados del {genderConflict.checkIn} al {genderConflict.checkOut}. No se puede mezclar géneros.
+        </div>
+      )}
+
+      {/* PLATAFORMA Y NOTAS */}
       <div><div style={lbl}>PLATAFORMA / ORIGEN</div>
         <select value={form.platform} onChange={e=>set("platform",e.target.value)} style={inp}>
           {PLATFORMS.map(p=><option key={p}>{p}</option>)}
         </select>
       </div>
-      <div><div style={lbl}>NOTAS</div><input value={form.notes} onChange={e=>set("notes",e.target.value)} placeholder="Opcional..." style={inp}/></div>
-      <button onClick={()=>ok&&onAdd(form)} style={{...btnStyle,background:ok?C.accent:C.border,color:ok?"#000":C.textMuted}}>Crear Reserva</button>
+      <div><div style={lbl}>NOTAS</div>
+        <input value={form.notes} onChange={e=>set("notes",e.target.value)} placeholder="Opcional..." style={inp}/>
+      </div>
+
+      {!form.gender && (
+        <div style={{fontSize:11,color:C.yellow,textAlign:"center",padding:"4px 0"}}>
+          ⚠️ Selecciona el género del huésped para continuar
+        </div>
+      )}
+
+      <button onClick={()=>ok&&onAdd(form)}
+        style={{...btnStyle,background:ok?C.accent:C.border,color:ok?"#000":C.textMuted,opacity:hasConflict?0.5:1}}>
+        {hasConflict?"No disponible":"Crear Reserva"}
+      </button>
     </ModalWrap>
   );
 }

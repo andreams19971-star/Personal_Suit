@@ -45,3 +45,51 @@ input, select, textarea, button {
 
 ::-webkit-scrollbar { display: none; }
 * { scrollbar-width: none; }
+
+/* FinanzApp */
+.fa-scroll::-webkit-scrollbar{display:none}
+@keyframes fa-slideUp{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes fa-fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fa-toastIn{from{transform:translateY(60px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes fa-spin{to{transform:rotate(360deg)}}
+.fa-fade-up{animation:fa-fadeUp .35s ease both}
+.fa-tx-row:hover{background:#1C2438!important}
+.fa-btn:active{transform:scale(.96)}
+
+/* Planner */
+@keyframes su{from{transform:translateY(50px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes fu{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pl-spin{to{transform:rotate(360deg)}}
+.fu{animation:fu .3s ease both}
+.bp:active{transform:scale(.96)}
+.hr:hover{background:#1C2438!important}
+
+/* FlotaTracker */
+@keyframes ft-su{from{transform:translateY(50px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes ft-fu{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.ft-fu{animation:ft-fu .3s ease both}
+.ft-row:hover{background:#1C2438!important}
+
+/* ApartamentoApp */
+@keyframes ap-su{from{transform:translateY(60px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes ap-fu{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes ap-spin{to{transform:rotate(360deg)}}
+.ap-fu{animation:ap-fu .3s ease both}
+
+/* Launcher */
+@keyframes launcher-fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.launcher-card {
+  transition: transform .2s ease;
+  cursor: pointer;
+  border: none;
+  text-align: left;
+  width: 100%;
+  background: none;
+  padding: 0;
+}
+.launcher-card:active { transform: scale(.97); }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+@keyframes settings-in { from{opacity:0;transform:translateY(100%)} to{opacity:1;transform:translateY(0)} }

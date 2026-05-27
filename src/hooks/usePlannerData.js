@@ -52,43 +52,95 @@ export function usePlannerData() {
   async function loadAll() {
     setLoading(true)
     try {
-      const [tr, hr, gr, nr] = await Promise.all([
-        supabase.from('tasks').select('*').order('date'),
-        supabase.from('habits').select('*').order('created_at'),
-        supabase.from('goals').select('*').order('deadline'),
-        supabase.from('notes').select('*').order('created_at', { ascending:false }),
+      // Load each table independently — a failure in one doesn't kill the rest
+      const [tr, gr, nr] = await Promise.all([
+        supabase.from('tasks').select('*').order('created_at', { ascending: false }),
+        supabase.from('goals').select('*').order('created_at', { ascending: false }),
+        supabase.from('notes').select('*').order('created_at', { ascending: false }),
       ])
-      if (tr.error||hr.error||gr.error||nr.error) throw new Error((tr.error||hr.error||gr.error||nr.error).message)
-      setTasks( tr.data || [])
-      setHabits((hr.data||[]).map(h => ({ ...h, completions: parseComp(h.completions) })))
-      setGoals( gr.data || [])
-      setNotes( nr.data || [])
+
+      if (tr.error) throw new Error('tasks: ' + tr.error.message)
+
+      // Map tasks — handle missing status column gracefully
+      setTasks((tr.data || []).map(t => ({
+        ...t,
+        status: t.status || (t.done ? 'done' : 'pending'),
+        done:   t.done || false,
+      })))
+
+      if (!gr.error) setGoals(gr.data || [])
+      if (!nr.error) setNotes(nr.data || [])
+
+      // Habits optional
+      const hr = await supabase.from('habits').select('*')
+      if (!hr.error) setHabits((hr.data||[]).map(h => ({ ...h, completions: parseComp(h.completions) })))
+
       setOnlineState(true)
+      console.log('[PlannerData] ✅ Online —', (tr.data||[]).length, 'tasks')
     } catch(err) {
       console.warn('[PlannerData] Offline →', err.message)
-      const s = seed()
-      setTasks(s.tasks); setHabits(s.habits); setGoals(s.goals); setNotes(s.notes)
       setOnlineState(false)
+      // Only seed if truly no data loaded
+      if (tasks.length === 0) {
+        const s = seed()
+        setTasks(s.tasks); setGoals(s.goals); setNotes(s.notes)
+      }
     } finally { setLoading(false) }
   }
 
   async function addTask(t) {
-    const row = { ...t, id:'T'+Date.now(), done:false }
-    setTasks(p => [row,...p])
+    const row = {
+      id:          'T'+Date.now(),
+      title:       t.title,
+      date:        t.date,
+      category:    t.category || 'other',
+      subcategory: t.subcategory || null,
+      priority:    t.priority || 'medium',
+      note:        t.note || null,
+      done:        false,
+      status:      'pending',
+    }
+    setTasks(p => [row, ...p])
     if (!onlineRef.current) return
     const { error } = await supabase.from('tasks').insert([row])
     if (error) console.error('[addTask]', error.message)
+    else console.log('[addTask] ✅', row.id)
+  }
+  async function setTaskStatus(id, status) {
+    const done = status === 'done'
+    setTasks(p => p.map(t => t.id!==id ? t : {...t, status, done}))
+    if (!onlineRef.current) return
+    await supabase.from('tasks').update({ status, done }).eq('id', id)
   }
   async function toggleTask(id) {
-    let updated
-    setTasks(p => p.map(t => { if(t.id!==id) return t; updated={...t,done:!t.done}; return updated }))
-    if (!onlineRef.current||!updated) return
-    await supabase.from('tasks').update({ done:updated.done }).eq('id', id)
+    const CYCLE = { pending:'in_progress', in_progress:'done', done:'pending' }
+    let nextStatus = 'pending'
+    setTasks(p => p.map(t => {
+      if (t.id!==id) return t
+      nextStatus = CYCLE[t.status||'pending'] || 'pending'
+      return {...t, status:nextStatus, done:nextStatus==='done'}
+    }))
+    if (!onlineRef.current) return
+    await supabase.from('tasks').update({ status:nextStatus, done:nextStatus==='done' }).eq('id', id)
   }
   async function deleteTask(id) {
     setTasks(p => p.filter(t => t.id!==id))
     if (!onlineRef.current) return
     await supabase.from('tasks').delete().eq('id', id)
+  }
+  async function updateTask(id, updates) {
+    setTasks(p => p.map(t => t.id!==id ? t : {...t, ...updates}))
+    if (!onlineRef.current) return
+    const { error } = await supabase.from('tasks').update({
+      title:       updates.title,
+      date:        updates.date,
+      category:    updates.category,
+      subcategory: updates.subcategory || null,
+      priority:    updates.priority,
+      note:        updates.note || null,
+    }).eq('id', id)
+    if (error) console.error('[updateTask]', error.message)
+    else console.log('[updateTask] ✅', id)
   }
 
   async function addHabit(h) {
@@ -138,5 +190,5 @@ export function usePlannerData() {
     await supabase.from('notes').delete().eq('id', id)
   }
 
-  return { tasks, habits, goals, notes, loading, online, addTask, toggleTask, deleteTask, addHabit, toggleHabit, deleteHabit, addGoal, updateGoalProgress, deleteGoal, addNote, deleteNote, reload:loadAll }
+  return { tasks, habits, goals, notes, loading, online, addTask, toggleTask, setTaskStatus, deleteTask, updateTask, addHabit, toggleHabit, deleteHabit, addGoal, updateGoalProgress, deleteGoal, addNote, deleteNote, reload:loadAll }
 }
