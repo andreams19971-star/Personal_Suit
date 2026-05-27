@@ -275,9 +275,8 @@ function TopBar({view,filterMonth,setFilterMonth,setSidebarOpen,openAddModal,onB
       paddingRight:"16px",
       display:"flex",
       alignItems:"center",
-      gap:10,
+      gap:8,
       flexShrink:0,
-      width:"100%",
     }}>
       {onBack&&<button onClick={onBack} style={{background:C.card,border:"1px solid "+(C.border),borderRadius:8,padding:"6px 10px",color:C.textSub,cursor:"pointer",fontSize:12,fontWeight:600,flexShrink:0}}>← Suite</button>}
       <div style={{fontSize:16,fontWeight:800,flex:1,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{titles[view]||""}</div>
@@ -286,8 +285,7 @@ function TopBar({view,filterMonth,setFilterMonth,setSidebarOpen,openAddModal,onB
         <span style={{fontSize:12,fontWeight:600,minWidth:62,textAlign:"center"}}>{MONTHS[parseInt(m)-1]} {y}</span>
         <button onClick={next} style={{background:"none",border:"none",color:C.textSub,cursor:"pointer",fontSize:15,padding:"0 3px",lineHeight:1}}>›</button>
       </div>
-      <button onClick={()=>openAddModal()} className="fa-btn fa-desktop" style={{background:C.accent,color:"#000",border:"none",borderRadius:8,padding:"7px 12px",fontWeight:700,fontSize:12,cursor:"pointer",flexShrink:0}}>+ Agregar</button>
-      <button onClick={()=>setSidebarOpen(true)} className="fa-btn" style={{background:C.card,border:"1px solid "+(C.border),borderRadius:8,padding:"7px 10px",color:C.textSub,cursor:"pointer",fontSize:14,flexShrink:0}}>⚙</button>
+      <button onClick={()=>setSidebarOpen(true)} style={{background:C.card,border:"1px solid "+(C.border),borderRadius:8,padding:"7px 10px",color:C.textSub,cursor:"pointer",fontSize:14,flexShrink:0}}>⚙</button>
     </div>
   );
 }
