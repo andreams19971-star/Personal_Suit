@@ -143,7 +143,7 @@ export default function Planner({ onBack }) {
         @keyframes su{from{transform:translateY(50px);opacity:0}to{transform:translateY(0);opacity:1}}
         @keyframes fu{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
         @keyframes pl-spin{to{transform:rotate(360deg)}}
-        .fu{animation:fu .3s ease both}.bp:active{transform:scale(.96)}.hr:hover{background:${C.cardHover}!important}
+        .fu{animation:fu .3s ease both}.bp:active{transform:scale(.96)}.hr:hover{background:#1C2438!important}
       `}</style>
 
       {loading && (

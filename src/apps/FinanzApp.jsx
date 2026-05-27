@@ -198,7 +198,7 @@ export default function FinanzApp({ onBack }){
         @keyframes fa-toastIn{from{transform:translateY(60px);opacity:0}to{transform:translateY(0);opacity:1}}
         @keyframes fa-spin{to{transform:rotate(360deg)}}
         .fa-fade-up{animation:fa-fadeUp .35s ease both}
-        .fa-tx-row:hover{background:${C.cardHover}!important}
+        .fa-tx-row:hover{background:#1C2438!important}
         .fa-btn:active{transform:scale(.96)}
         @media(max-width:640px){.fa-desktop{display:none!important}}
         @media(min-width:641px){.fa-mobile{display:none!important}}
