@@ -6,10 +6,27 @@ import './index.css'
 // ─── Service Worker ───────────────────────────────────────────────────────────
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
-      .then(reg => console.log('[SW] Registrado'))
-      .catch(err => console.warn('[SW] Error:', err))
-  })
+    navigator.serviceWorker.register('/sw.js').then(reg => {
+      console.log('[SW] Registrado');
+
+      // Cuando hay una nueva versión instalada → recargar automáticamente
+      reg.addEventListener('updatefound', () => {
+        const newWorker = reg.installing;
+        newWorker.addEventListener('statechange', () => {
+          if (newWorker.state === 'activated' && navigator.serviceWorker.controller) {
+            console.log('[SW] Nueva versión activa → recargando');
+            window.location.reload();
+          }
+        });
+      });
+    }).catch(err => console.warn('[SW] Error:', err));
+
+    // Si el SW toma control (primera activación), recargar para usar nueva versión
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      console.log('[SW] Controller cambió → recargando');
+      window.location.reload();
+    });
+  });
 }
 
 // ─── Bloquear zoom iOS ────────────────────────────────────────────────────────
