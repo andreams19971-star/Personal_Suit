@@ -1,43 +1,63 @@
-// Service Worker — Network First + Auto-update
-const CACHE_NAME = 'mi-suite-v2';
+// Service Worker — Estrategia correcta por tipo de archivo
+const CACHE = 'suite-assets-v1';
 
-// Al instalar: skipWaiting inmediato para tomar control
-self.addEventListener('install', () => {
-  self.skipWaiting();
-});
+self.addEventListener('install', () => self.skipWaiting());
 
-// Al activar: borrar caches viejos y tomar control de todas las tabs
 self.addEventListener('activate', e => {
   e.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
-    ).then(() => clients.claim())
+    caches.keys()
+      .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
+      .then(() => clients.claim())
   );
 });
 
-// Estrategia: Network First — siempre intenta la red primero
-// Solo usa caché si la red falla (modo offline)
 self.addEventListener('fetch', e => {
-  // Solo interceptar GET
   if (e.request.method !== 'GET') return;
-  // No interceptar peticiones a Supabase o APIs externas
+
   const url = new URL(e.request.url);
+
+  // 1. Supabase y APIs externas → siempre red, nunca cachear
   if (url.hostname !== self.location.hostname) return;
 
+  // 2. HTML (index.html, rutas SPA) → SIEMPRE red primero, nunca servir caché
+  //    Si la red falla, devolver offline page básica en lugar de HTML stale
+  if (url.pathname === '/' || url.pathname.endsWith('.html') || !url.pathname.includes('.')) {
+    e.respondWith(
+      fetch(e.request, { cache: 'no-cache' })
+        .catch(() => caches.match('/') || new Response('Sin conexión', { status: 503 }))
+    );
+    return;
+  }
+
+  // 3. Assets con hash (/assets/index-XXXXXXXX.js) → Cache First
+  //    Estos son inmutables: si el hash cambia, el nombre del archivo cambia
+  if (url.pathname.startsWith('/assets/')) {
+    e.respondWith(
+      caches.match(e.request).then(cached => {
+        if (cached) return cached;
+        return fetch(e.request).then(response => {
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(CACHE).then(c => c.put(e.request, clone));
+          }
+          return response;
+        });
+      })
+    );
+    return;
+  }
+
+  // 4. Otros archivos estáticos (favicon, manifest, sw) → Network First
   e.respondWith(
-    fetch(e.request)
+    fetch(e.request, { cache: 'no-cache' })
       .then(response => {
-        // Guardar copia en caché para offline
         if (response.ok) {
           const clone = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(e.request, clone));
+          caches.open(CACHE).then(c => c.put(e.request, clone));
         }
         return response;
       })
-      .catch(() => {
-        // Sin red: servir desde caché
-        return caches.match(e.request);
-      })
+      .catch(() => caches.match(e.request))
   );
 });
 
@@ -47,12 +67,12 @@ self.addEventListener('push', e => {
   e.waitUntil(
     self.registration.showNotification(data.title, {
       body: data.body, icon: '/favicon.svg', badge: '/favicon.svg',
-      vibrate: [200, 100, 200], data: data.url || '/',
+      vibrate: [200, 100, 200],
     })
   );
 });
 
 self.addEventListener('notificationclick', e => {
   e.notification.close();
-  e.waitUntil(clients.openWindow(e.notification.data || '/'));
+  e.waitUntil(clients.openWindow('/'));
 });
