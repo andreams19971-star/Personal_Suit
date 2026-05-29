@@ -59,12 +59,15 @@ function AppContent() {
     return()=>mq.removeEventListener("change",h);
   },[prefs.theme]);
 
-  useEffect(()=>{
+  useEffect(() => {
     if (!isConfigured) { setDb("error"); return; }
-    supabase.from("transactions").select("count",{count:"exact",head:true})
-      .then(({error})=>setDb(error?"error":"ok"))
-      .catch(()=>setDb("error"));
-  },[]);
+    // Timeout de 5s — si no responde, marcar como error
+    const t = setTimeout(() => setDb("error"), 5000);
+    supabase.from("profiles").select("count", { count:"exact", head:true })
+      .then(({ error }) => { clearTimeout(t); setDb(error ? "error" : "ok"); })
+      .catch(() => { clearTimeout(t); setDb("error"); });
+    return () => clearTimeout(t);
+  }, []);
 
   // ── Auth loading ──
   if (auth.loading) {
