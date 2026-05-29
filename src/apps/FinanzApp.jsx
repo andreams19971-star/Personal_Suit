@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useFinanzData } from "../hooks/useFinanzData.js";
 import { useCardsData } from "../hooks/useCardsData.js";
-import { checkFinanzAlerts, requestPermission } from "../hooks/useNotifications.js";
+import { checkFinanzAlerts, requestPermission, showLocalNotification } from "../hooks/useNotifications.js";
 import { loadSetting, saveSetting } from "../hooks/useSettings.js";
 
 // ─── PALETTE ─────────────────────────────────────────────────────────────────
@@ -1497,7 +1497,13 @@ function CatForm({ initial, onSave, onCancel }) {
 // ─── SIDEBAR ──────────────────────────────────────────────────────────────────
 function Sidebar({open,onClose,accounts,updateAccountBalance,settings,setSettings,showToast,categories=DEFAULT_CATEGORIES,saveCategories}){
   const [tab,setTab]=useState("accounts");
-  const { isSupported, permission, requestPermission, sendLocal } = useNotifications();
+  const [notifPerm, setNotifPerm]=useState(typeof Notification!=="undefined"?Notification.permission:"default");
+
+  const handleRequestNotif = async () => {
+    const result = await requestPermission();
+    setNotifPerm(result);
+    if (result==="granted") showToast("Notificaciones activadas ✓");
+  };
 
   return(
     <>
@@ -1522,23 +1528,21 @@ function Sidebar({open,onClose,accounts,updateAccountBalance,settings,setSetting
           {tab==="notif"&&(
             <div style={{display:"grid",gap:14}}>
               <div style={{fontSize:12,color:C.textMuted,fontWeight:700}}>NOTIFICACIONES</div>
-              {/* Estado actual */}
-              <div style={{background:C.card,border:"1px solid "+(permission==="granted"?C.accentText+"44":C.border),borderRadius:14,padding:14}}>
+              <div style={{background:C.card,border:"1px solid "+(notifPerm==="granted"?C.accentText+"44":C.border),borderRadius:14,padding:14}}>
                 <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
-                  <div style={{width:10,height:10,borderRadius:"50%",background:permission==="granted"?C.accentText:permission==="denied"?C.red:C.yellow,flexShrink:0}}/>
+                  <div style={{width:10,height:10,borderRadius:"50%",background:notifPerm==="granted"?C.accentText:notifPerm==="denied"?C.red:C.yellow,flexShrink:0}}/>
                   <div style={{fontSize:13,fontWeight:700}}>
-                    {permission==="granted"?"Notificaciones activas":permission==="denied"?"Notificaciones bloqueadas":"Sin configurar"}
+                    {notifPerm==="granted"?"Notificaciones activas":notifPerm==="denied"?"Notificaciones bloqueadas":"Sin configurar"}
                   </div>
                 </div>
-                {!isSupported&&<div style={{fontSize:12,color:C.textMuted}}>Tu navegador no soporta notificaciones. Instala la app en tu pantalla de inicio.</div>}
-                {isSupported&&permission!=="granted"&&(
-                  <button onClick={async()=>{const r=await requestPermission();showToast(r==="granted"?"Notificaciones activadas ✓":"No se pudo activar","err");}}
+                {notifPerm!=="granted"&&(
+                  <button onClick={handleRequestNotif}
                     style={{width:"100%",background:C.accentDim,border:"1px solid "+(C.accentText)+"44",color:C.accentText,borderRadius:10,padding:10,fontWeight:700,fontSize:13,cursor:"pointer"}}>
                     Activar Notificaciones
                   </button>
                 )}
-                {permission==="granted"&&(
-                  <button onClick={()=>sendLocal("Mi Suite Personal","¡Las notificaciones funcionan correctamente! 🎉")}
+                {notifPerm==="granted"&&(
+                  <button onClick={()=>{if(typeof showLocalNotification==="function")showLocalNotification("Mi Suite Personal","¡Las notificaciones funcionan! 🎉");else showToast("Notificaciones OK ✓");}}
                     style={{width:"100%",background:C.accentDim,border:"1px solid "+(C.accentText)+"44",color:C.accentText,borderRadius:10,padding:10,fontWeight:700,fontSize:13,cursor:"pointer"}}>
                     Probar notificación
                   </button>
