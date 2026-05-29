@@ -120,11 +120,7 @@ function AppContent() {
       fontSize:fontScale+"rem",
     }}>
       {/* HEADER */}
-      <div style={{
-        paddingTop:"max(52px,calc(env(safe-area-inset-top)+20px))",
-        padding:"max(52px,calc(env(safe-area-inset-top)+20px)) 24px 24px",
-        animation:"launcher-fadeUp .4s ease both",
-      }}>
+      <div className="launcher-header" style={{animation:"launcher-fadeUp .4s ease both"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
           <div>
             <div style={{fontSize:"0.75rem",color:C.textMuted,fontWeight:500,marginBottom:6}}>{greet}</div>
@@ -197,8 +193,7 @@ function AppContent() {
         )}
       </div>
 
-      <div style={{textAlign:"center",fontSize:"0.7rem",color:C.textMuted,
-        paddingBottom:"max(24px,env(safe-area-inset-bottom))"}}>
+      <div className="launcher-footer" style={{textAlign:"center",fontSize:"0.7rem",color:C.textMuted}}>
         Mi Suite Personal · v2.0
       </div>
 

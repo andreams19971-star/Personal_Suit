@@ -97,3 +97,14 @@ input, select, textarea, button { font-family: inherit; outline: none; -webkit-a
   min-width: 0;  /* CRÍTICO: sin esto, flex-children no se encogen */
   overflow: hidden;
 }
+
+/* ── LAUNCHER safe-area fix ── */
+.launcher-header {
+  padding-top: max(52px, calc(env(safe-area-inset-top) + 20px));
+  padding-left: 24px;
+  padding-right: 24px;
+  padding-bottom: 24px;
+}
+.launcher-footer {
+  padding-bottom: max(24px, env(safe-area-inset-bottom));
+}
