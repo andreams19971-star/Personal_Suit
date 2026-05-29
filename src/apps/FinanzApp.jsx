@@ -225,11 +225,12 @@ export default function FinanzApp({ onBack }){
       fontFamily:"'SF Pro Display',-apple-system,BlinkMacSystemFont,sans-serif",
       background:C.bg,
       position:"absolute",
-      top:0, left:0, right:0, bottom:0,
+      top:0,left:0,right:0,bottom:0,
       overflow:"hidden",
       color:C.text,
       display:"flex",
       flexDirection:"column",
+      maxWidth:"100vw",
     }}>
       {loading && (
         <div style={{position:"absolute",inset:0,background:C.bg,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",zIndex:50,gap:14}}>
@@ -238,7 +239,14 @@ export default function FinanzApp({ onBack }){
         </div>
       )}
       <TopBar view={view} filterMonth={filterMonth} setFilterMonth={setFilterMonth} onMonthChange={loadMonth} setSidebarOpen={setSidebarOpen} openAddModal={openAddModal} onBack={onBack}/>
-      <div className="fa-scroll overflow-guard" style={{flex:1,overflowY:"auto",overflowX:"hidden",paddingBottom:80,minHeight:0,position:"relative",maxWidth:"100%"}}>
+      <div className="fa-scroll" style={{paddingBottom:80}}>
+        {view==="dashboard" && <Dashboard transactions={transactions} accounts={computedAccounts} loans={loans} totalIncome={totalIncome} totalExpense={totalExpense} netBalance={netBalance} filterMonth={filterMonth} setView={setView} setSelAccount={setSelAccount} monthTxs={monthTxs} categories={categories}/>}
+        {view==="movements" && <Movements transactions={transactions} filterMonth={filterMonth} deleteTransaction={deleteTransaction} openAddModal={openAddModal} loans={loans} categories={categories} setEditTx={setEditTx}/>}
+        {view==="accounts"  && <AccountsView accounts={computedAccounts} transactions={transactions} selAccount={selAccount} setSelAccount={setSelAccount} filterMonth={filterMonth} showToast={showToast} categories={categories}/>}
+        {view==="cards"     && <CardsView cards={cards} addCharge={addCharge} deleteCharge={deleteCharge} updateCharge={updateCharge} markPaid={markPaid} saveCard={saveCard} addCard={addCard} filterMonth={filterMonth} showToast={showToast}/>}
+        {view==="loans"     && <LoansView loans={loans} transactions={transactions} setShowLoanModal={setShowLoanModal} setShowPayModal={setShowPayModal} accounts={computedAccounts} showToast={showToast} categories={categories}/>}
+        {view==="stats"     && <Stats monthTxs={monthTxs} totalIncome={totalIncome} totalExpense={totalExpense} transactions={transactions} filterMonth={filterMonth} categories={categories}/>}
+      </div>
         {view==="dashboard" && <Dashboard transactions={transactions} accounts={computedAccounts} loans={loans} totalIncome={totalIncome} totalExpense={totalExpense} netBalance={netBalance} filterMonth={filterMonth} setView={setView} setSelAccount={setSelAccount} monthTxs={monthTxs} categories={categories}/>}
         {view==="movements" && <Movements transactions={transactions} filterMonth={filterMonth} deleteTransaction={deleteTransaction} openAddModal={openAddModal} loans={loans} categories={categories} setEditTx={setEditTx}/>}
         {view==="accounts"  && <AccountsView accounts={computedAccounts} transactions={transactions} selAccount={selAccount} setSelAccount={setSelAccount} filterMonth={filterMonth} showToast={showToast} categories={categories}/>}
@@ -330,82 +338,69 @@ function Dashboard({transactions,accounts,loans,totalIncome,totalExpense,netBala
   });
   const maxDay=Math.max(...last7.map(d=>d.total),1);
   return(
-    <div style={{padding:"20px 20px 0",boxSizing:"border-box",width:"100%",overflow:"hidden",display:"grid",gap:0}} className="fa-fade-up fa-dash-root">
-      {/* ── PATRIMONIO HERO ── */}
-      <div style={{paddingBottom:20,borderBottom:"1px solid "+C.border,width:"100%",overflow:"hidden"}}>
+    <div className="fa-dash fa-fade-up">
+      {/* PATRIMONIO */}
+      <div className="fa-pad" style={{paddingTop:20,paddingBottom:20,borderBottom:"1px solid "+C.border}}>
         <div style={{fontSize:11,color:C.textMuted,fontWeight:500,letterSpacing:0.5,marginBottom:8}}>PATRIMONIO TOTAL</div>
         <div style={{fontSize:34,fontWeight:700,letterSpacing:-1.5,color:C.text,marginBottom:16,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{fmtCOP(totalAssets)}</div>
-        {/* MÉTRICAS — minWidth:0 es crítico para que flex items se encojan */}
         <div className="metrics-row">
           {[
-            {label:"Ingresos", val:fmtShort(totalIncome),  color:C.green,  icon:"↑"},
-            {label:"Egresos",  val:fmtShort(totalExpense), color:C.red,    icon:"↓"},
-            {label:"Balance",  val:fmtShort(netBalance),   color:netBalance>=0?C.green:C.red, icon:"="},
+            {label:"Ingresos",val:fmtShort(totalIncome), color:C.green, icon:"↑"},
+            {label:"Egresos", val:fmtShort(totalExpense),color:C.red,   icon:"↓"},
+            {label:"Balance", val:fmtShort(netBalance),  color:netBalance>=0?C.green:C.red,icon:"="},
             ...(totalPending>0?[{label:"Cobrar",val:fmtShort(totalPending),color:C.yellow,icon:"·"}]:[]),
           ].map((item,i,arr)=>(
-            <div key={item.label} style={{
-              flex:1, minWidth:0,
-              paddingRight:i<arr.length-1?8:0,
-              borderRight:i<arr.length-1?"1px solid "+C.border:"none",
-              marginRight:i<arr.length-1?8:0,
-              overflow:"hidden",
-            }}>
+            <div key={item.label} style={{flex:1,minWidth:0,paddingRight:i<arr.length-1?8:0,borderRight:i<arr.length-1?"1px solid "+C.border:"none",marginRight:i<arr.length-1?8:0,overflow:"hidden"}}>
               <div style={{fontSize:8,color:C.textMuted,fontWeight:600,marginBottom:3,whiteSpace:"nowrap"}}>{item.icon} {item.label.toUpperCase()}</div>
               <div style={{fontSize:13,fontWeight:700,color:item.color,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.val}</div>
             </div>
           ))}
         </div>
       </div>
-      {/* ── CUENTAS ── */}
-      <div style={{paddingTop:16}}>
+
+      {/* CUENTAS */}
+      <div className="fa-pad" style={{paddingTop:16,borderBottom:"1px solid "+C.border,paddingBottom:16}}>
         <SectionHeader title="Mis cuentas" action="Ver todas" onAction={()=>setView("accounts")}/>
-        <div className="overflow-guard" style={{marginTop:10}}>
-          <div className="hscroll-edge" style={{gap:10,paddingBottom:4}}>
-            {accounts.map(acc=>(
-              <button key={acc.id} onClick={()=>{setSelAccount(acc.id);setView("accounts");}} className="fa-btn"
-                style={{background:"transparent",border:"1px solid "+C.border,borderRadius:12,
-                  padding:"12px 14px",width:108,cursor:"pointer",textAlign:"left"}}>
-                <div style={{fontSize:18,marginBottom:6}}>{acc.icon}</div>
-                <div style={{fontSize:9,color:C.textMuted,fontWeight:500,marginBottom:3,
-                  overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{acc.label.toUpperCase()}</div>
-                <div style={{fontSize:13,fontWeight:700,
-                  color:acc.balance>0?C.text:acc.balance<0?C.red:C.textMuted,
-                  overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{fmtCOP(acc.balance)}</div>
-              </button>
-            ))}
-          </div>
+        <div className="hscroll-edge" style={{gap:10,paddingTop:10}}>
+          {accounts.map(acc=>(
+            <button key={acc.id} onClick={()=>{setSelAccount(acc.id);setView("accounts");}} className="fa-btn"
+              style={{background:"transparent",border:"1px solid "+C.border,borderRadius:12,padding:"12px 14px",width:108,cursor:"pointer",textAlign:"left"}}>
+              <div style={{fontSize:18,marginBottom:6}}>{acc.icon}</div>
+              <div style={{fontSize:9,color:C.textMuted,fontWeight:500,marginBottom:3,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{acc.label.toUpperCase()}</div>
+              <div style={{fontSize:13,fontWeight:700,color:acc.balance>0?C.text:acc.balance<0?C.red:C.textMuted,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{fmtCOP(acc.balance)}</div>
+            </button>
+          ))}
         </div>
       </div>
-      {/* ── PRÉSTAMOS ── */}
+
+      {/* PRÉSTAMOS */}
       {loans.filter(l=>l.status==="active").length>0&&(
-        <div style={{borderTop:"1px solid "+C.border,paddingTop:16}}>
+        <div className="fa-pad" style={{paddingTop:16,borderBottom:"1px solid "+C.border,paddingBottom:16}}>
           <SectionHeader title="Por cobrar" action="Ver todos" onAction={()=>setView("loans")}/>
-          <div style={{display:"grid",gap:0,marginTop:10}}>
-            {loans.filter(l=>l.status==="active").slice(0,3).map((loan,i,arr)=>(
-              <div key={loan.id} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 0",
-                borderBottom:i<arr.length-1?"1px solid "+C.borderSub:"none"}}>
-                <div style={{width:30,height:30,borderRadius:8,background:C.card,border:"1px solid "+C.border,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,flexShrink:0}}>👤</div>
-                <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontSize:13,fontWeight:600,color:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{loan.debtor}</div>
-                  <div style={{height:2,borderRadius:1,background:C.border,marginTop:5}}>
-                    <div style={{height:"100%",borderRadius:1,background:C.yellow,width:(Math.round((1-loan.balance/loan.amount)*100))+"%"}}/>
-                  </div>
-                </div>
-                <div style={{textAlign:"right",flexShrink:0}}>
-                  <div style={{fontSize:13,fontWeight:700,color:C.yellow}}>{fmtCOP(loan.balance)}</div>
-                  <div style={{fontSize:9,color:C.textMuted}}>pendiente</div>
+          {loans.filter(l=>l.status==="active").slice(0,3).map((loan,i,arr)=>(
+            <div key={loan.id} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 0",borderBottom:i<arr.length-1?"1px solid "+C.borderSub:"none"}}>
+              <div style={{width:30,height:30,borderRadius:8,background:C.card,border:"1px solid "+C.border,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,flexShrink:0}}>👤</div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:13,fontWeight:600,color:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{loan.debtor}</div>
+                <div style={{height:2,borderRadius:1,background:C.border,marginTop:5}}>
+                  <div style={{height:"100%",borderRadius:1,background:C.yellow,width:(Math.min(100,Math.round((1-loan.balance/loan.amount)*100)))+"%"}}/>
                 </div>
               </div>
-            ))}
-          </div>
+              <div style={{textAlign:"right",flexShrink:0}}>
+                <div style={{fontSize:13,fontWeight:700,color:C.yellow}}>{fmtCOP(loan.balance)}</div>
+                <div style={{fontSize:9,color:C.textMuted}}>pendiente</div>
+              </div>
+            </div>
+          ))}
         </div>
       )}
-      {/* ── GRÁFICA 7 DÍAS ── */}
-      <div style={{borderTop:"1px solid "+C.border,paddingTop:16}}>
+
+      {/* GRÁFICA */}
+      <div className="fa-pad" style={{paddingTop:16,borderBottom:"1px solid "+C.border,paddingBottom:16}}>
         <SectionHeader title="Gastos últimos 7 días"/>
-        <div style={{display:"flex",gap:4,alignItems:"flex-end",height:60,marginTop:14,overflow:"hidden",position:"relative"}}>
+        <div style={{display:"flex",gap:4,alignItems:"flex-end",height:56,marginTop:14,overflow:"hidden"}}>
           {last7.map((d,i)=>{
-            const barH = maxDay>0&&d.total>0 ? Math.max(4, Math.min(40,(d.total/maxDay)*40)) : 3;
+            const barH=maxDay>0&&d.total>0?Math.max(4,Math.min(40,(d.total/maxDay)*40)):3;
             return(
               <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:2,justifyContent:"flex-end",height:"100%"}}>
                 {d.total>0&&<div style={{fontSize:7,color:C.textMuted}}>{(d.total/1000).toFixed(0)}k</div>}
@@ -417,22 +412,21 @@ function Dashboard({transactions,accounts,loans,totalIncome,totalExpense,netBala
         </div>
       </div>
 
-      {/* ── TOP CATEGORÍAS ── */}
+      {/* TOP CATEGORÍAS */}
       {topCats.length>0&&(
-        <div style={{borderTop:"1px solid "+C.border,paddingTop:16}}>
+        <div className="fa-pad" style={{paddingTop:16,borderBottom:"1px solid "+C.border,paddingBottom:16}}>
           <SectionHeader title="Top gastos" action="Stats" onAction={()=>setView("stats")}/>
           <div style={{display:"grid",gap:10,marginTop:12}}>
             {topCats.map(([catId,amount])=>{
               const cat=categories.expense.find(c=>c.id===catId)||{label:catId,icon:"📦"};
-              const pct=Math.min(100,Math.round((amount/totalExpense)*100));
               return(
                 <div key={catId}>
                   <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}>
-                    <span style={{fontSize:13,color:C.textSub}}>{cat.icon} {cat.label}</span>
-                    <span style={{fontSize:13,fontWeight:600,color:C.text}}>{fmtCOP(amount)}</span>
+                    <span style={{fontSize:13,color:C.textSub,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1,marginRight:8}}>{cat.icon} {cat.label}</span>
+                    <span style={{fontSize:13,fontWeight:600,color:C.text,flexShrink:0}}>{fmtCOP(amount)}</span>
                   </div>
                   <div style={{height:2,borderRadius:1,background:C.border}}>
-                    <div style={{height:"100%",borderRadius:1,background:C.red,width:pct+"%",transition:"width .6s ease"}}/>
+                    <div style={{height:"100%",borderRadius:1,background:C.red,width:Math.min(100,Math.round((amount/totalExpense)*100))+"%"}}/>
                   </div>
                 </div>
               );
@@ -440,8 +434,9 @@ function Dashboard({transactions,accounts,loans,totalIncome,totalExpense,netBala
           </div>
         </div>
       )}
-      {/* ── RECIENTES ── */}
-      <div style={{borderTop:"1px solid "+C.border,paddingTop:16,paddingBottom:16}}>
+
+      {/* RECIENTES */}
+      <div className="fa-pad" style={{paddingTop:16,paddingBottom:16}}>
         <SectionHeader title="Movimientos recientes" action="Ver todos" onAction={()=>setView("movements")}/>
         <div style={{marginTop:10}}>
           {monthTxs.slice(0,5).map((tx,i)=><TxRow key={tx.id} tx={tx} compact categories={categories} showDivider={i<Math.min(4,monthTxs.length-1)}/>)}
@@ -451,7 +446,6 @@ function Dashboard({transactions,accounts,loans,totalIncome,totalExpense,netBala
     </div>
   );
 }
-
 // ─── MOVEMENTS ────────────────────────────────────────────────────────────────
 function Movements({transactions,filterMonth,deleteTransaction,openAddModal,loans,categories=DEFAULT_CATEGORIES,setEditTx}){
   const [filter,setFilter]=useState("all");

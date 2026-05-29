@@ -171,3 +171,56 @@ input, select, textarea, button { font-family: inherit; outline: none; -webkit-a
   max-width: 100%;
   position: relative;
 }
+
+/* ═══════════════════════════════════════════════════════
+   FIX DEFINITIVO OVERFLOW iOS Safari PWA
+   Principio: el padding NUNCA va en width:100% — va en el padre
+   ═══════════════════════════════════════════════════════ */
+
+/* Scroll container de FinanzApp */
+.fa-scroll {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
+  /* Crítico: evita que iOS expanda el scroll más allá del viewport */
+  position: relative;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Wrapper de padding seguro — el padding aquí no afecta el width */
+.fa-pad {
+  padding-left: 20px;
+  padding-right: 20px;
+  /* box-sizing garantiza que padding no sume al width */
+  box-sizing: border-box;
+  width: 100%;
+  /* Evita overflow horizontal de hijos */
+  overflow-x: hidden;
+}
+
+/* Dashboard root — reemplaza el grid con stack de bloques */
+.fa-dash {
+  width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
+  padding-bottom: 8px;
+}
+
+.fa-dash > * {
+  /* Cada sección del dashboard no puede exceder el padre */
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
+}
+
+/* Movements, Stats, etc. */
+.fa-view {
+  width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
+  padding: 16px 20px;
+}
+.fa-view > * {
+  max-width: 100%;
+}
