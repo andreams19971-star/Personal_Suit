@@ -923,7 +923,7 @@ function TaskCatManager({ taskCats, saveTaskCats, onClose }) {
   );
 }
 
-const lbl2 = {fontSize:10,color:"#3A4A62",fontWeight:700,marginBottom:4};
+const lbl2 = {fontSize:10,color:C.textMuted,fontWeight:700,marginBottom:4,textTransform:"uppercase"};
 
 function HabitModal({ onClose, onAdd }) {
   const [form, setForm] = useState({ name: "", icon: "💧", color: C.accent, target: 1, unit: "vez" });
@@ -1007,5 +1007,5 @@ function Modal({ title, onClose, accent, children }) {
 function MF({ label, children }) {
   return <div><div style={{ fontSize: 10, color: "#3A4A62", fontWeight: 700, marginBottom: 4 }}>{label.toUpperCase()}</div>{children}</div>;
 }
-const inp = { width: "100%", background: "#141E30", border: "1px solid #1E2D45", borderRadius: 9, padding: "9px 11px", color: "#F0F4FF", fontSize: 13 };
+const inp = {width:"100%",background:C.card,border:"1px solid "+(C.border),borderRadius:9,padding:"9px 11px",color:C.text,fontSize:13,boxSizing:"border-box"};
 const btn = { width: "100%", marginTop: 6, padding: 13, borderRadius: 12, border: "none", fontWeight: 800, fontSize: 15, cursor: "pointer" };
