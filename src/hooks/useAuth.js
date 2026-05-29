@@ -2,10 +2,7 @@ import { useState, useEffect, createContext, useContext } from "react";
 import { supabase } from "../supabase.js";
 
 export const AuthContext = createContext(null);
-
-export function useAuth() {
-  return useContext(AuthContext);
-}
+export function useAuth() { return useContext(AuthContext); }
 
 export function useAuthProvider() {
   const [user,    setUser]    = useState(null);
@@ -13,22 +10,56 @@ export function useAuthProvider() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Sesión actual
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user || null);
-      if (session?.user) loadProfile(session.user.id);
-      else setLoading(false);
-    });
+    let mounted = true;
 
-    // Listener de cambios de auth
+    // Timeout de seguridad: si en 6 segundos no resuelve, desbloquear
+    const timeout = setTimeout(() => {
+      if (mounted) {
+        console.warn("[Auth] Timeout — forzando loading=false");
+        setLoading(false);
+      }
+    }, 6000);
+
+    async function init() {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (!mounted) return;
+        if (error) { console.error("[Auth] getSession error:", error); }
+        setUser(session?.user || null);
+        if (session?.user) {
+          await loadProfile(session.user.id);
+        }
+      } catch(e) {
+        console.error("[Auth] init error:", e);
+      } finally {
+        if (mounted) {
+          clearTimeout(timeout);
+          setLoading(false);
+        }
+      }
+    }
+
+    init();
+
+    // Listener de cambios
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        if (!mounted) return;
         setUser(session?.user || null);
-        if (session?.user) await loadProfile(session.user.id);
-        else { setProfile(null); setLoading(false); }
+        if (session?.user) {
+          await loadProfile(session.user.id);
+        } else {
+          setProfile(null);
+          setLoading(false);
+        }
       }
     );
-    return () => subscription.unsubscribe();
+
+    return () => {
+      mounted = false;
+      clearTimeout(timeout);
+      subscription.unsubscribe();
+    };
   }, []);
 
   async function loadProfile(userId) {
@@ -40,11 +71,17 @@ export function useAuthProvider() {
         .single();
       if (!error && data) {
         setProfile(data);
-        // Actualizar last_seen
-        supabase.from("profiles").update({ last_seen: new Date().toISOString() }).eq("id", userId);
+        // Actualizar last_seen sin bloquear
+        supabase.from("profiles")
+          .update({ last_seen: new Date().toISOString() })
+          .eq("id", userId)
+          .then(() => {});
+      } else if (error) {
+        console.error("[Auth] loadProfile error:", error.message);
       }
-    } catch(e) { console.error("[Auth] loadProfile:", e); }
-    finally { setLoading(false); }
+    } catch(e) {
+      console.error("[Auth] loadProfile catch:", e);
+    }
   }
 
   async function signIn(email, password) {
@@ -80,8 +117,10 @@ export function useAuthProvider() {
     return { data, error };
   }
 
-  const isAdmin     = profile?.is_admin === true;
-  const allowedApps = profile?.allowed_apps || [];
-
-  return { user, profile, loading, isAdmin, allowedApps, signIn, signUp, signOut, updateProfile, loadProfile };
+  return {
+    user, profile, loading,
+    isAdmin:     profile?.is_admin === true,
+    allowedApps: profile?.allowed_apps || [],
+    signIn, signUp, signOut, updateProfile,
+  };
 }
