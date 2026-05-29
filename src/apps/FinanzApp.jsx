@@ -132,6 +132,13 @@ export default function FinanzApp({ onBack }){
   const [filterMonth,setFilterMonth]=useState(today().slice(0,7));
   const [settings,setSettings]=useState({currency:"COP",budgets:{}});
   const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
+  const [toast,setToast]=useState(null);
+
+  // ── Cards hook PRIMERO — antes de cualquier useEffect que use 'cards' ──
+  const {
+    cards, addCharge, deleteCharge, updateCharge, markPaid, saveCard, addCard,
+  } = useCardsData();
+
   const saveCategories = async (cats) => {
     setCategories(cats);
     await saveSetting('fa_categories', cats);
@@ -142,25 +149,17 @@ export default function FinanzApp({ onBack }){
     loadSetting('fa_categories', DEFAULT_CATEGORIES).then(cats => {
       if (cats) setCategories(cats);
     });
-    // Pedir permiso y verificar alertas al cargar la app
-    requestPermission().then(perm => {
-      if (perm === "granted" && loans.length > 0) {
-        checkFinanzAlerts({ loans, cards });
-      }
-    });
+    // Pedir permiso de notificaciones
+    requestPermission();
   }, []);
 
-  // Revisar alertas cuando los datos de préstamos y tarjetas estén listos
+  // Revisar alertas cuando los datos estén listos
   useEffect(() => {
     if (loans.length > 0 || cards.length > 0) {
       checkFinanzAlerts({ loans, cards });
     }
   }, [loans.length, cards.length]);
 
-  const [toast,setToast]=useState(null);
-  const {
-    cards, addCharge, deleteCharge, updateCharge, markPaid, saveCard, addCard,
-  } = useCardsData();
   const [showPayModal,setShowPayModal]=useState(null);
   const [showLoanModal,setShowLoanModal]=useState(false);
 
