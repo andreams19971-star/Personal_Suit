@@ -44,15 +44,28 @@ export default function AdminPanel({ currentUser, onClose }) {
   function showToast(msg) { setToast(msg); setTimeout(()=>setToast(""),2500); }
 
   async function updateProfile(id, updates) {
-    const { error } = await supabase.from("profiles").update(updates).eq("id", id);
-    if (error) {
-      console.error("[Admin] updateProfile error:", error.message);
-      showToast("Error: " + error.message);
+    try {
+      // Usar RPC con security definer para bypasear RLS
+      const { error } = await supabase.rpc('admin_update_profile', {
+        target_id:    id,
+        new_name:     updates.name         ?? null,
+        new_apps:     updates.allowed_apps ?? null,
+        new_is_admin: updates.is_admin     ?? null,
+        new_color:    updates.avatar_color ?? null,
+      });
+      if (error) {
+        console.error("[Admin] updateProfile error:", error.message);
+        showToast("Error: " + error.message);
+        return false;
+      }
+      showToast("Actualizado ✓");
+      await loadUsers();
+      return true;
+    } catch(e) {
+      console.error("[Admin] updateProfile catch:", e.message);
+      showToast("Error al actualizar");
       return false;
     }
-    showToast("Actualizado ✓");
-    await loadUsers();
-    return true;
   }
 
   async function toggleApp(user, appId) {
