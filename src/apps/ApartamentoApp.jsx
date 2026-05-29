@@ -3,14 +3,16 @@ import { useApartamentoData } from "../hooks/useApartamentoData.js";
 
 // ─── COLORES ──────────────────────────────────────────────────────────────────
 const C = {
-  bg:"#080B14",surface:"#0F1320",card:"#161C2E",cardHover:"#1C2438",
-  border:"#232D45",
-  accent:"#818CF8",accentDim:"#0F1235",accentText:"#818CF8",
-  green:"#34D399",greenDim:"#062318",
-  red:"#F87171",redDim:"#230606",
-  yellow:"#FBBF24",yellowDim:"#231806",
-  orange:"#FB923C",orangeDim:"#231206",
-  text:"#F1F5FF",textSub:"#7A8CAA",textMuted:"#3A4560",
+  bg:"#09090B",surface:"#111113",card:"#18181B",card2:"#1C1C1F",
+  border:"#27272A",borderSub:"#1C1C1F",
+  text:"#FAFAFA",textSub:"#A1A1AA",textMuted:"#52525B",
+  accent:"#22C55E",accentDim:"#052010",accentText:"#4ADE80",
+  green:"#22C55E",greenDim:"#052010",
+  red:"#EF4444",redDim:"#1F0808",
+  yellow:"#EAB308",yellowDim:"#1C1500",
+  orange:"#F97316",orangeDim:"#1C0A02",
+  blue:"#3B82F6",blueDim:"#071228",
+  purple:"#A855F7",purpleDim:"#180A28",
 };
 
 const MONTHS = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
@@ -161,7 +163,7 @@ export default function ApartamentoApp({ onBack }) {
         paddingTop:"max(14px,calc(env(safe-area-inset-top) + 8px))",
         paddingBottom:"14px",paddingLeft:"16px",paddingRight:"16px",
         display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
-        <button onClick={onBack} style={{background:C.card,border:"1px solid "+(C.border),borderRadius:8,padding:"6px 10px",color:C.textSub,cursor:"pointer",fontSize:12,fontWeight:600,flexShrink:0}}>← Suite</button>
+        <button onClick={onBack} style={{background:"transparent",border:"none",color:C.textMuted,cursor:"pointer",fontSize:13,fontWeight:500,flexShrink:0,padding:0}}>← Suite</button>
         <div style={{fontSize:16,fontWeight:800,flex:1,minWidth:0}}>🏠 Apartamento</div>
         <button onClick={()=>setModal({type:"newReservation"})} style={{background:C.accent,color:"#000",border:"none",borderRadius:8,padding:"7px 12px",fontWeight:700,fontSize:12,cursor:"pointer",flexShrink:0}}>+ Reserva</button>
         <button onClick={()=>setModal({type:"editRoom"})} style={{background:C.card,border:"1px solid "+(C.border),borderRadius:8,padding:"7px 10px",color:C.textSub,cursor:"pointer",fontSize:13,flexShrink:0}}>⚙</button>

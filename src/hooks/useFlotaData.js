@@ -109,15 +109,32 @@ export function useFlotaData() {
     else console.log('[deletePayment] ✅', pagoId)
   }
 
+  async function updatePayment(carId, pagoId, updates) {
+    setPayments(prev => ({
+      ...prev,
+      [carId]: (prev[carId]||[]).map(p => p.id !== pagoId ? p : {...p, ...updates})
+    }))
+    if (!onlineRef.current) return
+    const { error } = await supabase.from('car_payments').update({
+      fecha:   updates.fecha,
+      monto:   updates.monto,
+      nota:    updates.nota || '',
+      account: updates.account || 'cash',
+    }).eq('id', pagoId)
+    if (error) console.error('[updatePayment]', error.message)
+    else console.log('[updatePayment] ✅', pagoId)
+  }
+
   // ── Agregar día de trabajo ──
-  async function addWorkDay(carId, fecha, account='cash') {
+  async function addWorkDay(carId, fecha, account='cash', montoCustom=null) {
     const car = cars.find(c => c.id === carId)
-    const row = { id:'P'+Date.now(), car_id:carId, fecha, monto:car?.valor_diario||70000, pagado:false, nota:'', account }
+    const monto = montoCustom || car?.valor_diario || 70000
+    const row = { id:'P'+Date.now(), car_id:carId, fecha, monto, pagado:false, nota:'', account }
     setPayments(prev => ({...prev, [carId]: [row, ...(prev[carId]||[])]}))
     if (!onlineRef.current) return
     const { error } = await supabase.from('car_payments').insert([row])
     if (error) console.error('[addWorkDay]', error.message)
-    else console.log('[addWorkDay] ✅', fecha, account)
+    else console.log('[addWorkDay] ✅', fecha, monto, account)
   }
 
   // ── Agregar gasto ──
@@ -151,6 +168,32 @@ export function useFlotaData() {
     if (error) console.error('[updateCar]', error.message)
   }
 
+  // ── Agregar carro ──
+  async function addCar(data) {
+    const newCar = {
+      id: 'car-'+Date.now(),
+      nombre: data.nombre, placa: data.placa || '',
+      conductor: data.conductor || '', modelo: data.modelo || '',
+      tipo: data.tipo || 'diario',
+      valor_diario: data.valor_diario || 70000,
+      valor_mensual: data.valor_mensual || 500000,
+      color: data.color || '#3B82F6',
+      icon: data.icon || '🚗', activo: true,
+    }
+    setCars(prev => [...prev, newCar])
+    if (!onlineRef.current) return
+    const { error } = await supabase.from('cars').insert([newCar])
+    if (error) console.error('[addCar]', error.message)
+    else console.log('[addCar] ✅', newCar.nombre)
+  }
+
+  // ── Eliminar carro (soft delete) ──
+  async function deleteCar(carId) {
+    setCars(prev => prev.filter(c => c.id !== carId))
+    if (!onlineRef.current) return
+    await supabase.from('cars').update({ activo: false }).eq('id', carId)
+  }
+
   const carsWithData = cars.map(c => ({
     ...c,
     pagos:  payments[c.id] || [],
@@ -159,7 +202,7 @@ export function useFlotaData() {
 
   return {
     cars: carsWithData, rawCars: cars, loading, online,
-    togglePayment, deletePayment, addWorkDay,
-    addExpense, deleteExpense, updateCar, reload: loadAll
+    togglePayment, deletePayment, updatePayment, addWorkDay,
+    addExpense, deleteExpense, updateCar, addCar, deleteCar, reload: loadAll
   }
 }

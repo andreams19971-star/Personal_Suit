@@ -113,7 +113,7 @@ export function usePlannerData() {
     await supabase.from('tasks').update({ status, done }).eq('id', id)
   }
   async function toggleTask(id) {
-    const CYCLE = { pending:'in_progress', in_progress:'done', done:'pending' }
+    const CYCLE = { pending:'in_progress', in_progress:'done', done:'pending', archived:'pending' }
     let nextStatus = 'pending'
     setTasks(p => p.map(t => {
       if (t.id!==id) return t

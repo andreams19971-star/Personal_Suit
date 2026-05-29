@@ -11,15 +11,22 @@ const ACCOUNTS = [
 ];
 
 // ─── COLORES ──────────────────────────────────────────────────────────────────
+
+const CAR1 = "#3B82F6";   // azul - diario
+const CAR1_DIM = "#071228";
+const CAR2 = "#A855F7";   // morado - mensual
+const CAR2_DIM = "#180A28";
 const C = {
-  bg:"#07090F", surface:"#0E1119", card:"#141820", cardHover:"#191F2A",
-  border:"#1E2535",
-  car1:"#3B82F6", car1Dim:"#0A1628",   // Carro 1 - Azul (diario)
-  car2:"#A855F7", car2Dim:"#1A0A28",   // Carro 2 - Morado (mensual)
-  green:"#22C55E", greenDim:"#0A1F10",
-  red:"#EF4444",   redDim:"#1F0A0A",
-  yellow:"#EAB308",
-  text:"#F1F5FF", textSub:"#7A8CAA", textMuted:"#3A4560",
+  bg:"#09090B",surface:"#111113",card:"#18181B",card2:"#1C1C1F",
+  border:"#27272A",borderSub:"#1C1C1F",
+  text:"#FAFAFA",textSub:"#A1A1AA",textMuted:"#52525B",
+  accent:"#22C55E",accentDim:"#052010",accentText:"#4ADE80",
+  green:"#22C55E",greenDim:"#052010",
+  red:"#EF4444",redDim:"#1F0808",
+  yellow:"#EAB308",yellowDim:"#1C1500",
+  orange:"#F97316",orangeDim:"#1C0A02",
+  blue:"#3B82F6",blueDim:"#071228",
+  purple:"#A855F7",purpleDim:"#180A28",
 };
 
 const fmt = v => new Intl.NumberFormat("es-CO",{style:"currency",currency:"COP",maximumFractionDigits:0}).format(v||0);
@@ -86,8 +93,8 @@ function seedData() {
         conductor: "Carlos R.",
         tipo: "diario",
         valorDiario: CARRO1_DIARIO,
-        color: C.car1,
-        colorDim: C.car1Dim,
+        color: CAR1,
+        colorDim: CAR1_DIM,
         icon: "🚗",
         activo: true,
         gastos: [
@@ -104,8 +111,8 @@ function seedData() {
         conductor: "Andrés M.",
         tipo: "mensual",
         valorMensual: CARRO2_MENSUAL,
-        color: C.car2,
-        colorDim: C.car2Dim,
+        color: CAR2,
+        colorDim: CAR2_DIM,
         icon: "🚙",
         activo: true,
         gastos: [
@@ -122,12 +129,17 @@ function seedData() {
 export default function FlotaTracker({ onBack }) {
   const {
     cars, loading, online,
-    togglePayment, deletePayment, addWorkDay, addExpense, updateCar,
+    togglePayment, deletePayment, updatePayment, addWorkDay, addExpense, updateCar, addCar, deleteCar,
   } = useFlotaData();
 
   const [view,        setView]        = useState("dashboard");
   const [filterMonth, setFilterMonth] = useState(td().slice(0,7));
   const [modal,       setModal]       = useState(null);
+  const [editPago,    setEditPago]    = useState(null);
+  const [showAddCar,  setShowAddCar]  = useState(false);
+
+  const handleAddCar    = async (data) => { await addCar(data);   showToast("Carro agregado ✓"); setShowAddCar(false); };
+  const handleDeleteCar = async (id)   => { await deleteCar(id);  showToast("Carro eliminado",  "err"); };
   const [sidebar,     setSidebar]     = useState(false);
   const [toast,       setToast]       = useState(null);
 
@@ -208,8 +220,8 @@ export default function FlotaTracker({ onBack }) {
     } catch(e) { console.error('[FlotaTracker] sync gasto:', e); }
   };
 
-  const agregarPagoDiario = (carroId, fecha, account) => {
-    addWorkDay(carroId, fecha, account);
+  const agregarPagoDiario = (carroId, fecha, account, monto) => {
+    addWorkDay(carroId, fecha, account, monto);
     showToast("Día agregado ✓");
     setModal(null);
   };
@@ -235,6 +247,7 @@ export default function FlotaTracker({ onBack }) {
           <button onClick={()=>{const d=new Date(filterMonth+"-01");d.setMonth(d.getMonth()+1);if(d<=new Date())setFilterMonth(d.toISOString().slice(0,7));}} style={{background:"none",border:"none",color:C.textSub,cursor:"pointer",fontSize:14,lineHeight:1}}>›</button>
         </div>
         <button onClick={()=>setSidebar(true)} style={{background:C.card,border:"1px solid "+(C.border),borderRadius:8,padding:"7px 10px",color:C.textSub,cursor:"pointer",fontSize:14}}>⚙</button>
+        <button onClick={()=>setShowAddCar(true)} style={{background:C.accent,border:"none",borderRadius:8,padding:"7px 10px",color:"#000",cursor:"pointer",fontSize:14,fontWeight:700}}>+</button>
       </div>
 
       {/* CONTENT */}
@@ -247,7 +260,7 @@ export default function FlotaTracker({ onBack }) {
         )}
         {!loading && view==="dashboard" && <Dashboard carros={cars} getStats={getStats} totalEsperado={totalEsperado} totalCobrado={totalCobrado} totalPendiente={totalPendiente} totalGastos={totalGastos} totalNeto={totalNeto} filterMonth={filterMonth} setView={setView} />}
         {!loading && cars.map(carro => (
-          view==="carro_"+carro.id && <CarroView key={carro.id} carro={carro} stats={getStats(carro)} pagos={carro.pagos||[]} filterMonth={filterMonth} marcarPagado={marcarPagado} eliminarPago={(carId,pagoId)=>{deletePayment(carId,pagoId);showToast("Registro eliminado","err");}} setModal={setModal} />
+          view==="carro_"+carro.id && <CarroView key={carro.id} carro={carro} stats={getStats(carro)} pagos={carro.pagos||[]} filterMonth={filterMonth} marcarPagado={marcarPagado} eliminarPago={(carId,pagoId)=>{deletePayment(carId,pagoId);showToast("Registro eliminado","err");}} editarPago={(carId,pago)=>setEditPago({carId,pago})} setModal={setModal} />
         ))}
         {!loading && view==="gastos"    && <GastosView carros={cars} filterMonth={filterMonth} setModal={setModal} totalGastos={totalGastos} />}
       </div>
@@ -255,7 +268,7 @@ export default function FlotaTracker({ onBack }) {
       {/* BOTTOM NAV */}
       <div style={{position:"fixed",bottom:0,left:0,right:0,background:C.surface,borderTop:"1px solid "+(C.border),display:"flex",zIndex:50}}>
         {nav.map(n=>(
-          <button key={n.id} onClick={()=>setView(n.id)} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:2,padding:"8px 0",border:"none",background:"transparent",color:view===n.id?"#fff":C.textMuted,cursor:"pointer",fontSize:9,fontWeight:600,borderTop:view===n.id?"2px solid "+(n.id==="dashboard"?C.green:n.id.startsWith("carro_")?C.car1:C.green):"2px solid transparent"}}>
+          <button key={n.id} onClick={()=>setView(n.id)} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:2,padding:"8px 0",border:"none",background:"transparent",color:view===n.id?"#fff":C.textMuted,cursor:"pointer",fontSize:9,fontWeight:600,borderTop:view===n.id?"2px solid "+(n.id==="dashboard"?C.green:n.id.startsWith("carro_")?CAR1:C.green):"2px solid transparent"}}>
             <span style={{fontSize:18}}>{n.icon}</span>{n.label}
           </button>
         ))}
@@ -264,6 +277,8 @@ export default function FlotaTracker({ onBack }) {
       {/* MODALS */}
       {modal?.type==="gasto" && <GastoModal carroId={modal.carroId} carros={cars} onClose={()=>setModal(null)} onAdd={agregarGasto} accounts={ACCOUNTS}/>}
       {modal?.type==="dia"   && <DiaModal   carroId={modal.carroId} onClose={()=>setModal(null)} onAdd={agregarPagoDiario} cars={cars} accounts={ACCOUNTS}/>}
+      {editPago && <EditPagoModal carId={editPago.carId} pago={editPago.pago} accounts={ACCOUNTS} onClose={()=>setEditPago(null)} onSave={async(pagoId,updates)=>{ await updatePayment(editPago.carId,pagoId,updates); showToast("Registro actualizado ✓"); setEditPago(null); }}/>}
+      {showAddCar && <AddCarModal onClose={()=>setShowAddCar(false)} onSave={handleAddCar}/>}
 
       {/* SIDEBAR CONFIGURACIÓN */}
       {sidebar && <>
@@ -284,7 +299,7 @@ export default function FlotaTracker({ onBack }) {
             </div>
             {/* CONFIG CARROS */}
             {cars.map(carro=>(
-              <CarroConfig key={carro.id} carro={carro} onSave={(updates)=>{updateCar(carro.id,updates);showToast((carro.nombre)+" actualizado ✓");}}/>
+              <CarroConfig key={carro.id} carro={carro} onSave={(updates)=>{updateCar(carro.id,updates);showToast((carro.nombre)+" actualizado ✓");}} onDelete={(id)=>{handleDeleteCar(id);setSidebar(false);}}/>
             ))}
           </div>
         </div>
@@ -303,22 +318,22 @@ function Dashboard({carros,getStats,totalEsperado,totalCobrado,totalPendiente,to
     <div style={{padding:14,display:"grid",gap:14}} className="fu">
 
       {/* HERO */}
-      <div style={{background:"linear-gradient(135deg,#0A1628,"+(C.card)+")",border:"1px solid "+(C.car1)+"44",borderRadius:20,padding:20,position:"relative",overflow:"hidden"}}>
-        <div style={{position:"absolute",top:-30,right:-30,width:120,height:120,borderRadius:"50%",background:(C.car1)+"0D"}}/>
-        <div style={{fontSize:11,color:C.car1,fontWeight:700,letterSpacing:1,marginBottom:4}}>INGRESOS DEL MES</div>
+      <div style={{background:"linear-gradient(135deg,#0A1628,"+(C.card)+")",border:"1px solid "+(CAR1)+"44",borderRadius:20,padding:20,position:"relative",overflow:"hidden"}}>
+        <div style={{position:"absolute",top:-30,right:-30,width:120,height:120,borderRadius:"50%",background:(CAR1)+"0D"}}/>
+        <div style={{fontSize:11,color:CAR1,fontWeight:700,letterSpacing:1,marginBottom:4}}>INGRESOS DEL MES</div>
         <div style={{fontSize:34,fontWeight:900,letterSpacing:-1,marginBottom:2}}>{fmt(totalCobrado)}</div>
         <div style={{fontSize:13,color:C.textSub,marginBottom:16}}>de {fmt(totalEsperado)} esperados</div>
 
         {/* BARRA PROGRESO */}
         <div style={{height:8,borderRadius:4,background:C.border,marginBottom:6}}>
-          <div style={{height:"100%",borderRadius:4,background:"linear-gradient(90deg,"+(C.car1)+","+(C.car2)+")",width:(pctCobrado)+"%",transition:"width 1s ease"}}/>
+          <div style={{height:"100%",borderRadius:4,background:"linear-gradient(90deg,"+(CAR1)+","+(CAR2)+")",width:(pctCobrado)+"%",transition:"width 1s ease"}}/>
         </div>
         <div style={{display:"flex",justifyContent:"space-between",fontSize:11}}>
-          <span style={{color:C.car1,fontWeight:700}}>{pctCobrado}% cobrado</span>
+          <span style={{color:CAR1,fontWeight:700}}>{pctCobrado}% cobrado</span>
           <span style={{color:totalPendiente>0?C.yellow:C.green,fontWeight:700}}>{fmt(totalPendiente)} pendiente</span>
         </div>
 
-        <div style={{display:"flex",gap:12,marginTop:16,paddingTop:14,borderTop:"1px solid "+(C.car1)+"22"}}>
+        <div style={{display:"flex",gap:12,marginTop:16,paddingTop:14,borderTop:"1px solid "+(CAR1)+"22"}}>
           {[[C.green,"💰","Cobrado",fmt(totalCobrado)],[C.red,"🔧","Gastos",fmt(totalGastos)],[totalNeto>=0?C.green:C.red,"=","Neto",fmt(totalNeto)]].map(([color,icon,label,val])=>(
             <div key={label} style={{flex:1}}>
               <div style={{fontSize:9,color,fontWeight:700,marginBottom:2}}>{icon} {label.toUpperCase()}</div>
@@ -332,8 +347,8 @@ function Dashboard({carros,getStats,totalEsperado,totalCobrado,totalPendiente,to
       {carros.map(carro => {
         const s = getStats(carro);
         const pct = s.esperadoMes > 0 ? Math.min(100, Math.round((s.cobrado/s.esperadoMes)*100)) : 0;
-        const carColor  = carro.color   || (carro.id==="C1"?C.car1:C.car2);
-        const carDim    = carro.color_dim|| (carro.id==="C1"?C.car1Dim:C.car2Dim);
+        const carColor  = carro.color   || (carro.id==="C1"?CAR1:CAR2);
+        const carDim    = carro.color_dim|| (carro.id==="C1"?CAR1_DIM:CAR2_DIM);
         const valDiario = carro.valor_diario  || CARRO1_DIARIO;
         const valMensual= carro.valor_mensual || CARRO2_MENSUAL;
         return (
@@ -422,7 +437,7 @@ function Dashboard({carros,getStats,totalEsperado,totalCobrado,totalPendiente,to
 }
 
 // ─── VISTA POR CARRO ──────────────────────────────────────────────────────────
-function CarroView({carro,stats,pagos,filterMonth,marcarPagado,eliminarPago,setModal}) {
+function CarroView({carro,stats,pagos,filterMonth,marcarPagado,eliminarPago,editarPago,setModal}) {
   const pagosMes = pagos.filter(p=>p.fecha.startsWith(filterMonth));
   const pagosOrdenados = [...pagosMes].sort((a,b)=>b.fecha.localeCompare(a.fecha));
 
@@ -519,6 +534,11 @@ function CarroView({carro,stats,pagos,filterMonth,marcarPagado,eliminarPago,setM
                   style={{padding:"6px 14px",borderRadius:100,border:"1px solid "+(pago.pagado?carro.color:C.yellow),background:pago.pagado?carro.color+"22":C.yellow+"15",color:pago.pagado?carro.color:C.yellow,fontWeight:700,fontSize:11,cursor:"pointer",whiteSpace:"nowrap"}}>
                   {pago.pagado?"✓ Pagado":"⏳ Pendiente"}
                 </button>
+                {/* EDITAR */}
+                <button onClick={()=>editarPago&&editarPago(carro.id,pago)} className="bp"
+                  style={{background:"transparent",border:"1px solid "+C.border,color:C.accentText,borderRadius:8,padding:"6px 8px",cursor:"pointer",fontSize:12,flexShrink:0}}>
+                  ✏️
+                </button>
                 {/* ELIMINAR */}
                 <button onClick={()=>eliminarPago&&eliminarPago(carro.id,pago.id)} className="bp"
                   style={{background:C.redDim,border:"1px solid "+C.red+"33",color:C.red,borderRadius:8,padding:"6px 8px",cursor:"pointer",fontSize:12,flexShrink:0}}>
@@ -612,6 +632,49 @@ function GastosView({carros,filterMonth,setModal,totalGastos}) {
 }
 
 // ─── MODALS ───────────────────────────────────────────────────────────────────
+function EditPagoModal({carId, pago, accounts, onClose, onSave}) {
+  const [form, setForm] = useState({
+    fecha:   pago.fecha,
+    monto:   pago.monto,
+    nota:    pago.nota || "",
+    account: pago.account || "cash",
+  });
+  const set = (k,v) => setForm(f=>({...f,[k]:v}));
+  return (
+    <ModalWrap title="Editar Registro" onClose={onClose} color={CAR1}>
+      <div>
+        <div style={lbl}>MONTO</div>
+        <input type="number" value={form.monto} onChange={e=>set("monto",parseFloat(e.target.value)||0)}
+          style={{...inp, fontSize:22, fontWeight:900, color:CAR1}}/>
+      </div>
+      <div>
+        <div style={lbl}>FECHA</div>
+        <input type="date" value={form.fecha} onChange={e=>set("fecha",e.target.value)} style={inp}/>
+      </div>
+      <div>
+        <div style={lbl}>CUENTA</div>
+        <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+          {(accounts||[]).map(a=>(
+            <button key={a.id} onClick={()=>set("account",a.id)}
+              style={{flex:"1 1 auto",padding:"8px 4px",borderRadius:9,border:"1px solid "+(form.account===a.id?CAR1:C.border),background:form.account===a.id?CAR1_DIM:"transparent",color:form.account===a.id?CAR1:C.textSub,cursor:"pointer",fontSize:11,fontWeight:600,textAlign:"center"}}>
+              {a.icon} {a.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div>
+        <div style={lbl}>NOTA</div>
+        <input value={form.nota} onChange={e=>set("nota",e.target.value)} placeholder="Opcional..."
+          style={inp}/>
+      </div>
+      <button onClick={()=>onSave(pago.id, form)}
+        style={{...btn, background:CAR1, color:"#fff"}}>
+        Guardar cambios
+      </button>
+    </ModalWrap>
+  );
+}
+
 function GastoModal({carroId,carros,onClose,onAdd,accounts}) {
   const carro = carros.find(c=>c.id===carroId);
   const [form,setForm] = useState({fecha:td(),categoria:"Gasolina",monto:"",nota:"",account:"cash"});
@@ -653,15 +716,24 @@ function GastoModal({carroId,carros,onClose,onAdd,accounts}) {
 }
 
 function DiaModal({carroId, onClose, onAdd, cars, accounts}) {
-  const [fecha, setFecha] = useState(td());
-  const [account, setAccount] = useState("cash");
   const carro = cars?.find(c=>c.id===carroId);
-  const valor = carro?.valor_diario || CARRO1_DIARIO;
+  const [fecha,   setFecha]   = useState(td());
+  const [account, setAccount] = useState("cash");
+  const [monto,   setMonto]   = useState(String(carro?.valor_diario || CARRO1_DIARIO));
+  const color = carro?.tipo === "mensual" ? CAR2 : CAR1;
+  const colorDim = carro?.tipo === "mensual" ? CAR2_DIM : CAR1_DIM;
   return (
-    <ModalWrap title="Agregar Día de Trabajo" onClose={onClose} color={C.car1}>
-      <div style={{background:C.car1Dim,border:"1px solid "+(C.car1)+"33",borderRadius:12,padding:14,textAlign:"center"}}>
-        <div style={{fontSize:11,color:C.textMuted,marginBottom:2}}>VALOR DEL DÍA</div>
-        <div style={{fontSize:28,fontWeight:900,color:C.car1}}>{fmt(valor)}</div>
+    <ModalWrap title="Agregar Día de Trabajo" onClose={onClose} color={color}>
+      <div>
+        <div style={{fontSize:11,color:C.textMuted,fontWeight:600,marginBottom:6}}>VALOR DEL DÍA</div>
+        <div style={{background:colorDim,border:"1px solid "+color+"33",borderRadius:12,padding:"10px 14px",display:"flex",alignItems:"center",gap:6}}>
+          <span style={{color:C.textMuted,fontSize:16,flexShrink:0}}>$</span>
+          <input type="number" value={monto} onChange={e=>setMonto(e.target.value)}
+            style={{flex:1,background:"transparent",border:"none",fontSize:22,fontWeight:900,color}}/>
+        </div>
+        <div style={{fontSize:10,color:C.textMuted,marginTop:4}}>
+          Valor default del carro: {fmt(carro?.valor_diario || CARRO1_DIARIO)}
+        </div>
       </div>
       <MF label="Fecha del día trabajado">
         <input type="date" value={fecha} onChange={e=>setFecha(e.target.value)} style={inp}/>
@@ -670,20 +742,21 @@ function DiaModal({carroId, onClose, onAdd, cars, accounts}) {
         <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
           {(accounts||[]).map(a=>(
             <button key={a.id} onClick={()=>setAccount(a.id)}
-              style={{flex:"1 1 auto",padding:"8px 4px",borderRadius:9,border:"1px solid "+(account===a.id?C.car1:C.border),background:account===a.id?C.car1Dim:"transparent",color:account===a.id?C.car1:C.textSub,cursor:"pointer",fontSize:11,fontWeight:600,textAlign:"center"}}>
+              style={{flex:"1 1 auto",padding:"8px 4px",borderRadius:9,border:"1px solid "+(account===a.id?color:C.border),background:account===a.id?colorDim:"transparent",color:account===a.id?color:C.textSub,cursor:"pointer",fontSize:11,fontWeight:600,textAlign:"center"}}>
               {a.icon} {a.label}
             </button>
           ))}
         </div>
       </MF>
-      <button onClick={()=>onAdd(carroId, fecha, account)} style={{...btn,background:C.car1,color:"#fff"}}>
+      <button onClick={()=>parseFloat(monto)>0&&onAdd(carroId, fecha, account, parseFloat(monto))}
+        style={{...btn,background:parseFloat(monto)>0?color:C.border,color:parseFloat(monto)>0?"#fff":C.textMuted}}>
         Agregar Día
       </button>
     </ModalWrap>
   );
 }
 
-function CarroConfig({carro, onSave}) {
+function CarroConfig({carro, onSave, onDelete}) {
   const [form, setForm] = useState({
     nombre:       carro.nombre       || '',
     placa:        carro.placa        || '',
@@ -746,8 +819,86 @@ function CarroConfig({carro, onSave}) {
             style={{background:carro.color,color:"#fff",border:"none",borderRadius:10,padding:10,fontWeight:700,fontSize:13,cursor:"pointer",marginTop:4}}>
             Guardar cambios
           </button>
+          {onDelete&&(
+            <button onClick={()=>onDelete(carro.id)}
+              style={{background:C.redDim,color:C.red,border:"1px solid "+C.red+"33",borderRadius:10,padding:10,fontWeight:700,fontSize:13,cursor:"pointer"}}>
+              🗑 Eliminar este carro
+            </button>
+          )}
         </div>
       )}
+    </div>
+  );
+}
+
+function AddCarModal({onClose, onSave}) {
+  const [form, setForm] = useState({
+    nombre:"", placa:"", conductor:"", modelo:"",
+    tipo:"diario", valor_diario:70000, valor_mensual:500000,
+    color:"#3B82F6", icon:"🚗",
+  });
+  const set=(k,v)=>setForm(f=>({...f,[k]:v}));
+  const ok=form.nombre.trim().length>0;
+  return(
+    <div style={{position:"fixed",inset:0,background:"#0009",zIndex:500,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:C.surface,borderRadius:"20px 20px 0 0",width:"100%",maxWidth:480,padding:"16px 16px 36px",maxHeight:"90vh",overflowY:"auto",borderTop:"1px solid "+C.accent+"55"}}>
+        <div style={{width:32,height:3,background:C.border,borderRadius:2,margin:"0 auto 14px"}}/>
+        <div style={{display:"flex",justifyContent:"space-between",marginBottom:16}}>
+          <div style={{fontSize:16,fontWeight:800}}>+ Nuevo Carro</div>
+          <button onClick={onClose} style={{background:C.card,border:"1px solid "+C.border,borderRadius:6,padding:"4px 8px",color:C.text,cursor:"pointer"}}>✕</button>
+        </div>
+        <div style={{display:"grid",gap:10}}>
+          {[["Nombre del carro","nombre","text","Ej: Mi Carro"],
+            ["Placa","placa","text","ABC-123"],
+            ["Conductor","conductor","text","Nombre"],
+            ["Modelo","modelo","text","Chevrolet Sail 2020"],
+          ].map(([l,k,t,ph])=>(
+            <div key={k}>
+              <div style={{fontSize:10,color:C.textMuted,fontWeight:700,marginBottom:4}}>{l.toUpperCase()}</div>
+              <input type={t} value={form[k]} onChange={e=>set(k,e.target.value)} placeholder={ph}
+                style={{width:"100%",background:C.card,border:"1px solid "+C.border,borderRadius:9,padding:"9px 11px",color:C.text,fontSize:14}}/>
+            </div>
+          ))}
+          <div>
+            <div style={{fontSize:10,color:C.textMuted,fontWeight:700,marginBottom:6}}>TIPO DE COBRO</div>
+            <div style={{display:"flex",gap:8}}>
+              {[["diario","Por día"],["mensual","Mensualidad"]].map(([v,l])=>(
+                <button key={v} onClick={()=>set("tipo",v)}
+                  style={{flex:1,padding:"8px",borderRadius:8,border:"1px solid "+(form.tipo===v?C.accent:C.border),background:form.tipo===v?C.accentDim:"transparent",color:form.tipo===v?C.accentText:C.textSub,cursor:"pointer",fontSize:12,fontWeight:600}}>{l}</button>
+              ))}
+            </div>
+          </div>
+          {form.tipo==="diario"&&(
+            <div>
+              <div style={{fontSize:10,color:C.textMuted,fontWeight:700,marginBottom:4}}>VALOR POR DÍA (COP)</div>
+              <input type="number" value={form.valor_diario} onChange={e=>set("valor_diario",parseFloat(e.target.value)||0)}
+                style={{width:"100%",background:C.card,border:"1px solid "+C.border,borderRadius:9,padding:"9px 11px",color:C.text,fontSize:14}}/>
+            </div>
+          )}
+          {form.tipo==="mensual"&&(
+            <div>
+              <div style={{fontSize:10,color:C.textMuted,fontWeight:700,marginBottom:4}}>VALOR MENSUAL (COP)</div>
+              <input type="number" value={form.valor_mensual} onChange={e=>set("valor_mensual",parseFloat(e.target.value)||0)}
+                style={{width:"100%",background:C.card,border:"1px solid "+C.border,borderRadius:9,padding:"9px 11px",color:C.text,fontSize:14}}/>
+            </div>
+          )}
+          <div>
+            <div style={{fontSize:10,color:C.textMuted,fontWeight:700,marginBottom:6}}>ÍCONO</div>
+            <div style={{display:"flex",gap:8}}>
+              {["🚗","🚙","🚕","🚐","🏎️"].map(ic=>(
+                <button key={ic} onClick={()=>set("icon",ic)}
+                  style={{width:40,height:40,borderRadius:10,border:"1px solid "+(form.icon===ic?C.accent:C.border),background:form.icon===ic?C.accentDim:"transparent",fontSize:20,cursor:"pointer"}}>
+                  {ic}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+        <button onClick={()=>ok&&onSave(form)}
+          style={{width:"100%",marginTop:16,padding:13,borderRadius:12,border:"none",background:ok?C.accent:C.border,color:ok?"#000":C.textMuted,fontWeight:700,fontSize:15,cursor:"pointer"}}>
+          Crear Carro
+        </button>
+      </div>
     </div>
   );
 }

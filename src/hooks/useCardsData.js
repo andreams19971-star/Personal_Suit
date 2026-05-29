@@ -106,5 +106,27 @@ export function useCardsData() {
     await supabase.from('credit_cards').insert([{ id:newCard.id, name:data.name, bank:data.bank, last4:data.last4, color:data.color, card_limit:data.limit, cut_day:data.cutDay, pay_day:data.payDay, balance:0 }])
   }
 
-  return { cards, loading, online, addCharge, deleteCharge, markPaid, saveCard, addCard, reload:loadAll }
+  async function updateCharge(cardId, chargeId, updates) {
+    setCards(prev => prev.map(c => {
+      if (c.id !== cardId) return c
+      const old = c.charges.find(ch => ch.id === chargeId)
+      const diff = updates.amount - (old?.amount || 0)
+      return { ...c, balance: (c.balance||0)+diff,
+        charges: c.charges.map(ch => ch.id !== chargeId ? ch : {...ch,...updates}) }
+    }))
+    if (!onlineRef.current) return
+    await supabase.from('card_charges').update({
+      date: updates.date, amount: updates.amount,
+      category: updates.category, note: updates.note||'', installments: updates.installments||1
+    }).eq('id', chargeId)
+    const card = cards.find(c => c.id === cardId)
+    if (card) {
+      const old = card.charges.find(ch => ch.id === chargeId)
+      await supabase.from('credit_cards').update({
+        balance: (card.balance||0) + updates.amount - (old?.amount||0)
+      }).eq('id', cardId)
+    }
+  }
+
+  return { cards, loading, online, addCharge, deleteCharge, updateCharge, markPaid, saveCard, addCard, reload:loadAll }
 }
