@@ -124,6 +124,6 @@ export function useAuthProvider() {
     user, profile, loading,
     isAdmin:     profile?.is_admin === true,
     allowedApps: profile?.allowed_apps || [],
-    signIn, signUp, signOut, updateProfile,
+    signIn, signUp, signOut, updateProfile, loadProfile,
   };
 }

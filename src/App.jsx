@@ -93,10 +93,13 @@ function AppContent() {
     return <LockScreen onUnlock={()=>setLocked(false)} userName={auth.profile?.name||prefs.name||"Andrés"}/>;
   }
 
-  // ── Apps permitidas (admin ve todo) ──
+  // ── Apps permitidas (admin ve todo, si profile no cargó → reintentar) ──
   const visibleApps = ALL_APPS.filter(a=>
     auth.isAdmin || (auth.allowedApps||[]).includes(a.id)
   );
+
+  // Si el usuario está logueado pero el perfil no cargó → mostrar estado de reintento
+  const profileMissing = auth.user && !auth.profile;
 
   if (activeApp==="finanz")      return <AuthContext.Provider value={auth}><FinanzApp       onBack={()=>setActiveApp(null)}/></AuthContext.Provider>;
   if (activeApp==="planner")     return <AuthContext.Provider value={auth}><Planner         onBack={()=>setActiveApp(null)}/></AuthContext.Provider>;
@@ -166,30 +169,50 @@ function AppContent() {
 
       {/* APPS */}
       <div style={{padding:"8px 0 40px"}}>
-        {visibleApps.map((a,i)=>(
-          <button key={a.id} className="launcher-card" onClick={()=>setActiveApp(a.id)}
-            style={{animation:"launcher-fadeUp .4s ease "+(i*.08+.1)+"s both"}}>
-            <div style={{padding:"16px 24px",display:"flex",alignItems:"center",gap:14}}>
-              <div style={{width:44,height:44,borderRadius:12,flexShrink:0,
-                background:a.bg,border:"1px solid "+a.accent+"40",
-                display:"flex",alignItems:"center",justifyContent:"center",
-                fontSize:"1.2rem",color:a.accent,fontWeight:800}}>{a.icon}</div>
-              <div style={{flex:1,minWidth:0}}>
-                <div style={{fontSize:"1rem",fontWeight:600,color:C.text}}>{a.label}</div>
-                <div style={{fontSize:"0.75rem",color:C.textMuted,marginTop:2}}>{a.sub}</div>
-              </div>
-              <div style={{color:C.textMuted,fontSize:"1.1rem",flexShrink:0}}>›</div>
-            </div>
-            {i<visibleApps.length-1&&<div style={{height:1,background:C.border,marginLeft:82}}/>}
-          </button>
-        ))}
-
-        {visibleApps.length===0&&(
+        {profileMissing ? (
+          <div style={{padding:"40px 24px",textAlign:"center"}}>
+            <div style={{fontSize:32,marginBottom:12}}>⏳</div>
+            <div style={{fontSize:14,fontWeight:600,color:C.text,marginBottom:6}}>Cargando perfil...</div>
+            <div style={{fontSize:12,color:C.textMuted,marginBottom:24}}>Conectando con Supabase</div>
+            <button onClick={()=>auth.loadProfile&&auth.loadProfile(auth.user.id)} style={{
+              padding:"10px 20px",borderRadius:10,border:"none",
+              background:C.accent,color:"#000",fontWeight:700,fontSize:13,cursor:"pointer",
+            }}>Reintentar</button>
+            <button onClick={()=>auth.signOut()} style={{
+              display:"block",margin:"12px auto 0",padding:"8px 16px",
+              borderRadius:10,border:"1px solid "+C.border,
+              background:"transparent",color:C.textMuted,fontSize:12,cursor:"pointer",
+            }}>Cerrar sesión</button>
+          </div>
+        ) : visibleApps.length === 0 ? (
           <div style={{padding:"40px 24px",textAlign:"center",color:C.textMuted}}>
             <div style={{fontSize:32,marginBottom:12}}>🔒</div>
             <div style={{fontSize:14,fontWeight:600,color:C.text,marginBottom:6}}>Sin acceso</div>
             <div style={{fontSize:13}}>No tienes apps asignadas. Contacta al administrador.</div>
+            <button onClick={()=>auth.signOut()} style={{
+              marginTop:20,padding:"8px 16px",borderRadius:10,
+              border:"1px solid "+C.border,background:"transparent",
+              color:C.textMuted,fontSize:12,cursor:"pointer",
+            }}>Cerrar sesión</button>
           </div>
+        ) : (
+          visibleApps.map((a,i)=>(
+            <button key={a.id} className="launcher-card" onClick={()=>setActiveApp(a.id)}
+              style={{animation:"launcher-fadeUp .4s ease "+(i*.08+.1)+"s both"}}>
+              <div style={{padding:"16px 24px",display:"flex",alignItems:"center",gap:14}}>
+                <div style={{width:44,height:44,borderRadius:12,flexShrink:0,
+                  background:a.bg,border:"1px solid "+a.accent+"40",
+                  display:"flex",alignItems:"center",justifyContent:"center",
+                  fontSize:"1.2rem",color:a.accent,fontWeight:800}}>{a.icon}</div>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:"1rem",fontWeight:600,color:C.text}}>{a.label}</div>
+                  <div style={{fontSize:"0.75rem",color:C.textMuted,marginTop:2}}>{a.sub}</div>
+                </div>
+                <div style={{color:C.textMuted,fontSize:"1.1rem",flexShrink:0}}>›</div>
+              </div>
+              {i<visibleApps.length-1&&<div style={{height:1,background:C.border,marginLeft:82}}/>}
+            </button>
+          ))
         )}
       </div>
 

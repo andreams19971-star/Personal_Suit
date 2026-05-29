@@ -45,14 +45,20 @@ export default function AdminPanel({ currentUser, onClose }) {
 
   async function updateProfile(id, updates) {
     const { error } = await supabase.from("profiles").update(updates).eq("id", id);
-    if (!error) { showToast("Perfil actualizado ✓"); await loadUsers(); }
-    else showToast("Error al actualizar");
+    if (error) {
+      console.error("[Admin] updateProfile error:", error.message);
+      showToast("Error: " + error.message);
+      return false;
+    }
+    showToast("Actualizado ✓");
+    await loadUsers();
+    return true;
   }
 
   async function toggleApp(user, appId) {
     const current = user.allowed_apps || [];
     const next    = current.includes(appId)
-      ? current.filter(a=>a!==appId)
+      ? current.filter(a => a !== appId)
       : [...current, appId];
     await updateProfile(user.id, { allowed_apps: next });
   }
