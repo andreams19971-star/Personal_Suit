@@ -96,7 +96,13 @@ function AppContent() {
     return <LockScreen onUnlock={()=>setLocked(false)} userName={auth.profile?.name||prefs.name||"Andrés"}/>;
   }
 
-  // ── Apps permitidas (admin ve todo, si profile no cargó → reintentar) ──
+  // Si el usuario existe pero el perfil no cargó (timeout), reintentar
+  useEffect(() => {
+    if (auth.user && !auth.profile && !auth.loading) {
+      console.log("[App] Perfil null con usuario activo — reintentando...");
+      auth.loadProfile(auth.user.id);
+    }
+  }, [auth.user, auth.profile, auth.loading]);
   const visibleApps = ALL_APPS.filter(a=>
     auth.isAdmin || (auth.allowedApps||[]).includes(a.id)
   );
@@ -174,15 +180,18 @@ function AppContent() {
       <div style={{padding:"8px 0 40px"}}>
         {profileMissing ? (
           <div style={{padding:"40px 24px",textAlign:"center"}}>
-            <div style={{fontSize:32,marginBottom:12}}>⏳</div>
+            <div style={{fontSize:32,marginBottom:12,animation:"pulse 1.5s ease infinite"}}>⏳</div>
             <div style={{fontSize:14,fontWeight:600,color:C.text,marginBottom:6}}>Cargando perfil...</div>
-            <div style={{fontSize:12,color:C.textMuted,marginBottom:24}}>Conectando con Supabase</div>
-            <button onClick={()=>auth.loadProfile&&auth.loadProfile(auth.user.id)} style={{
+            <div style={{fontSize:12,color:C.textMuted,marginBottom:24,lineHeight:1.5}}>
+              Conectando con Supabase.<br/>Si demora más de 10 segundos, toca Reintentar.
+            </div>
+            <button onClick={()=>auth.loadProfile(auth.user.id)} style={{
               padding:"10px 20px",borderRadius:10,border:"none",
               background:C.accent,color:"#000",fontWeight:700,fontSize:13,cursor:"pointer",
+              marginBottom:10,display:"block",margin:"0 auto 10px",
             }}>Reintentar</button>
             <button onClick={()=>auth.signOut()} style={{
-              display:"block",margin:"12px auto 0",padding:"8px 16px",
+              display:"block",margin:"0 auto",padding:"8px 16px",
               borderRadius:10,border:"1px solid "+C.border,
               background:"transparent",color:C.textMuted,fontSize:12,cursor:"pointer",
             }}>Cerrar sesión</button>

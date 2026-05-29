@@ -12,19 +12,23 @@ export function useAuthProvider() {
   async function loadProfile(userId) {
     if (!userId) return;
     try {
-      const { data, error } = await supabase
-        .from("profiles").select("*").eq("id", userId).single();
+      // Race entre la query y un timeout de 4s
+      const result = await Promise.race([
+        supabase.from("profiles").select("*").eq("id", userId).single(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("profile_timeout")), 4000))
+      ]);
+      const { data, error } = result;
       if (!error && data) {
         setProfile(data);
-        supabase.from("profiles")
-          .update({ last_seen: new Date().toISOString() })
-          .eq("id", userId).then(()=>{});
         console.log("[Auth] ✅ Perfil cargado:", data.name, "admin:", data.is_admin);
+        supabase.from("profiles").update({ last_seen: new Date().toISOString() }).eq("id", userId).then(()=>{});
       } else {
         console.warn("[Auth] loadProfile error:", error?.message);
       }
     } catch(e) {
-      console.error("[Auth] loadProfile catch:", e.message);
+      console.warn("[Auth] loadProfile timeout/error:", e.message);
+      // Retry silencioso después de 3 segundos
+      setTimeout(() => loadProfile(userId), 3000);
     }
   }
 
