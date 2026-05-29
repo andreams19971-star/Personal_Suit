@@ -768,4 +768,3 @@ function ModalWrap({title,onClose,children}){
 const lbl = {fontSize:10,color:C.textMuted,fontWeight:700,marginBottom:4,textTransform:"uppercase"};
 const inp = {width:"100%",background:C.card,border:"1px solid "+(C.border),borderRadius:9,padding:"9px 11px",color:C.text,fontSize:13,boxSizing:"border-box"};
 const btnStyle = {width:"100%",marginTop:4,padding:13,borderRadius:12,border:"none",fontWeight:800,fontSize:15,cursor:"pointer"};
-const btnStyle={width:"100%",marginTop:4,padding:13,borderRadius:12,border:"none",fontWeight:800,fontSize:15,cursor:"pointer"};
