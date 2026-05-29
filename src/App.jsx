@@ -1,23 +1,25 @@
 import { useState, useEffect } from "react";
 import { supabase, isConfigured } from "./supabase.js";
+import { useAuthProvider, AuthContext } from "./hooks/useAuth.js";
 import FinanzApp      from "./apps/FinanzApp.jsx";
 import Planner        from "./apps/Planner.jsx";
 import FlotaTracker   from "./apps/FlotaTracker.jsx";
 import ApartamentoApp from "./apps/ApartamentoApp.jsx";
+import AuthScreen     from "./AuthScreen.jsx";
+import AdminPanel     from "./AdminPanel.jsx";
 import LockScreen     from "./LockScreen.jsx";
 
-const APPS = [
-  { id:"finanz",      label:"Finanzas",      sub:"Ingresos, gastos y préstamos",  icon:"$", accent:"#22C55E", bg:"#052010" },
-  { id:"planner",     label:"Planner",       sub:"Tareas, metas y notas",         icon:"▢", accent:"#3B82F6", bg:"#071228" },
-  { id:"flota",       label:"FlotaTracker",  sub:"Cobros y gastos de tus carros", icon:"◎", accent:"#A855F7", bg:"#180A28" },
-  { id:"apartamento", label:"Apartamento",   sub:"Reservas y disponibilidad",     icon:"⌂", accent:"#F97316", bg:"#1C0A02" },
+const ALL_APPS = [
+  { id:"finanz",      label:"Finanzas",      sub:"Ingresos, gastos y préstamos",  icon:"$",  accent:"#22C55E", bg:"#052010" },
+  { id:"planner",     label:"Planner",       sub:"Tareas, metas y notas",         icon:"▢",  accent:"#3B82F6", bg:"#071228" },
+  { id:"flota",       label:"FlotaTracker",  sub:"Cobros y gastos de tus carros", icon:"◎",  accent:"#A855F7", bg:"#180A28" },
+  { id:"apartamento", label:"Apartamento",   sub:"Reservas y disponibilidad",     icon:"⌂",  accent:"#F97316", bg:"#1C0A02" },
 ];
 
-// Temas — dark / light / system
 const THEMES = {
-  dark:   { bg:"#09090B", surface:"#111113", card:"#18181B", border:"#27272A", text:"#FAFAFA", textSub:"#A1A1AA", textMuted:"#52525B", accent:"#22C55E" },
-  light:  { bg:"#FAFAFA", surface:"#FFFFFF", card:"#F4F4F5", border:"#E4E4E7", text:"#09090B", textSub:"#52525B", textMuted:"#A1A1AA", accent:"#16A34A" },
-  black:  { bg:"#000000", surface:"#0A0A0A", card:"#141414", border:"#222222", text:"#FAFAFA", textSub:"#A1A1AA", textMuted:"#444444", accent:"#22C55E" },
+  dark:   { bg:"#09090B", surface:"#111113", card:"#18181B", border:"#27272A", text:"#FAFAFA", textSub:"#A1A1AA", textMuted:"#52525B", accent:"#22C55E", accentDim:"#052010" },
+  light:  { bg:"#FAFAFA", surface:"#FFFFFF", card:"#F4F4F5", border:"#E4E4E7", text:"#09090B", textSub:"#52525B", textMuted:"#A1A1AA", accent:"#16A34A", accentDim:"#DCFCE7" },
+  black:  { bg:"#000000", surface:"#0A0A0A", card:"#141414", border:"#222222", text:"#FAFAFA", textSub:"#A1A1AA", textMuted:"#444444", accent:"#22C55E", accentDim:"#052010" },
 };
 
 const FONT_SIZES = [
@@ -27,78 +29,95 @@ const FONT_SIZES = [
   { id:"xl",     label:"XL", scale:1.24 },
 ];
 
-function load() { try { return JSON.parse(localStorage.getItem("suite_prefs")||"{}"); } catch { return {}; } }
-function save(p) { try { localStorage.setItem("suite_prefs", JSON.stringify(p)); } catch {} }
+function loadPrefs() { try { return JSON.parse(localStorage.getItem("suite_prefs")||"{}"); } catch { return {}; } }
+function savePrefs(p) { try { localStorage.setItem("suite_prefs", JSON.stringify(p)); } catch {} }
+function getSystemTheme() { return window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"; }
 
-function getSystemTheme() {
-  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-}
+function AppContent() {
+  const auth = useAuthProvider();
 
-export default function App() {
-  const [activeApp, setActiveApp] = useState(null);
-  const [db,        setDb]        = useState("checking");
-  const [settings,  setSettings]  = useState(false);
-  const [prefs,     setPrefs]     = useState(load);
-  // Biométrica — empieza bloqueado si la opción está activada
-  const [locked, setLocked] = useState(() => {
-    const p = load();
-    return p.biometric === true;
-  });
+  const [activeApp,  setActiveApp]  = useState(null);
+  const [settings,   setSettings]   = useState(false);
+  const [showAdmin,  setShowAdmin]   = useState(false);
+  const [prefs,      setPrefs]      = useState(loadPrefs);
+  const [db,         setDb]         = useState("checking");
+  const [locked,     setLocked]     = useState(()=>loadPrefs().biometric===true);
 
-  const setPref = (k, v) => { const n={...prefs,[k]:v}; setPrefs(n); save(n); };
+  const setPref = (k,v) => { const n={...prefs,[k]:v}; setPrefs(n); savePrefs(n); };
 
-  // Resolve theme: system → detectar automáticamente
-  const themeKey = prefs.theme === "system" ? getSystemTheme() : (prefs.theme || "dark");
-  const C = THEMES[themeKey] || THEMES.dark;
+  const themeKey   = prefs.theme==="system"?getSystemTheme():(prefs.theme||"dark");
+  const C          = THEMES[themeKey]||THEMES.dark;
+  const fontScale  = FONT_SIZES.find(f=>f.id===(prefs.fontSize||"medium"))?.scale||1;
 
-  // Font scale aplicado al root
-  const fontScale = FONT_SIZES.find(f=>f.id===(prefs.fontSize||"medium"))?.scale || 1;
+  useEffect(()=>{ document.documentElement.style.fontSize=(fontScale*16)+"px"; },[fontScale]);
 
-  useEffect(() => {
-    // Apply font scale to root
-    document.documentElement.style.fontSize = (fontScale * 16) + "px";
-  }, [fontScale]);
+  useEffect(()=>{
+    if (prefs.theme!=="system") return;
+    const mq=window.matchMedia("(prefers-color-scheme: dark)");
+    const h=()=>setPrefs(p=>({...p}));
+    mq.addEventListener("change",h);
+    return()=>mq.removeEventListener("change",h);
+  },[prefs.theme]);
 
-  useEffect(() => {
-    // System theme listener
-    if (prefs.theme !== "system") return;
-    const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    const handler = () => setPrefs(p => ({...p})); // force re-render
-    mq.addEventListener("change", handler);
-    return () => mq.removeEventListener("change", handler);
-  }, [prefs.theme]);
-
-  useEffect(() => {
+  useEffect(()=>{
     if (!isConfigured) { setDb("error"); return; }
     supabase.from("transactions").select("count",{count:"exact",head:true})
       .then(({error})=>setDb(error?"error":"ok"))
       .catch(()=>setDb("error"));
-  }, []);
+  },[]);
 
-  // Mostrar LockScreen si está bloqueado
-  if (locked) {
-    return <LockScreen onUnlock={()=>setLocked(false)} userName={prefs.name||"Andrés"}/>;
+  // ── Auth loading ──
+  if (auth.loading) {
+    return (
+      <div style={{position:"absolute",inset:0,background:"#09090B",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:14}}>
+        <div style={{fontSize:32}}>💰</div>
+        <div style={{fontSize:13,color:"#52525B"}}>Cargando...</div>
+      </div>
+    );
   }
 
-  if (activeApp === "finanz")      return <FinanzApp       onBack={()=>setActiveApp(null)} />;
-  if (activeApp === "planner")     return <Planner         onBack={()=>setActiveApp(null)} />;
-  if (activeApp === "flota")       return <FlotaTracker    onBack={()=>setActiveApp(null)} />;
-  if (activeApp === "apartamento") return <ApartamentoApp  onBack={()=>setActiveApp(null)} />;
+  // ── Auth gate ──
+  if (!auth.user) {
+    return (
+      <AuthContext.Provider value={auth}>
+        <AuthScreen onAuth={async(mode,email,password,name)=>{
+          if (mode==="login") await auth.signIn(email,password);
+          else await auth.signUp(email,password,name);
+        }}/>
+      </AuthContext.Provider>
+    );
+  }
 
-  const name   = prefs.name || "Andrés";
-  const hour   = new Date().getHours();
-  const greet  = hour < 12 ? "Buenos días" : hour < 18 ? "Buenas tardes" : "Buenas noches";
-  const dbColor = db==="ok"?C.accent:db==="error"?"#EF4444":C.textMuted;
-  const isLight = themeKey === "light";
+  // ── Biometric lock ──
+  if (locked) {
+    return <LockScreen onUnlock={()=>setLocked(false)} userName={auth.profile?.name||prefs.name||"Andrés"}/>;
+  }
+
+  // ── Apps permitidas (admin ve todo) ──
+  const visibleApps = ALL_APPS.filter(a=>
+    auth.isAdmin || (auth.allowedApps||[]).includes(a.id)
+  );
+
+  if (activeApp==="finanz")      return <AuthContext.Provider value={auth}><FinanzApp       onBack={()=>setActiveApp(null)}/></AuthContext.Provider>;
+  if (activeApp==="planner")     return <AuthContext.Provider value={auth}><Planner         onBack={()=>setActiveApp(null)}/></AuthContext.Provider>;
+  if (activeApp==="flota")       return <AuthContext.Provider value={auth}><FlotaTracker    onBack={()=>setActiveApp(null)}/></AuthContext.Provider>;
+  if (activeApp==="apartamento") return <AuthContext.Provider value={auth}><ApartamentoApp  onBack={()=>setActiveApp(null)}/></AuthContext.Provider>;
+  if (showAdmin)                 return <AuthContext.Provider value={auth}><AdminPanel currentUser={auth.user} onClose={()=>setShowAdmin(false)}/></AuthContext.Provider>;
+
+  const userName  = auth.profile?.name || prefs.name || "Usuario";
+  const hour      = new Date().getHours();
+  const greet     = hour<12?"Buenos días":hour<18?"Buenas tardes":"Buenas noches";
+  const dbColor   = db==="ok"?C.accent:db==="error"?"#EF4444":C.textMuted;
+  const avatarColor = auth.profile?.avatar_color||C.accent;
+  const isLight   = themeKey==="light";
 
   return (
+    <AuthContext.Provider value={auth}>
     <div style={{
-      position:"absolute",inset:0,
-      background:C.bg, color:C.text,
+      position:"absolute",inset:0,background:C.bg,color:C.text,
       fontFamily:"-apple-system,BlinkMacSystemFont,'SF Pro Display',sans-serif",
-      display:"flex",flexDirection:"column",
-      overflowY:"auto",overflowX:"hidden",
-      fontSize: fontScale+"rem",
+      display:"flex",flexDirection:"column",overflowY:"auto",overflowX:"hidden",
+      fontSize:fontScale+"rem",
     }}>
       {/* HEADER */}
       <div style={{
@@ -110,9 +129,17 @@ export default function App() {
           <div>
             <div style={{fontSize:"0.75rem",color:C.textMuted,fontWeight:500,marginBottom:6}}>{greet}</div>
             <div style={{fontSize:"1.9rem",fontWeight:700,letterSpacing:-1,lineHeight:1.1}}>
-              {name}<span style={{color:C.accent}}>.</span>
+              {userName}<span style={{color:C.accent}}>.</span>
             </div>
-            <div style={{display:"flex",alignItems:"center",gap:5,marginTop:8}}>
+            {auth.isAdmin&&(
+              <div style={{display:"inline-flex",alignItems:"center",gap:4,marginTop:6,
+                background:C.accentDim,border:"1px solid "+C.accent+"44",
+                borderRadius:100,padding:"2px 8px"}}>
+                <div style={{width:5,height:5,borderRadius:"50%",background:C.accent}}/>
+                <span style={{fontSize:"0.68rem",color:C.accent,fontWeight:700}}>Admin</span>
+              </div>
+            )}
+            <div style={{display:"flex",alignItems:"center",gap:5,marginTop:auth.isAdmin?4:8}}>
               <div style={{width:6,height:6,borderRadius:"50%",background:dbColor,flexShrink:0,
                 animation:db==="checking"?"pulse 1.2s ease infinite":"none"}}/>
               <span style={{fontSize:"0.7rem",color:C.textMuted,fontWeight:500}}>
@@ -120,21 +147,30 @@ export default function App() {
               </span>
             </div>
           </div>
-          <button onClick={()=>setSettings(true)} style={{
-            width:40,height:40,borderRadius:12,
-            background:C.card,border:"1px solid "+C.border,
-            cursor:"pointer",color:C.textSub,fontSize:18,
-            display:"flex",alignItems:"center",justifyContent:"center",
-            marginTop:4,flexShrink:0,
-          }}>⚙</button>
+          <div style={{display:"flex",gap:8,marginTop:4}}>
+            {auth.isAdmin&&(
+              <button onClick={()=>setShowAdmin(true)} style={{
+                width:40,height:40,borderRadius:12,
+                background:C.accentDim,border:"1px solid "+C.accent+"44",
+                cursor:"pointer",color:C.accent,fontSize:18,
+                display:"flex",alignItems:"center",justifyContent:"center",
+              }}>👥</button>
+            )}
+            <button onClick={()=>setSettings(true)} style={{
+              width:40,height:40,borderRadius:12,
+              background:C.card,border:"1px solid "+C.border,
+              cursor:"pointer",color:C.textSub,fontSize:18,
+              display:"flex",alignItems:"center",justifyContent:"center",
+            }}>⚙</button>
+          </div>
         </div>
       </div>
 
       <div style={{height:1,background:C.border,marginBottom:8}}/>
 
-      {/* APPS LIST */}
+      {/* APPS */}
       <div style={{padding:"8px 0 40px"}}>
-        {APPS.map((a,i)=>(
+        {visibleApps.map((a,i)=>(
           <button key={a.id} className="launcher-card" onClick={()=>setActiveApp(a.id)}
             style={{animation:"launcher-fadeUp .4s ease "+(i*.08+.1)+"s both"}}>
             <div style={{padding:"16px 24px",display:"flex",alignItems:"center",gap:14}}>
@@ -148,9 +184,17 @@ export default function App() {
               </div>
               <div style={{color:C.textMuted,fontSize:"1.1rem",flexShrink:0}}>›</div>
             </div>
-            {i<APPS.length-1&&<div style={{height:1,background:C.border,marginLeft:82}}/>}
+            {i<visibleApps.length-1&&<div style={{height:1,background:C.border,marginLeft:82}}/>}
           </button>
         ))}
+
+        {visibleApps.length===0&&(
+          <div style={{padding:"40px 24px",textAlign:"center",color:C.textMuted}}>
+            <div style={{fontSize:32,marginBottom:12}}>🔒</div>
+            <div style={{fontSize:14,fontWeight:600,color:C.text,marginBottom:6}}>Sin acceso</div>
+            <div style={{fontSize:13}}>No tienes apps asignadas. Contacta al administrador.</div>
+          </div>
+        )}
       </div>
 
       <div style={{textAlign:"center",fontSize:"0.7rem",color:C.textMuted,
@@ -158,7 +202,7 @@ export default function App() {
         Mi Suite Personal · v2.0
       </div>
 
-      {/* SETTINGS SHEET */}
+      {/* SETTINGS */}
       {settings&&(
         <div style={{position:"fixed",inset:0,background:"#000000AA",zIndex:200,display:"flex",alignItems:"flex-end"}}
           onClick={()=>setSettings(false)}>
@@ -171,108 +215,87 @@ export default function App() {
             <div style={{width:36,height:3,background:C.border,borderRadius:2,margin:"0 auto 20px"}}/>
             <div style={{fontSize:"1rem",fontWeight:700,marginBottom:20}}>Configuración</div>
 
-            {/* Nombre */}
-            <div style={{marginBottom:20}}>
-              <div style={{fontSize:"0.7rem",color:C.textMuted,fontWeight:600,letterSpacing:0.5,marginBottom:8}}>NOMBRE</div>
-              <input value={prefs.name||""} onChange={e=>setPref("name",e.target.value)} placeholder="Tu nombre"
-                style={{width:"100%",background:C.card,border:"1px solid "+C.border,borderRadius:10,
-                  padding:"10px 14px",color:C.text,fontSize:"0.94rem"}}/>
+            {/* Perfil de usuario */}
+            <div style={{background:C.card,border:"1px solid "+C.border,borderRadius:12,padding:"12px 14px",marginBottom:20,display:"flex",alignItems:"center",gap:10}}>
+              <div style={{width:36,height:36,borderRadius:10,background:avatarColor+"22",border:"1px solid "+avatarColor+"44",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:800,color:avatarColor,flexShrink:0}}>
+                {userName[0].toUpperCase()}
+              </div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:"0.87rem",fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{userName}</div>
+                <div style={{fontSize:"0.72rem",color:C.textMuted,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{auth.user?.email}</div>
+              </div>
+              <button onClick={()=>{auth.signOut();setSettings(false);}} style={{background:"transparent",border:"1px solid "+C.border,borderRadius:8,padding:"6px 10px",color:C.textMuted,cursor:"pointer",fontSize:"0.75rem",flexShrink:0}}>
+                Salir
+              </button>
             </div>
 
-            {/* Biométrica */}
-            <div style={{marginBottom:20}}>
-              <div style={{fontSize:"0.7rem",color:C.textMuted,fontWeight:600,letterSpacing:0.5,marginBottom:8}}>SEGURIDAD</div>
-              <div style={{background:C.card,border:"1px solid "+C.border,borderRadius:12,padding:"14px",display:"flex",alignItems:"center",gap:12}}>
-                <div style={{flex:1}}>
-                  <div style={{fontSize:"0.87rem",fontWeight:600,color:C.text,marginBottom:2}}>Face ID / Touch ID</div>
-                  <div style={{fontSize:"0.72rem",color:C.textMuted}}>
-                    {prefs.biometric?"Activo — se pedirá al abrir la app":"Desactivado"}
-                  </div>
-                </div>
-                <button onClick={()=>setPref("biometric",!prefs.biometric)} style={{
-                  width:46,height:26,borderRadius:13,border:"none",cursor:"pointer",
-                  background:prefs.biometric?C.accent:C.border,
-                  position:"relative",transition:"background .2s",flexShrink:0,
-                }}>
-                  <div style={{
-                    position:"absolute",top:3,left:prefs.biometric?23:3,
-                    width:20,height:20,borderRadius:"50%",background:"#fff",
-                    transition:"left .2s",boxShadow:"0 1px 3px #0005",
-                  }}/>
-                </button>
-              </div>
+            {/* Nombre */}
+            <div style={{marginBottom:16}}>
+              <div style={{fontSize:"0.7rem",color:C.textMuted,fontWeight:600,letterSpacing:0.5,marginBottom:6}}>NOMBRE VISIBLE</div>
+              <input value={prefs.name||auth.profile?.name||""} onChange={e=>{ setPref("name",e.target.value); auth.updateProfile({name:e.target.value}); }}
+                placeholder="Tu nombre"
+                style={{width:"100%",background:C.card,border:"1px solid "+C.border,borderRadius:10,padding:"10px 14px",color:C.text,fontSize:"0.94rem",boxSizing:"border-box"}}/>
             </div>
 
             {/* Tema */}
-            <div style={{marginBottom:20}}>
+            <div style={{marginBottom:16}}>
               <div style={{fontSize:"0.7rem",color:C.textMuted,fontWeight:600,letterSpacing:0.5,marginBottom:8}}>TEMA</div>
               <div style={{display:"flex",gap:8}}>
-                {[
-                  {id:"dark",   label:"Oscuro",   preview:"#09090B"},
-                  {id:"light",  label:"Claro",    preview:"#FAFAFA"},
-                  {id:"black",  label:"Negro",    preview:"#000000"},
-                  {id:"system", label:"Sistema",  preview:"linear-gradient(135deg,#09090B 50%,#FAFAFA 50%)"},
-                ].map(t=>{
+                {[{id:"dark",l:"Oscuro",p:"#09090B"},{id:"light",l:"Claro",p:"#FAFAFA"},{id:"black",l:"Negro",p:"#000000"},{id:"system",l:"Sistema",p:"linear-gradient(135deg,#09090B 50%,#FAFAFA 50%)"}].map(t=>{
                   const active=(prefs.theme||"dark")===t.id;
-                  return(
-                    <button key={t.id} onClick={()=>setPref("theme",t.id)} style={{
-                      flex:1,padding:"10px 4px",borderRadius:10,cursor:"pointer",
-                      border:"1px solid "+(active?C.accent:C.border),
-                      background:active?C.accentDim:C.card,
-                      color:active?C.accent:C.textSub,fontSize:"0.7rem",fontWeight:600,
-                    }}>
-                      <div style={{width:22,height:22,borderRadius:6,background:t.preview,
-                        border:"1px solid "+C.border,margin:"0 auto 6px"}}/>
-                      {t.label}
-                    </button>
-                  );
+                  return(<button key={t.id} onClick={()=>setPref("theme",t.id)} style={{flex:1,padding:"10px 4px",borderRadius:10,cursor:"pointer",border:"1px solid "+(active?C.accent:C.border),background:active?C.accentDim:C.card,color:active?C.accent:C.textSub,fontSize:"0.7rem",fontWeight:600}}>
+                    <div style={{width:22,height:22,borderRadius:6,background:t.p,border:"1px solid "+C.border,margin:"0 auto 6px"}}/>
+                    {t.l}
+                  </button>);
                 })}
               </div>
             </div>
 
             {/* Tamaño de letra */}
-            <div style={{marginBottom:20}}>
+            <div style={{marginBottom:16}}>
               <div style={{fontSize:"0.7rem",color:C.textMuted,fontWeight:600,letterSpacing:0.5,marginBottom:8}}>TAMAÑO DE LETRA</div>
               <div style={{display:"flex",gap:8}}>
                 {FONT_SIZES.map(f=>{
                   const active=(prefs.fontSize||"medium")===f.id;
-                  return(
-                    <button key={f.id} onClick={()=>setPref("fontSize",f.id)} style={{
-                      flex:1,padding:"10px 4px",borderRadius:10,cursor:"pointer",
-                      border:"1px solid "+(active?C.accent:C.border),
-                      background:active?C.accentDim:C.card,
-                      color:active?C.accent:C.textSub,
-                      fontSize:(f.scale*0.9)+"rem",fontWeight:700,
-                    }}>
-                      {f.label}
-                    </button>
-                  );
+                  return(<button key={f.id} onClick={()=>setPref("fontSize",f.id)} style={{flex:1,padding:"10px 4px",borderRadius:10,cursor:"pointer",border:"1px solid "+(active?C.accent:C.border),background:active?C.accentDim:C.card,color:active?C.accent:C.textSub,fontSize:(f.scale*0.9)+"rem",fontWeight:700}}>
+                    {f.label}
+                  </button>);
                 })}
-              </div>
-              <div style={{fontSize:"0.68rem",color:C.textMuted,marginTop:6,textAlign:"center"}}>
-                El tamaño afecta toda la suite
               </div>
             </div>
 
-            {/* DB status */}
+            {/* Biométrica */}
+            <div style={{marginBottom:16}}>
+              <div style={{fontSize:"0.7rem",color:C.textMuted,fontWeight:600,letterSpacing:0.5,marginBottom:8}}>SEGURIDAD</div>
+              <div style={{background:C.card,border:"1px solid "+C.border,borderRadius:12,padding:"14px",display:"flex",alignItems:"center",gap:12}}>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:"0.87rem",fontWeight:600,marginBottom:2}}>Face ID / Touch ID</div>
+                  <div style={{fontSize:"0.72rem",color:C.textMuted}}>{prefs.biometric?"Activo":"Desactivado"}</div>
+                </div>
+                <button onClick={()=>setPref("biometric",!prefs.biometric)} style={{width:46,height:26,borderRadius:13,border:"none",cursor:"pointer",background:prefs.biometric?C.accent:C.border,position:"relative",transition:"background .2s",flexShrink:0}}>
+                  <div style={{position:"absolute",top:3,left:prefs.biometric?23:3,width:20,height:20,borderRadius:"50%",background:"#fff",transition:"left .2s",boxShadow:"0 1px 3px #0005"}}/>
+                </button>
+              </div>
+            </div>
+
+            {/* DB */}
             <div style={{background:C.card,border:"1px solid "+C.border,borderRadius:12,padding:"12px 14px",marginBottom:16}}>
               <div style={{fontSize:"0.7rem",color:C.textMuted,fontWeight:600,marginBottom:6,letterSpacing:0.5}}>CONEXIÓN</div>
               <div style={{display:"flex",alignItems:"center",gap:8}}>
                 <div style={{width:8,height:8,borderRadius:"50%",background:dbColor}}/>
-                <span style={{fontSize:"0.81rem",color:dbColor,fontWeight:600}}>
-                  {db==="ok"?"Supabase conectado ✓":"Sin conexión"}
-                </span>
+                <span style={{fontSize:"0.81rem",color:dbColor,fontWeight:600}}>{db==="ok"?"Supabase conectado ✓":"Sin conexión"}</span>
               </div>
-              <div style={{fontSize:"0.68rem",color:C.textMuted,marginTop:4}}>cpzwvavhbhspjuntlkyz</div>
             </div>
 
-            <button onClick={()=>setSettings(false)} style={{
-              width:"100%",padding:13,borderRadius:12,border:"none",
-              background:C.accent,color:isLight?"#fff":"#000",fontWeight:700,fontSize:"0.94rem",cursor:"pointer",
-            }}>Cerrar</button>
+            <button onClick={()=>setSettings(false)} style={{width:"100%",padding:13,borderRadius:12,border:"none",background:C.accent,color:isLight?"#fff":"#000",fontWeight:700,fontSize:"0.94rem",cursor:"pointer"}}>Cerrar</button>
           </div>
         </div>
       )}
     </div>
+    </AuthContext.Provider>
   );
+}
+
+export default function App() {
+  return <AppContent/>;
 }
