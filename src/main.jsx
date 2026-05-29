@@ -1,6 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
+import ErrorBoundary from './ErrorBoundary.jsx'
 import './index.css'
 
 // ─── Service Worker ───────────────────────────────────────────────────────────
@@ -45,13 +46,15 @@ document.addEventListener('touchend', e => {
 // iOS Safari cambia el viewport cuando aparece/desaparece la barra del navegador
 function fixIOSHeight() {
   const vh = window.innerHeight * 0.01
-  document.documentElement.style.setProperty('--vh', `${vh}px`)
+  document.documentElement.style.setProperty('--vh', (vh)+'px')
 }
 fixIOSHeight()
 window.addEventListener('resize', fixIOSHeight)
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <App />
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
   </React.StrictMode>,
 )

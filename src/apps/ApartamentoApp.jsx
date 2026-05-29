@@ -338,15 +338,17 @@ function RoomsView({rooms,reservations,getRoomStatus,setModal,updateReservationS
 
   return(
     <div style={{padding:"14px",display:"grid",gap:14,boxSizing:"border-box"}} className="ap-fu">
-      <div style={{display:"flex",gap:8,overflowX:"auto",paddingBottom:2}}>
-        {rooms.map(r=>{
-          const status=getRoomStatus(r.id);const sc=STATUS_CONFIG[status];
-          return(
-            <button key={r.id} onClick={()=>setSelRoom(r.id)} style={{padding:"9px 14px",borderRadius:12,flexShrink:0,cursor:"pointer",fontWeight:700,fontSize:12,background:selRoom===r.id?r.color+"22":C.card,border:"1px solid "+(selRoom===r.id?r.color:C.border),color:selRoom===r.id?r.color:C.textSub,display:"flex",alignItems:"center",gap:6}}>
-              <span>{sc.icon}</span>{r.name}
-            </button>
-          );
-        })}
+      <div className="overflow-guard">
+        <div className="hscroll-edge" style={{gap:8,paddingBottom:2}}>
+          {rooms.map(r=>{
+            const status=getRoomStatus(r.id);const sc=STATUS_CONFIG[status];
+            return(
+              <button key={r.id} onClick={()=>setSelRoom(r.id)} style={{padding:"9px 14px",borderRadius:12,cursor:"pointer",fontWeight:700,fontSize:12,background:selRoom===r.id?r.color+"22":C.card,border:"1px solid "+(selRoom===r.id?r.color:C.border),color:selRoom===r.id?r.color:C.textSub,display:"flex",alignItems:"center",gap:6}}>
+                <span>{sc.icon}</span>{r.name}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {room && (

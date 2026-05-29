@@ -108,3 +108,66 @@ input, select, textarea, button { font-family: inherit; outline: none; -webkit-a
 .launcher-footer {
   padding-bottom: max(24px, env(safe-area-inset-bottom));
 }
+
+/* ══════════════════════════════════════════════════════════════
+   HORIZONTAL SCROLL — Patrón unificado para iOS Safari PWA
+   Uso: className="hscroll" en el contenedor de pills/cards
+   El padre DEBE tener overflow-x:hidden para que funcione en iOS
+   ══════════════════════════════════════════════════════════════ */
+.hscroll {
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: visible;
+  /* Ocultar scrollbar en todos los browsers */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  /* Scroll nativo suave en iOS */
+  -webkit-overflow-scrolling: touch;
+  /* No puede exceder el ancho del padre */
+  max-width: 100%;
+  width: 100%;
+  /* Snap suave para sensación nativa */
+  scroll-snap-type: x proximity;
+  /* Espacio visual al final del scroll */
+  padding-right: 20px;
+  box-sizing: border-box;
+}
+.hscroll::-webkit-scrollbar { display: none; }
+.hscroll > * {
+  flex-shrink: 0;
+  scroll-snap-align: start;
+}
+
+/* Variante edge-to-edge: llega hasta el borde de pantalla */
+.hscroll-edge {
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: visible;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x proximity;
+  /* Negative margin trick: sale del padding del padre */
+  margin-left: -20px;
+  margin-right: -20px;
+  padding-left: 20px;
+  padding-right: 20px;
+  width: calc(100% + 40px);
+  max-width: calc(100% + 40px);
+  box-sizing: border-box;
+}
+.hscroll-edge::-webkit-scrollbar { display: none; }
+.hscroll-edge > * {
+  flex-shrink: 0;
+  scroll-snap-align: start;
+}
+
+/* Contenedor padre que aísla el overflow del hscroll */
+.overflow-guard {
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100%;
+  position: relative;
+}

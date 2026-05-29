@@ -9,80 +9,88 @@ export function useAuthProvider() {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  async function loadProfile(userId) {
+    if (!userId) return;
+    try {
+      const { data, error } = await supabase
+        .from("profiles").select("*").eq("id", userId).single();
+      if (!error && data) {
+        setProfile(data);
+        supabase.from("profiles")
+          .update({ last_seen: new Date().toISOString() })
+          .eq("id", userId).then(()=>{});
+        console.log("[Auth] ✅ Perfil cargado:", data.name, "admin:", data.is_admin);
+      } else {
+        console.warn("[Auth] loadProfile error:", error?.message);
+      }
+    } catch(e) {
+      console.error("[Auth] loadProfile catch:", e.message);
+    }
+  }
+
   useEffect(() => {
     let mounted = true;
 
-    // Timeout de seguridad: si en 6 segundos no resuelve, desbloquear
+    // Timeout de seguridad: 6s máximo en pantalla de carga
     const timeout = setTimeout(() => {
       if (mounted) {
-        console.warn("[Auth] Timeout — forzando loading=false");
+        console.warn("[Auth] Timeout — forzando carga");
         setLoading(false);
       }
     }, 6000);
 
-    async function init() {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        if (!mounted) return;
-        if (error) { console.error("[Auth] getSession error:", error); }
-        setUser(session?.user || null);
-        if (session?.user) {
-          await loadProfile(session.user.id);
-        }
-      } catch(e) {
-        console.error("[Auth] init error:", e);
-      } finally {
-        if (mounted) {
-          clearTimeout(timeout);
-          setLoading(false);
-        }
-      }
-    }
-
-    init();
-
-    // Listener de cambios
+    // 1. Listener de cambios de sesión — cubre TODOS los casos:
+    //    SIGNED_IN, TOKEN_REFRESHED, INITIAL_SESSION, SIGNED_OUT, USER_UPDATED
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (!mounted) return;
-        setUser(session?.user || null);
-        if (session?.user) {
-          await loadProfile(session.user.id);
-        } else {
+        console.log("[Auth] Evento:", event, session?.user?.email || "sin sesión");
+
+        if (event === "SIGNED_OUT") {
+          setUser(null);
           setProfile(null);
           setLoading(false);
+          return;
+        }
+
+        if (session?.user) {
+          setUser(session.user);
+          await loadProfile(session.user.id);
+        } else {
+          setUser(null);
+          setProfile(null);
+        }
+
+        // Siempre desbloquear la carga en estos eventos
+        if (["INITIAL_SESSION","SIGNED_IN","TOKEN_REFRESHED","USER_UPDATED"].includes(event)) {
+          if (mounted) {
+            clearTimeout(timeout);
+            setLoading(false);
+          }
         }
       }
     );
+
+    // 2. Recargar perfil cuando el usuario vuelve a la app (tab visible)
+    function handleVisibilityChange() {
+      if (document.visibilityState === "visible") {
+        supabase.auth.getSession().then(({ data: { session } }) => {
+          if (session?.user && mounted) {
+            console.log("[Auth] App en foco — recargando perfil");
+            loadProfile(session.user.id);
+          }
+        });
+      }
+    }
+    document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
       mounted = false;
       clearTimeout(timeout);
       subscription.unsubscribe();
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, []);
-
-  async function loadProfile(userId) {
-    try {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", userId)
-        .single();
-      if (!error && data) {
-        setProfile(data);
-        // Actualizar last_seen sin bloquear
-        supabase.from("profiles")
-          .update({ last_seen: new Date().toISOString() })
-          .eq("id", userId)
-          .then(() => {});
-      } else if (error) {
-        console.error("[Auth] loadProfile error:", error.message);
-      }
-    } catch(e) {
-      console.error("[Auth] loadProfile catch:", e);
-    }
-  }
 
   async function signIn(email, password) {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
@@ -92,8 +100,7 @@ export function useAuthProvider() {
 
   async function signUp(email, password, name) {
     const { data, error } = await supabase.auth.signUp({
-      email, password,
-      options: { data: { name } }
+      email, password, options: { data: { name } }
     });
     if (error) throw error;
     return data;
@@ -107,12 +114,8 @@ export function useAuthProvider() {
 
   async function updateProfile(updates) {
     if (!user) return;
-    const { data, error } = await supabase
-      .from("profiles")
-      .update(updates)
-      .eq("id", user.id)
-      .select()
-      .single();
+    const { data, error } = await supabase.from("profiles")
+      .update(updates).eq("id", user.id).select().single();
     if (!error && data) setProfile(data);
     return { data, error };
   }

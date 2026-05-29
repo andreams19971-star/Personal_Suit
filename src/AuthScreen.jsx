@@ -14,12 +14,13 @@ const inp = {
 };
 
 export default function AuthScreen({ onAuth }) {
-  const [mode,     setMode]     = useState("login"); // login | register
-  const [name,     setName]     = useState("");
-  const [email,    setEmail]    = useState("");
-  const [password, setPassword] = useState("");
-  const [loading,  setLoading]  = useState(false);
-  const [error,    setError]    = useState("");
+  const [mode,       setMode]       = useState("login");
+  const [name,       setName]       = useState("");
+  const [email,      setEmail]      = useState(() => localStorage.getItem("suite_email") || "");
+  const [password,   setPassword]   = useState("");
+  const [rememberMe, setRememberMe] = useState(true);
+  const [loading,    setLoading]    = useState(false);
+  const [error,      setError]      = useState("");
 
   async function handleSubmit() {
     if (!email || !password) { setError("Completa todos los campos"); return; }
@@ -27,6 +28,8 @@ export default function AuthScreen({ onAuth }) {
     setLoading(true);
     setError("");
     try {
+      if (rememberMe) localStorage.setItem("suite_email", email);
+      else localStorage.removeItem("suite_email");
       await onAuth(mode, email, password, name);
     } catch(e) {
       setError(e.message || "Error de autenticación");
@@ -90,6 +93,24 @@ export default function AuthScreen({ onAuth }) {
           {loading?(mode==="login"?"Ingresando...":"Creando cuenta...")
             :(mode==="login"?"Ingresar":"Crear cuenta")}
         </button>
+
+        {/* Recordar sesión */}
+        {mode==="login"&&(
+          <button onClick={()=>setRememberMe(r=>!r)} style={{
+            display:"flex",alignItems:"center",gap:8,padding:"8px 0",
+            background:"transparent",border:"none",cursor:"pointer",width:"100%",
+          }}>
+            <div style={{
+              width:20,height:20,borderRadius:5,border:"1px solid "+(rememberMe?C.accent:C.border),
+              background:rememberMe?C.accent:"transparent",
+              display:"flex",alignItems:"center",justifyContent:"center",
+              flexShrink:0,transition:"all .15s",
+            }}>
+              {rememberMe&&<span style={{color:"#000",fontSize:12,fontWeight:800,lineHeight:1}}>✓</span>}
+            </div>
+            <span style={{fontSize:13,color:C.textSub}}>Mantener sesión activa</span>
+          </button>
+        )}
 
         <button onClick={()=>{setMode(m=>m==="login"?"register":"login");setError("");}} style={{
           background:"transparent",border:"none",color:C.textMuted,

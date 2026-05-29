@@ -509,20 +509,22 @@ function AllTasksView({ tasks, setTaskStatus, deleteTask, taskCats, setEditTask 
 
   return (
     <div style={{padding:"14px",display:"grid",gap:14,boxSizing:"border-box"}}>
-      {/* STATS — 4 pills incluyendo archivadas */}
-      <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:2}}>
-        {[
-          {key:"all",     icon:"◎", label:"Todas",    color:C.accentText, bg:C.accentDim, count:activeTasks.length},
-          ...Object.entries(TASK_STATUS).filter(([k])=>k!=="archived").map(([k,s])=>({key:k,icon:s.icon,label:s.label,color:s.color,bg:s.bg,count:activeTasks.filter(t=>(t.status||"pending")===k).length})),
-          {key:"archived",icon:"📦",label:"Archivadas",color:C.textMuted,  bg:C.card,      count:archivedTasks.length},
-        ].map(item=>(
-          <button key={item.key} onClick={()=>setFilter(filter===item.key?"all":item.key)}
-            style={{flexShrink:0,background:filter===item.key?item.bg:C.card,border:"1px solid "+(filter===item.key?item.color:C.border),borderRadius:10,padding:"8px 12px",cursor:"pointer",textAlign:"center",minWidth:72}}>
-            <div style={{fontSize:14}}>{item.icon}</div>
-            <div style={{fontSize:16,fontWeight:800,color:item.color}}>{item.count}</div>
-            <div style={{fontSize:8,color:item.color,fontWeight:600,marginTop:1,whiteSpace:"nowrap"}}>{item.label.toUpperCase()}</div>
-          </button>
-        ))}
+      {/* STATS — pills incluyendo archivadas */}
+      <div className="overflow-guard">
+        <div className="hscroll" style={{gap:6,paddingBottom:2}}>
+          {[
+            {key:"all",     icon:"◎", label:"Todas",    color:C.accentText, bg:C.accentDim, count:activeTasks.length},
+            ...Object.entries(TASK_STATUS).filter(([k])=>k!=="archived").map(([k,s])=>({key:k,icon:s.icon,label:s.label,color:s.color,bg:s.bg,count:activeTasks.filter(t=>(t.status||"pending")===k).length})),
+            {key:"archived",icon:"📦",label:"Archivadas",color:C.textMuted,  bg:C.card,      count:archivedTasks.length},
+          ].map(item=>(
+            <button key={item.key} onClick={()=>setFilter(filter===item.key?"all":item.key)}
+              style={{background:filter===item.key?item.bg:C.card,border:"1px solid "+(filter===item.key?item.color:C.border),borderRadius:10,padding:"8px 12px",cursor:"pointer",textAlign:"center",minWidth:68}}>
+              <div style={{fontSize:14}}>{item.icon}</div>
+              <div style={{fontSize:16,fontWeight:800,color:item.color}}>{item.count}</div>
+              <div style={{fontSize:8,color:item.color,fontWeight:600,marginTop:1,whiteSpace:"nowrap"}}>{item.label.toUpperCase()}</div>
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* AGRUPAR POR */}

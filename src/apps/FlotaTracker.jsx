@@ -634,11 +634,13 @@ function GastosView({carros,filterMonth,setModal,totalGastos}) {
 // ─── MODALS ───────────────────────────────────────────────────────────────────
 function EditPagoModal({carId, pago, accounts, onClose, onSave}) {
   const [form, setForm] = useState({
-    fecha:   pago.fecha,
-    monto:   pago.monto,
-    nota:    pago.nota || "",
-    account: pago.account || "cash",
+    fecha:   pago?.fecha   || td(),
+    monto:   pago?.monto   || 0,
+    nota:    pago?.nota    || "",
+    account: pago?.account || "cash",
   });
+  // Guard DESPUÉS de hooks
+  if (!pago) return null;
   const set = (k,v) => setForm(f=>({...f,[k]:v}));
   return (
     <ModalWrap title="Editar Registro" onClose={onClose} color={CAR1}>

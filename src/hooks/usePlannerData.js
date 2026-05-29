@@ -52,40 +52,42 @@ export function usePlannerData() {
   async function loadAll() {
     setLoading(true)
     try {
-      // Load each table independently — a failure in one doesn't kill the rest
-      const [tr, gr, nr] = await Promise.all([
-        supabase.from('tasks').select('*').order('created_at', { ascending: false }),
-        supabase.from('goals').select('*').order('created_at', { ascending: false }),
-        supabase.from('notes').select('*').order('created_at', { ascending: false }),
+      const loadTable = async (table) => {
+        try {
+          // Primero intentar con created_at, si falla intentar sin orden
+          let res = await supabase.from(table).select('*').order('created_at', { ascending: false })
+          if (res.error) {
+            console.warn('[PlannerData]', table, 'created_at fallback:', res.error.message)
+            res = await supabase.from(table).select('*')
+          }
+          if (res.error) { console.warn('[PlannerData]', table, 'error:', res.error.message); return [] }
+          return res.data || []
+        } catch(e) { console.warn('[PlannerData]', table, 'catch:', e.message); return [] }
+      }
+
+      const [taskData, goalData, noteData, habitData] = await Promise.all([
+        loadTable('tasks'),
+        loadTable('goals'),
+        loadTable('notes'),
+        loadTable('habits'),
       ])
 
-      if (tr.error) throw new Error('tasks: ' + tr.error.message)
-
-      // Map tasks — handle missing status column gracefully
-      setTasks((tr.data || []).map(t => ({
+      setTasks(taskData.map(t => ({
         ...t,
         status: t.status || (t.done ? 'done' : 'pending'),
         done:   t.done || false,
       })))
-
-      if (!gr.error) setGoals(gr.data || [])
-      if (!nr.error) setNotes(nr.data || [])
-
-      // Habits optional
-      const hr = await supabase.from('habits').select('*')
-      if (!hr.error) setHabits((hr.data||[]).map(h => ({ ...h, completions: parseComp(h.completions) })))
-
+      setGoals(goalData)
+      setNotes(noteData)
+      setHabits(habitData.map(h => ({ ...h, completions: parseComp(h.completions) })))
       setOnlineState(true)
-      console.log('[PlannerData] ✅ Online —', (tr.data||[]).length, 'tasks')
+      console.log('[PlannerData] ✅', taskData.length, 'tasks,', goalData.length, 'goals')
     } catch(err) {
-      console.warn('[PlannerData] Offline →', err.message)
+      console.warn('[PlannerData] Error →', err.message)
       setOnlineState(false)
-      // Only seed if truly no data loaded
-      if (tasks.length === 0) {
-        const s = seed()
-        setTasks(s.tasks); setGoals(s.goals); setNotes(s.notes)
-      }
-    } finally { setLoading(false) }
+    } finally {
+      setLoading(false)
+    }
   }
 
   async function addTask(t) {

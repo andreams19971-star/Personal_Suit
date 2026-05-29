@@ -75,8 +75,13 @@ export function useFinanzData() {
   async function loadAll() {
     setLoading(true)
     try {
+      // Carga en paralelo: los últimos 2 meses de transacciones + todos los préstamos
+      const now     = new Date()
+      const twoAgo  = new Date(now.getFullYear(), now.getMonth()-1, 1).toISOString().slice(0,10)
       const [txRes, loanRes, balRes] = await Promise.all([
-        supabase.from('transactions').select('*').order('date', { ascending: false }),
+        supabase.from('transactions').select('*')
+          .gte('date', twoAgo)
+          .order('date', { ascending: false }),
         supabase.from('loans').select('*').order('created_at', { ascending: false }),
         supabase.from('account_balances').select('*'),
       ])
@@ -93,20 +98,37 @@ export function useFinanzData() {
       console.log("[FinanzData] ✅ Online — "+(txRes.data?.length||0)+" txs, "+(loanRes.data?.length||0)+" loans")
     } catch (err) {
       console.warn('[FinanzData] ❌ Offline →', err.message)
-      const s = seed()
-      setTransactions(s.transactions)
-      setLoans(s.loans)
+      setTransactions([]); setLoans([])
       setOnlineState(false)
-    } finally {
-      setLoading(false)
-    }
+    } finally { setLoading(false) }
+  }
+
+  // Carga transacciones de un mes específico bajo demanda
+  async function loadMonth(yearMonth) {
+    try {
+      const from = yearMonth + '-01'
+      const d    = new Date(yearMonth + '-01')
+      d.setMonth(d.getMonth()+1)
+      const to   = d.toISOString().slice(0,10)
+      const { data, error } = await supabase.from('transactions').select('*')
+        .gte('date', from).lt('date', to)
+        .order('date', { ascending: false })
+      if (error) { console.warn('[FinanzData] loadMonth:', error.message); return }
+      const newTxs = (data || []).map(rowToTx)
+      // Merge: reemplazar las del mismo mes sin duplicar
+      setTransactions(prev => {
+        const others = prev.filter(t => !t.date.startsWith(yearMonth))
+        return [...others, ...newTxs].sort((a,b) => b.date.localeCompare(a.date))
+      })
+      console.log("[FinanzData] Mes "+yearMonth+" — "+newTxs.length+" txs cargadas")
+    } catch(e) { console.warn('[FinanzData] loadMonth catch:', e.message) }
   }
 
   async function updateAccountBalance(accountId, newBalance, meta = {}) {
     setAccountBalances(prev => ({
       ...prev,
       [accountId]: newBalance,
-      [`${accountId}_meta`]: meta
+      [accountId+"_meta"]: meta
     }))
     if (!onlineRef.current) return
     const row = {
@@ -200,6 +222,6 @@ export function useFinanzData() {
   return {
     transactions, loans, accountBalances, loading, online,
     addTransaction, deleteTransaction, updateTransaction, addLoan, addPayment,
-    updateAccountBalance, reload:loadAll
+    updateAccountBalance, loadMonth, reload:loadAll
   }
 }

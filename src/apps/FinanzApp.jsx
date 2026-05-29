@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useFinanzData } from "../hooks/useFinanzData.js";
 import { useCardsData } from "../hooks/useCardsData.js";
-import { useNotifications } from "../hooks/useNotifications.js";
+import { checkFinanzAlerts, requestPermission } from "../hooks/useNotifications.js";
 import { loadSetting, saveSetting } from "../hooks/useSettings.js";
 
 // ─── PALETTE ─────────────────────────────────────────────────────────────────
@@ -54,7 +54,15 @@ const ACCOUNTS_DEF = [
   {id:"savings_acc", label:"Ahorros",     icon:"🏦",color:"#34D399"},
 ];
 
-const fmtCOP = v => new Intl.NumberFormat("es-CO",{style:"currency",currency:"COP",maximumFractionDigits:0}).format(v||0);
+const fmtCOP   = v => new Intl.NumberFormat("es-CO",{style:"currency",currency:"COP",maximumFractionDigits:0}).format(v||0);
+// Formato compacto para espacios pequeños: $2.7M, $484k, $22.6M
+const fmtShort = v => {
+  const n = Math.abs(v||0);
+  const s = v < 0 ? "-" : "";
+  if (n >= 1000000) return s+"$"+(n/1000000).toFixed(1).replace(".0","")+"M";
+  if (n >= 1000)    return s+"$"+(n/1000).toFixed(0)+"k";
+  return s+"$"+n;
+};
 const today  = () => new Date().toISOString().slice(0,10);
 const MONTHS  = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
 
@@ -108,7 +116,7 @@ export default function FinanzApp({ onBack }){
     updateTransaction: dbUpdateTx,
     addLoan:           dbAddLoan,
     addPayment:        dbAddPayment,
-    updateAccountBalance,
+    updateAccountBalance, loadMonth,
   } = useFinanzData();
 
   // Cuentas: definición base + saldos iniciales desde Supabase
@@ -134,7 +142,20 @@ export default function FinanzApp({ onBack }){
     loadSetting('fa_categories', DEFAULT_CATEGORIES).then(cats => {
       if (cats) setCategories(cats);
     });
+    // Pedir permiso y verificar alertas al cargar la app
+    requestPermission().then(perm => {
+      if (perm === "granted" && loans.length > 0) {
+        checkFinanzAlerts({ loans, cards });
+      }
+    });
   }, []);
+
+  // Revisar alertas cuando los datos de préstamos y tarjetas estén listos
+  useEffect(() => {
+    if (loans.length > 0 || cards.length > 0) {
+      checkFinanzAlerts({ loans, cards });
+    }
+  }, [loans.length, cards.length]);
 
   const [toast,setToast]=useState(null);
   const {
@@ -217,8 +238,8 @@ export default function FinanzApp({ onBack }){
           <div style={{fontSize:14,color:C.textMuted}}>Cargando datos...</div>
         </div>
       )}
-      <TopBar view={view} filterMonth={filterMonth} setFilterMonth={setFilterMonth} setSidebarOpen={setSidebarOpen} openAddModal={openAddModal} onBack={onBack}/>
-      <div className="fa-scroll" style={{flex:1,overflowY:"auto",overflowX:"hidden",paddingBottom:80,minHeight:0,position:"relative",maxWidth:"100%"}}>
+      <TopBar view={view} filterMonth={filterMonth} setFilterMonth={setFilterMonth} onMonthChange={loadMonth} setSidebarOpen={setSidebarOpen} openAddModal={openAddModal} onBack={onBack}/>
+      <div className="fa-scroll overflow-guard" style={{flex:1,overflowY:"auto",overflowX:"hidden",paddingBottom:80,minHeight:0,position:"relative",maxWidth:"100%"}}>
         {view==="dashboard" && <Dashboard transactions={transactions} accounts={computedAccounts} loans={loans} totalIncome={totalIncome} totalExpense={totalExpense} netBalance={netBalance} filterMonth={filterMonth} setView={setView} setSelAccount={setSelAccount} monthTxs={monthTxs} categories={categories}/>}
         {view==="movements" && <Movements transactions={transactions} filterMonth={filterMonth} deleteTransaction={deleteTransaction} openAddModal={openAddModal} loans={loans} categories={categories} setEditTx={setEditTx}/>}
         {view==="accounts"  && <AccountsView accounts={computedAccounts} transactions={transactions} selAccount={selAccount} setSelAccount={setSelAccount} filterMonth={filterMonth} showToast={showToast} categories={categories}/>}
@@ -232,7 +253,7 @@ export default function FinanzApp({ onBack }){
       <button onClick={()=>setShowTransferModal(true)} style={{position:"fixed",bottom:82,right:82,width:44,height:44,borderRadius:"50%",background:C.card,border:"1px solid "+C.border,cursor:"pointer",fontSize:18,zIndex:100,display:"flex",alignItems:"center",justifyContent:"center"}} title="Transferir">↔️</button>
       {editTx            && <EditTxModal tx={editTx} onClose={()=>setEditTx(null)} onSave={updateTransaction} accounts={accounts} categories={categories}/>}
       {showAddModal      && <AddModal  onClose={()=>{ setShowAddModal(false); setAddModalOpts({}); }} onAdd={addTransaction} accounts={accounts} opts={addModalOpts} categories={categories}/>}
-      {showLoanModal     && <LoanModal onClose={()=>setShowLoanModal(false)} onAdd={addLoan} accounts={accounts}/>}
+      {showLoanModal     && <LoanModal onClose={()=>setShowLoanModal(false)} onAdd={addLoan} accounts={accounts} cards={cards}/>}
       {showPayModal      && <PayModal  onClose={()=>setShowPayModal(null)} loan={showPayModal} onPay={addPayment} accounts={accounts}/>}
       {showTransferModal && <TransferModal onClose={()=>setShowTransferModal(false)} onTransfer={addTransfer} accounts={accounts}/>}
       {toast && <div style={{position:"fixed",bottom:96,left:"50%",transform:"translateX(-50%)",background:toast.type==="error"?C.red:C.accent,color:toast.type==="error"?"#fff":"#000",padding:"10px 20px",borderRadius:100,fontWeight:700,fontSize:14,zIndex:9999,animation:"fa-toastIn .3s ease",whiteSpace:"nowrap",boxShadow:"0 8px 24px #0006"}}>{toast.msg}</div>}
@@ -241,10 +262,11 @@ export default function FinanzApp({ onBack }){
 }
 
 // ─── TOP BAR ──────────────────────────────────────────────────────────────────
-function TopBar({view,filterMonth,setFilterMonth,setSidebarOpen,openAddModal,onBack}){
+function TopBar({view,filterMonth,setFilterMonth,onMonthChange,setSidebarOpen,openAddModal,onBack}){
   const titles={dashboard:"Dashboard",movements:"Movimientos",accounts:"Cuentas",loans:"Por cobrar",stats:"Estadísticas"};
-  const prev=()=>{const d=new Date(filterMonth+"-01");d.setMonth(d.getMonth()-1);setFilterMonth(d.toISOString().slice(0,7));};
-  const next=()=>{const d=new Date(filterMonth+"-01");d.setMonth(d.getMonth()+1);if(d<=new Date())setFilterMonth(d.toISOString().slice(0,7));};
+  const goMonth=(ym)=>{ setFilterMonth(ym); onMonthChange&&onMonthChange(ym); };
+  const prev=()=>{const d=new Date(filterMonth+"-01");d.setMonth(d.getMonth()-1);goMonth(d.toISOString().slice(0,7));};
+  const next=()=>{const d=new Date(filterMonth+"-01");d.setMonth(d.getMonth()+1);if(d<=new Date())goMonth(d.toISOString().slice(0,7));};
   const [y,m]=filterMonth.split("-");
   return(
     <div style={{
@@ -317,20 +339,20 @@ function Dashboard({transactions,accounts,loans,totalIncome,totalExpense,netBala
         {/* MÉTRICAS — minWidth:0 es crítico para que flex items se encojan */}
         <div className="metrics-row">
           {[
-            {label:"Ingresos", val:fmtCOP(totalIncome),  color:C.green,  icon:"↑"},
-            {label:"Egresos",  val:fmtCOP(totalExpense), color:C.red,    icon:"↓"},
-            {label:"Balance",  val:fmtCOP(netBalance),   color:netBalance>=0?C.green:C.red, icon:"="},
-            ...(totalPending>0?[{label:"Cobrar",val:fmtCOP(totalPending),color:C.yellow,icon:"·"}]:[]),
+            {label:"Ingresos", val:fmtShort(totalIncome),  color:C.green,  icon:"↑"},
+            {label:"Egresos",  val:fmtShort(totalExpense), color:C.red,    icon:"↓"},
+            {label:"Balance",  val:fmtShort(netBalance),   color:netBalance>=0?C.green:C.red, icon:"="},
+            ...(totalPending>0?[{label:"Cobrar",val:fmtShort(totalPending),color:C.yellow,icon:"·"}]:[]),
           ].map((item,i,arr)=>(
             <div key={item.label} style={{
-              flex:1, minWidth:0,  /* minWidth:0 = permite que flex items se encojan */
-              paddingRight:i<arr.length-1?10:0,
+              flex:1, minWidth:0,
+              paddingRight:i<arr.length-1?8:0,
               borderRight:i<arr.length-1?"1px solid "+C.border:"none",
-              marginRight:i<arr.length-1?10:0,
+              marginRight:i<arr.length-1?8:0,
               overflow:"hidden",
             }}>
-              <div style={{fontSize:9,color:C.textMuted,fontWeight:500,marginBottom:3,whiteSpace:"nowrap"}}>{item.icon} {item.label.toUpperCase()}</div>
-              <div style={{fontSize:12,fontWeight:700,color:item.color,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.val}</div>
+              <div style={{fontSize:8,color:C.textMuted,fontWeight:600,marginBottom:3,whiteSpace:"nowrap"}}>{item.icon} {item.label.toUpperCase()}</div>
+              <div style={{fontSize:13,fontWeight:700,color:item.color,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.val}</div>
             </div>
           ))}
         </div>
@@ -338,20 +360,21 @@ function Dashboard({transactions,accounts,loans,totalIncome,totalExpense,netBala
       {/* ── CUENTAS ── */}
       <div style={{paddingTop:16}}>
         <SectionHeader title="Mis cuentas" action="Ver todas" onAction={()=>setView("accounts")}/>
-        {/* accounts-scroll: negative margin para llegar al borde sin romper layout */}
-        <div className="accounts-scroll" style={{marginTop:10}}>
-          {accounts.map(acc=>(
-            <button key={acc.id} onClick={()=>{setSelAccount(acc.id);setView("accounts");}} className="fa-btn"
-              style={{background:"transparent",border:"1px solid "+C.border,borderRadius:12,
-                padding:"12px 14px",width:105,flexShrink:0,cursor:"pointer",textAlign:"left"}}>
-              <div style={{fontSize:18,marginBottom:6}}>{acc.icon}</div>
-              <div style={{fontSize:9,color:C.textMuted,fontWeight:500,marginBottom:3,
-                overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",width:"100%"}}>{acc.label.toUpperCase()}</div>
-              <div style={{fontSize:13,fontWeight:700,
-                color:acc.balance>0?C.text:acc.balance<0?C.red:C.textMuted,
-                overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",width:"100%"}}>{fmtCOP(acc.balance)}</div>
-            </button>
-          ))}
+        <div className="overflow-guard" style={{marginTop:10}}>
+          <div className="hscroll-edge" style={{gap:10,paddingBottom:4}}>
+            {accounts.map(acc=>(
+              <button key={acc.id} onClick={()=>{setSelAccount(acc.id);setView("accounts");}} className="fa-btn"
+                style={{background:"transparent",border:"1px solid "+C.border,borderRadius:12,
+                  padding:"12px 14px",width:108,cursor:"pointer",textAlign:"left"}}>
+                <div style={{fontSize:18,marginBottom:6}}>{acc.icon}</div>
+                <div style={{fontSize:9,color:C.textMuted,fontWeight:500,marginBottom:3,
+                  overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{acc.label.toUpperCase()}</div>
+                <div style={{fontSize:13,fontWeight:700,
+                  color:acc.balance>0?C.text:acc.balance<0?C.red:C.textMuted,
+                  overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{fmtCOP(acc.balance)}</div>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
       {/* ── PRÉSTAMOS ── */}
@@ -381,15 +404,17 @@ function Dashboard({transactions,accounts,loans,totalIncome,totalExpense,netBala
       {/* ── GRÁFICA 7 DÍAS ── */}
       <div style={{borderTop:"1px solid "+C.border,paddingTop:16}}>
         <SectionHeader title="Gastos últimos 7 días"/>
-        <div style={{display:"flex",gap:6,alignItems:"flex-end",height:60,marginTop:14}}>
-          {last7.map((d,i)=>(
-            <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
-              {d.total>0&&<div style={{fontSize:8,color:C.textMuted,marginBottom:2}}>{(d.total/1000).toFixed(0)}k</div>}
-              <div style={{width:"100%",borderRadius:3,background:d.total?C.red:C.border,
-                height:d.total?Math.max(4,(d.total/maxDay)*44):3,transition:"height .4s ease"}}/>
-              <span style={{fontSize:9,color:C.textMuted}}>{d.label}</span>
-            </div>
-          ))}
+        <div style={{display:"flex",gap:4,alignItems:"flex-end",height:60,marginTop:14,overflow:"hidden",position:"relative"}}>
+          {last7.map((d,i)=>{
+            const barH = maxDay>0&&d.total>0 ? Math.max(4, Math.min(40,(d.total/maxDay)*40)) : 3;
+            return(
+              <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:2,justifyContent:"flex-end",height:"100%"}}>
+                {d.total>0&&<div style={{fontSize:7,color:C.textMuted}}>{(d.total/1000).toFixed(0)}k</div>}
+                <div style={{width:"100%",borderRadius:3,background:d.total?C.red:C.border,height:barH,flexShrink:0}}/>
+                <span style={{fontSize:8,color:C.textMuted}}>{d.label}</span>
+              </div>
+            );
+          })}
         </div>
       </div>
 
@@ -439,6 +464,29 @@ function Movements({transactions,filterMonth,deleteTransaction,openAddModal,loan
   const grouped={};
   filtered.forEach(t=>{(grouped[t.date]=grouped[t.date]||[]).push(t);});
   const sortedDates=Object.keys(grouped).sort((a,b)=>b.localeCompare(a));
+
+  function exportCSV() {
+    const rows=[["Fecha","Tipo","Categoría","Subcategoría","Cuenta","Monto","Descripción"]];
+    filtered.forEach(t=>rows.push([t.date,t.type==="income"?"Ingreso":"Gasto",t.category||"",t.subcategory||"",t.account||"",t.amount,t.note||""]));
+    const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(",")).join("\n");
+    const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url; a.download="FinanzApp-"+filterMonth+".csv"; a.click(); URL.revokeObjectURL(url);
+  }
+
+  function exportPDF() {
+    const win=window.open("","_blank");
+    win.document.write('<html><head><title>Movimientos '+filterMonth+'</title><style>body{font-family:Arial;font-size:11px;margin:20px}h2{color:#111}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd;padding:5px 8px}th{background:#18181b;color:#fff}.i{color:green;font-weight:700}.e{color:red;font-weight:700}tfoot td{font-weight:700;background:#f5f5f5}</style></head><body>');
+    win.document.write('<h2>Movimientos · '+filterMonth+'</h2>');
+    win.document.write('<table><thead><tr><th>Fecha</th><th>Tipo</th><th>Categoría</th><th>Cuenta</th><th>Monto</th><th>Descripción</th></tr></thead><tbody>');
+    filtered.forEach(t=>{const c=t.type==="income"?"i":"e";win.document.write('<tr><td>'+t.date+'</td><td class="'+c+'">'+(t.type==="income"?"↑ Ingreso":"↓ Gasto")+'</td><td>'+(t.category||"")+'</td><td>'+(t.account||"")+'</td><td class="'+c+'">$'+t.amount.toLocaleString("es-CO")+'</td><td>'+(t.note||"")+'</td></tr>');});
+    const tot=filtered.reduce((s,t)=>s+(t.type==="income"?t.amount:-t.amount),0);
+    win.document.write('<tr><td colspan="4"><strong>BALANCE</strong></td><td colspan="2" class="'+(tot>=0?"i":"e")+'">'+(tot>=0?"+":"")+tot.toLocaleString("es-CO")+'</td></tr>');
+    win.document.write('</tbody></table></body></html>');
+    win.document.close(); win.print();
+  }
+
   return(
     <div style={{padding:"16px",display:"grid",gap:12,boxSizing:"border-box"}} className="fa-fade-up">
       <div style={{position:"relative"}}>
@@ -446,10 +494,16 @@ function Movements({transactions,filterMonth,deleteTransaction,openAddModal,loan
         <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar..."
           style={{width:"100%",background:C.card,border:"1px solid "+(C.border),borderRadius:12,padding:"10px 12px 10px 36px",color:C.text,fontSize:14}}/>
       </div>
-      <div style={{display:"flex",gap:8}}>
-        {[["all","Todos"],["income","Ingresos"],["expense","Gastos"]].map(([v,l])=>(
-          <button key={v} onClick={()=>setFilter(v)} style={{padding:"6px 14px",borderRadius:100,border:filter!==v?"1px solid "+(C.border):"none",cursor:"pointer",fontSize:12,fontWeight:600,background:filter===v?C.accent:C.card,color:filter===v?"#000":C.textSub}}>{l}</button>
-        ))}
+      <div style={{display:"flex",gap:8,justifyContent:"space-between",alignItems:"center"}}>
+        <div style={{display:"flex",gap:6}}>
+          {[["all","Todos"],["income","Ingresos"],["expense","Gastos"]].map(([v,l])=>(
+            <button key={v} onClick={()=>setFilter(v)} style={{padding:"6px 12px",borderRadius:100,border:filter!==v?"1px solid "+(C.border):"none",cursor:"pointer",fontSize:12,fontWeight:600,background:filter===v?C.accent:C.card,color:filter===v?"#000":C.textSub}}>{l}</button>
+          ))}
+        </div>
+        <div style={{display:"flex",gap:6}}>
+          <button onClick={exportCSV} style={{padding:"6px 10px",borderRadius:8,border:"1px solid "+C.border,background:C.card,color:C.textSub,cursor:"pointer",fontSize:11,fontWeight:600}}>📊 Excel</button>
+          <button onClick={exportPDF} style={{padding:"6px 10px",borderRadius:8,border:"1px solid "+C.border,background:C.card,color:C.textSub,cursor:"pointer",fontSize:11,fontWeight:600}}>🖨 PDF</button>
+        </div>
       </div>
       {sortedDates.length===0&&<EmptyState label="Sin movimientos"/>}
       {sortedDates.map(date=>(
@@ -705,19 +759,21 @@ function CardsView({ cards, addCharge, deleteCharge, updateCharge, markPaid, sav
       </div>
 
       {/* SELECTOR DE TARJETA */}
-      <div style={{display:"flex",gap:10,overflowX:"auto",paddingBottom:2}}>
-        {cards.map(c => (
-          <button key={c.id} onClick={()=>setSelCard(c.id)} style={{
-            padding:"10px 14px",borderRadius:12,flexShrink:0,cursor:"pointer",fontWeight:700,fontSize:12,
-            background:selCard===c.id?c.color+"33":C.card,
-            border:"1px solid "+(selCard===c.id?c.color:C.border),
-            color:selCard===c.id?c.color:C.textSub,
-            display:"flex",alignItems:"center",gap:6,
-          }}>
-            <span>💳</span>{c.name}
-          </button>
-        ))}
-        <button onClick={()=>setShowEditCard("new")} style={{padding:"10px 14px",borderRadius:12,flexShrink:0,cursor:"pointer",fontSize:12,fontWeight:700,background:C.card,border:"1px solid "+(C.border),color:C.textMuted}}>+ Nueva</button>
+      <div className="overflow-guard">
+        <div className="hscroll-edge" style={{gap:10,paddingBottom:2}}>
+          {cards.map(c => (
+            <button key={c.id} onClick={()=>setSelCard(c.id)} style={{
+              padding:"10px 14px",borderRadius:12,cursor:"pointer",fontWeight:700,fontSize:12,
+              background:selCard===c.id?c.color+"33":C.card,
+              border:"1px solid "+(selCard===c.id?c.color:C.border),
+              color:selCard===c.id?c.color:C.textSub,
+              display:"flex",alignItems:"center",gap:6,
+            }}>
+              <span>💳</span>{c.name}
+            </button>
+          ))}
+          <button onClick={()=>setShowEditCard("new")} style={{padding:"10px 14px",borderRadius:12,cursor:"pointer",fontSize:12,fontWeight:700,background:C.card,border:"1px solid "+(C.border),color:C.textMuted}}>+ Nueva</button>
+        </div>
       </div>
 
       {/* TARJETA ACTIVA */}
@@ -743,6 +799,28 @@ function CardsView({ cards, addCharge, deleteCharge, updateCharge, markPaid, sav
               </div>
             ))}
           </div>
+          {/* PAGO MÍNIMO */}
+          {(card.balance||0) > 0 && (() => {
+            const saldo   = card.balance || 0;
+            const minPct  = Math.max(saldo * 0.05, 20000); // 5% del saldo, mínimo $20.000
+            const minFijo = saldo <= 500000 ? saldo : minPct;
+            const totalSug = minFijo * 1.15; // incluye intereses aprox 3% mensual
+            return (
+              <div style={{background:C.yellowDim,border:"1px solid "+C.yellow+"44",borderRadius:12,padding:"12px 14px",marginBottom:14}}>
+                <div style={{fontSize:10,color:C.yellow,fontWeight:700,marginBottom:6}}>⚡ PAGO MÍNIMO ESTIMADO</div>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end"}}>
+                  <div>
+                    <div style={{fontSize:20,fontWeight:900,color:C.yellow}}>{fmtCOP(Math.round(totalSug/1000)*1000)}</div>
+                    <div style={{fontSize:10,color:C.textMuted,marginTop:2}}>Base {fmtCOP(Math.round(minFijo/1000)*1000)} + intereses aprox.</div>
+                  </div>
+                  <div style={{fontSize:10,color:C.textMuted,textAlign:"right"}}>
+                    <div>Tasa ~3% mensual</div>
+                    <div style={{color:C.red,fontWeight:600}}>Pagar antes día {card.payDay||"?"}</div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
           <div style={{height:8,borderRadius:4,background:C.border,marginBottom:8}}>
             <div style={{height:"100%",borderRadius:4,background:card.color,width:(Math.min(100,Math.round(((card.balance||0)/Math.max(card.limit||1,1))*100)))+"%",transition:"width 1s ease"}}/>
           </div>
@@ -1585,10 +1663,11 @@ function AddModal({onClose,onAdd,accounts,opts,categories=DEFAULT_CATEGORIES}){
 }
 
 // ─── LOAN MODAL ───────────────────────────────────────────────────────────────
-function LoanModal({onClose,onAdd,accounts}){
-  const [form,setForm]=useState({debtor:"",amount:"",date:today(),account:accounts[0]?.id||"",subcategory:"Préstamo personal",note:""});
+function LoanModal({onClose,onAdd,accounts,cards=[]}){
+  const [sourceType,setSourceType]=useState("account"); // account | card
+  const [form,setForm]=useState({debtor:"",amount:"",date:today(),account:accounts[0]?.id||"",cardId:"",subcategory:"Préstamo personal",note:""});
   const set=(k,v)=>setForm(f=>({...f,[k]:v}));
-  const ok=form.debtor&&form.amount&&form.account;
+  const ok=form.debtor&&form.amount&&(sourceType==="account"?form.account:form.cardId);
   return(
     <div style={{position:"fixed",inset:0,background:"#000000BB",zIndex:500,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
       <div onClick={e=>e.stopPropagation()} style={{background:C.surface,borderRadius:"24px 24px 0 0",width:"100%",maxWidth:480,padding:"20px 20px 36px",animation:"fa-slideUp .3s cubic-bezier(.4,0,.2,1)",maxHeight:"90vh",overflowY:"auto",borderTop:"1px solid "+(C.orange)+"66"}}>
@@ -1597,31 +1676,46 @@ function LoanModal({onClose,onAdd,accounts}){
           <div style={{fontSize:18,fontWeight:800}}>🤝 Registrar Préstamo</div>
           <button onClick={onClose} style={{background:C.card,border:"1px solid "+(C.border),borderRadius:8,padding:"6px 10px",color:C.text,cursor:"pointer"}}>✕</button>
         </div>
-        <div style={{fontSize:12,color:C.textMuted,marginBottom:20}}>Se registrará como gasto en <span style={{color:C.orange,fontWeight:700}}>Préstamos</span> y aparecerá en Cuentas por Cobrar</div>
+        <div style={{fontSize:12,color:C.textMuted,marginBottom:16}}>Aparecerá en <span style={{color:C.orange,fontWeight:700}}>Por Cobrar</span></div>
         <div style={{background:C.orangeDim,border:"1px solid "+(C.orange)+"44",borderRadius:16,padding:16,marginBottom:16}}>
-          <div style={{fontSize:12,color:C.textMuted,marginBottom:4}}>MONTO DEL PRÉSTAMO</div>
+          <div style={{fontSize:12,color:C.textMuted,marginBottom:4}}>MONTO</div>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
             <span style={{fontSize:22,color:C.textMuted}}>$</span>
             <input type="number" value={form.amount} onChange={e=>set("amount",e.target.value)} placeholder="0" style={{flex:1,background:"transparent",border:"none",fontSize:26,fontWeight:900,color:C.orange}}/>
-            <span style={{fontSize:12,color:C.textMuted}}>COP</span>
           </div>
         </div>
         <div style={{display:"grid",gap:10}}>
           <MF label="Nombre del deudor"><input type="text" value={form.debtor} onChange={e=>set("debtor",e.target.value)} placeholder="Ej: Carlos Rodríguez" style={{width:"100%",background:C.card,border:"1px solid "+(C.border),borderRadius:10,padding:"10px 12px",color:C.text,fontSize:14}}/></MF>
-          <MF label="Fecha del préstamo"><input type="date" value={form.date} onChange={e=>set("date",e.target.value)} style={{width:"100%",background:C.card,border:"1px solid "+(C.border),borderRadius:10,padding:"10px 12px",color:C.text,fontSize:14}}/></MF>
+          <MF label="Fecha"><input type="date" value={form.date} onChange={e=>set("date",e.target.value)} style={{width:"100%",background:C.card,border:"1px solid "+(C.border),borderRadius:10,padding:"10px 12px",color:C.text,fontSize:14}}/></MF>
           <MF label="Tipo">
             <select value={form.subcategory} onChange={e=>set("subcategory",e.target.value)} style={{width:"100%",background:C.card,border:"1px solid "+(C.border),borderRadius:10,padding:"10px 12px",color:C.text,fontSize:14}}>
               <option>Préstamo personal</option><option>Préstamo familiar</option><option>Préstamo laboral</option><option>Auxilio de emergencia</option>
             </select>
           </MF>
-          <MF label="Cuenta origen">
-            <select value={form.account} onChange={e=>set("account",e.target.value)} style={{width:"100%",background:C.card,border:"1px solid "+(C.border),borderRadius:10,padding:"10px 12px",color:C.text,fontSize:14}}>
-              {accounts.map(a=><option key={a.id} value={a.id}>{a.icon} {a.label}</option>)}
-            </select>
+          {/* FUENTE DEL PRÉSTAMO */}
+          <MF label="Fuente del dinero">
+            <div style={{display:"flex",gap:8,marginBottom:8}}>
+              {[["account","💰 Cuenta"],["card","💳 Tarjeta"]].map(([t,l])=>(
+                <button key={t} onClick={()=>setSourceType(t)} style={{flex:1,padding:"8px",borderRadius:9,border:"1px solid "+(sourceType===t?C.accent:C.border),background:sourceType===t?C.accentDim:"transparent",color:sourceType===t?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:600}}>
+                  {l}
+                </button>
+              ))}
+            </div>
+            {sourceType==="account"&&(
+              <select value={form.account} onChange={e=>set("account",e.target.value)} style={{width:"100%",background:C.card,border:"1px solid "+(C.border),borderRadius:10,padding:"10px 12px",color:C.text,fontSize:14}}>
+                {accounts.map(a=><option key={a.id} value={a.id}>{a.icon} {a.label}</option>)}
+              </select>
+            )}
+            {sourceType==="card"&&(
+              <select value={form.cardId} onChange={e=>set("cardId",e.target.value)} style={{width:"100%",background:C.card,border:"1px solid "+(C.border),borderRadius:10,padding:"10px 12px",color:C.text,fontSize:14}}>
+                <option value="">Seleccionar tarjeta...</option>
+                {cards.map(c=><option key={c.id} value={c.id}>{c.name} ···{c.last4}</option>)}
+              </select>
+            )}
           </MF>
           <MF label="Nota (opcional)"><input type="text" value={form.note} onChange={e=>set("note",e.target.value)} placeholder="Ej: Para auxilio médico" style={{width:"100%",background:C.card,border:"1px solid "+(C.border),borderRadius:10,padding:"10px 12px",color:C.text,fontSize:14}}/></MF>
         </div>
-        <button onClick={()=>ok&&onAdd({...form,amount:parseFloat(form.amount)})} disabled={!ok} style={{width:"100%",marginTop:20,padding:14,borderRadius:14,border:"none",background:ok?C.orange:C.border,color:ok?"#fff":C.textMuted,fontWeight:800,fontSize:16,cursor:ok?"pointer":"not-allowed"}}>Registrar Préstamo</button>
+        <button onClick={()=>ok&&onAdd({...form,amount:parseFloat(form.amount),sourceType})} disabled={!ok} style={{width:"100%",marginTop:20,padding:14,borderRadius:14,border:"none",background:ok?C.orange:C.border,color:ok?"#fff":C.textMuted,fontWeight:800,fontSize:16,cursor:ok?"pointer":"not-allowed"}}>Registrar Préstamo</button>
       </div>
     </div>
   );
