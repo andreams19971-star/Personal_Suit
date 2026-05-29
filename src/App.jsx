@@ -96,13 +96,6 @@ function AppContent() {
     return <LockScreen onUnlock={()=>setLocked(false)} userName={auth.profile?.name||prefs.name||"Andrés"}/>;
   }
 
-  // Si el usuario existe pero el perfil no cargó (timeout), reintentar
-  useEffect(() => {
-    if (auth.user && !auth.profile && !auth.loading) {
-      console.log("[App] Perfil null con usuario activo — reintentando...");
-      auth.loadProfile(auth.user.id);
-    }
-  }, [auth.user, auth.profile, auth.loading]);
   const visibleApps = ALL_APPS.filter(a=>
     auth.isAdmin || (auth.allowedApps||[]).includes(a.id)
   );
