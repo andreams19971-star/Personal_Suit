@@ -7,6 +7,38 @@
 
 ---
 
+## [2.4.7] — 2026-05-30 — Bugfix global: inserts con ID inválido en todas las apps
+
+### Auditoría completa
+El mismo bug de v2.4.5 y v2.4.6 existía en 3 hooks adicionales — **8 inserts afectados**:
+
+| Hook | Función | ID inválido |
+|------|---------|-------------|
+| usePlannerData | addTask | 'T'+Date.now() |
+| usePlannerData | addHabit | 'H'+Date.now() |
+| usePlannerData | addGoal | 'G'+Date.now() |
+| usePlannerData | addNote | 'N'+Date.now() |
+| useApartamentoData | addReservation | 'RES'+Date.now() |
+| useApartamentoData | addExpense | 'E'+Date.now() |
+| useCardsData | addCharge | 'ch-'+Date.now() |
+| useCardsData | addCard | 'card-'+Date.now() |
+
+### Solución aplicada (idéntica a v2.4.5/2.4.6)
+- Omitir `id` en el insert → Supabase genera UUID automáticamente
+- Rollback del estado local si el insert falla
+- El state local se actualiza con el UUID real de Supabase tras el insert
+
+### SQL requerido
+Ejecutar `fix-all-tables-uuid.sql` — aplica `DEFAULT gen_random_uuid()::text`
+y política `auth_all` a las 16 tablas de datos en un solo script.
+
+### Archivos
+- `src/hooks/usePlannerData.js`
+- `src/hooks/useApartamentoData.js`
+- `src/hooks/useCardsData.js`
+
+---
+
 ## [2.4.6] — 2026-05-30 — Bugfix: FlotaTracker edición/guardado silenciosa
 
 ### Causa (misma raíz que v2.4.5)

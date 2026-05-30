@@ -221,7 +221,7 @@ export default function FlotaTracker({ onBack }) {
     } catch(e) { console.error('[FlotaTracker] sync gasto:', e); }
   };
 
-  const agregarPagoDiario = (carroId, fecha, account, monto) => {
+  const agregarPagoDiario = async (carroId, fecha, account, monto) => {
     const r = await addWorkDay(carroId, fecha, account, monto);
     if (r?.error) showToast("Error: "+r.error,"err");
     else showToast("Día agregado ✓");
