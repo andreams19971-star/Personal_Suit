@@ -7,6 +7,18 @@
 
 ---
 
+## [2.4.1] — 2026-05-30 — Bugfix: Editar/Eliminar en vista Cuentas
+
+### Corregido
+- **AccountsView** no recibía `deleteTransaction` ni `setEditTx` — las transacciones
+  se mostraban pero sin handlers. `TxRow` renderizaba sin `onDelete`/`onEdit`.
+- Solución: pasar las dos funciones desde el render principal y usarlas en el `TxRow` de AccountsView.
+
+### Archivos modificados
+- `src/apps/FinanzApp.jsx` — línea 246 (llamada) + línea 550 (firma) + línea 585 (TxRow)
+
+---
+
 ## [2.4.0] — 2026-05-29 — Todas las recomendaciones
 
 ### Nuevo

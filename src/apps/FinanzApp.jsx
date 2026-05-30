@@ -243,7 +243,7 @@ export default function FinanzApp({ onBack }){
       <div className="fa-scroll" style={{paddingBottom:80}}>
         {view==="dashboard" && <Dashboard transactions={transactions} accounts={computedAccounts} loans={loans} totalIncome={totalIncome} totalExpense={totalExpense} netBalance={netBalance} filterMonth={filterMonth} setView={setView} setSelAccount={setSelAccount} monthTxs={monthTxs} categories={categories} settings={settings}/>}
         {view==="movements" && <Movements transactions={transactions} filterMonth={filterMonth} deleteTransaction={deleteTransaction} openAddModal={openAddModal} loans={loans} categories={categories} setEditTx={setEditTx}/>}
-        {view==="accounts"  && <AccountsView accounts={computedAccounts} transactions={transactions} selAccount={selAccount} setSelAccount={setSelAccount} filterMonth={filterMonth} showToast={showToast} categories={categories}/>}
+        {view==="accounts"  && <AccountsView accounts={computedAccounts} transactions={transactions} selAccount={selAccount} setSelAccount={setSelAccount} filterMonth={filterMonth} showToast={showToast} categories={categories} deleteTransaction={deleteTransaction} setEditTx={setEditTx}/>}
         {view==="cards"     && <CardsView cards={cards} addCharge={addCharge} deleteCharge={deleteCharge} updateCharge={updateCharge} markPaid={markPaid} saveCard={saveCard} addCard={addCard} filterMonth={filterMonth} showToast={showToast}/>}
         {view==="loans"     && <LoansView loans={loans} transactions={transactions} setShowLoanModal={setShowLoanModal} setShowPayModal={setShowPayModal} accounts={computedAccounts} showToast={showToast} categories={categories}/>}
         {view==="stats"     && <Stats monthTxs={monthTxs} totalIncome={totalIncome} totalExpense={totalExpense} transactions={transactions} filterMonth={filterMonth} categories={categories}/>}
@@ -547,7 +547,7 @@ function Movements({transactions,filterMonth,deleteTransaction,openAddModal,loan
 }
 
 // ─── ACCOUNTS ─────────────────────────────────────────────────────────────────
-function AccountsView({accounts,transactions,selAccount,setSelAccount,filterMonth,showToast,categories=DEFAULT_CATEGORIES}){
+function AccountsView({accounts,transactions,selAccount,setSelAccount,filterMonth,showToast,categories=DEFAULT_CATEGORIES,deleteTransaction,setEditTx}){
   const active=selAccount||accounts[0]?.id;
   const acc=accounts.find(a=>a.id===active)||accounts[0];
   const accTxs=transactions.filter(t=>t.account===active&&t.date.startsWith(filterMonth));
@@ -582,7 +582,10 @@ function AccountsView({accounts,transactions,selAccount,setSelAccount,filterMont
         {accTxs.length===0&&<EmptyState label="Sin movimientos en esta cuenta"/>}
         <div style={{background:C.card,border:"1px solid "+(C.border),borderRadius:16,overflow:"hidden"}}>
           {accTxs.sort((a,b)=>b.date.localeCompare(a.date)).map((tx,i)=>(
-            <TxRow key={tx.id} tx={tx} showDivider={i<accTxs.length-1} categories={categories}/>
+            <TxRow key={tx.id} tx={tx} showDivider={i<accTxs.length-1} categories={categories}
+              onDelete={deleteTransaction ? ()=>deleteTransaction(tx.id) : null}
+              onEdit={setEditTx ? ()=>setEditTx(tx) : null}
+            />
           ))}
         </div>
       </div>

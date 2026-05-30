@@ -73,13 +73,19 @@ function AppContent() {
   },[prefs.theme]);
 
   useEffect(() => {
-    if (!isConfigured) { setDb("error"); return; }
-    // Timeout de 5s — si no responde, marcar como error
-    const t = setTimeout(() => setDb("error"), 5000);
-    supabase.from("profiles").select("count", { count:"exact", head:true })
-      .then(({ error }) => { clearTimeout(t); setDb(error ? "error" : "ok"); })
-      .catch(() => { clearTimeout(t); setDb("error"); });
-    return () => clearTimeout(t);
+    function checkDb() {
+      if (!isConfigured) { setDb("error"); return; }
+      setDb("checking");
+      const t = setTimeout(() => setDb("error"), 5000);
+      supabase.from("profiles").select("count", { count:"exact", head:true })
+        .then(({ error }) => { clearTimeout(t); setDb(error ? "error" : "ok"); })
+        .catch(() => { clearTimeout(t); setDb("error"); });
+    }
+    checkDb();
+    // Reintentar conexión cada vez que el usuario vuelve a la app
+    const onVisible = () => { if (document.visibilityState === "visible") checkDb(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
   }, []);
 
   // ── Auth loading ──
@@ -114,6 +120,7 @@ function AppContent() {
   );
 
   // Si el usuario está logueado pero el perfil no cargó → mostrar estado de reintento
+  // Solo si NO hay perfil en caché (si hay caché, auth ya lo cargó al iniciar)
   const profileMissing = auth.user && !auth.profile;
 
   const AppLoader = () => (
