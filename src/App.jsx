@@ -73,31 +73,27 @@ function AppContent() {
   },[prefs.theme]);
 
   useEffect(() => {
+    if (!isConfigured) { setDb("error"); return; }
+
     let retryTimer = null;
 
     async function checkDb() {
-      if (!isConfigured) { setDb("error"); return; }
-      setDb("checking");
       try {
-        // Usar el endpoint de salud de Supabase en lugar de una tabla (no requiere permisos)
-        const url = import.meta.env.VITE_SUPABASE_URL + "/rest/v1/";
+        // Usar el endpoint de health de Supabase
         const res = await Promise.race([
-          fetch(url, {
-            headers: { apikey: import.meta.env.VITE_SUPABASE_KEY },
-            method: "HEAD"
+          fetch(import.meta.env.VITE_SUPABASE_URL + "/auth/v1/health", {
+            headers: { apikey: import.meta.env.VITE_SUPABASE_KEY }
           }),
-          new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), 4000))
+          new Promise((_, rej) => setTimeout(()=>rej(new Error("timeout")), 5000))
         ]);
-        setDb(res.ok ? "ok" : "error");
+        setDb(res.status < 500 ? "ok" : "error");
       } catch {
         setDb("error");
-        // Reintentar en 5 segundos si falla
         retryTimer = setTimeout(checkDb, 5000);
       }
     }
 
     checkDb();
-    // Reintentar al volver a foreground
     const onVisible = () => { if (document.visibilityState === "visible") checkDb(); };
     document.addEventListener("visibilitychange", onVisible);
     return () => {

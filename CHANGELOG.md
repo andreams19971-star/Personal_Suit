@@ -7,6 +7,17 @@
 
 ---
 
+## [2.4.8] — 2026-05-30 — Bugfix build: async faltante en agregarPagoDiario
+
+### Error
+`"await" can only be used inside an "async" function` en FlotaTracker.jsx:225
+`agregarPagoDiario` era una arrow function sin `async` pero usaba `await` internamente.
+
+### Fix
+Cambiar `const agregarPagoDiario = (carroId...) =>` a `const agregarPagoDiario = async (carroId...) =>`
+
+---
+
 ## [2.4.7] — 2026-05-30 — Bugfix global: inserts con ID inválido en todas las apps
 
 ### Auditoría completa
