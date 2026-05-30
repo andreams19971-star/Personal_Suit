@@ -7,6 +7,30 @@
 
 ---
 
+## [2.4.2] — 2026-05-30 — Bugfix: Reconexión automática al volver a la app
+
+### Problema
+Al dejar la app inactiva y volver, iOS Safari cierra la conexión WebSocket con Supabase.
+El perfil quedaba `null`, la conexión mostraba "Sin conexión", y el usuario tenía que
+borrar el caché para que volviera a funcionar.
+
+### Solución
+- **Caché de perfil en localStorage** (`suite_profile_cache`) — el perfil se guarda al
+  cargarse. Al reiniciar, React se inicializa con el caché y las apps aparecen de inmediato
+  sin pantalla de "Cargando perfil".
+- **Auto-reconexión en visibilitychange** — `useAuth.js` escucha cuando la app vuelve
+  a foreground y espera 800ms (para que la red se estabilice) antes de recargar el perfil.
+- **Conexión auto-reintento** — `App.jsx` repite el check de conexión a Supabase cada vez
+  que la app vuelve a primer plano (ya no queda en "Sin conexión" para siempre).
+- Si `loadProfile` falla, usa el caché como fallback en lugar de mostrar `null`.
+
+### Archivos modificados
+- `src/hooks/useAuth.js` — `saveProfileCache`, `loadProfileCache`, estado inicial desde caché,
+  fallback en errores, retry delay de 800ms en visibilitychange
+- `src/App.jsx` — `checkDb()` extraída como función, listener visibilitychange
+
+---
+
 ## [2.4.1] — 2026-05-30 — Bugfix: Editar/Eliminar en vista Cuentas
 
 ### Corregido
