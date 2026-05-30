@@ -7,6 +7,33 @@
 
 ---
 
+## [2.5.0] — 2026-05-30 — Fix: loadProfile con timeout propio + caché inmediato
+
+### Causa raíz del timeout
+`loadProfile` no tenía timeout propio — dependía del timeout global de 7s de `useAuth`.
+Si Supabase tardaba en refrescar el JWT (token refresh al abrir la app), la query
+de `profiles` se colgaba indefinidamente. El timeout de 7s forzaba `loading=false`
+pero `profile` quedaba `null` → pantalla de "Cargando perfil...".
+
+### Solución
+1. **AbortController en la query** — la query de `profiles` se aborta a los 5s
+   si Supabase no responde. Previene que el hook quede colgado.
+2. **Caché inmediato al inicio** — si hay perfil en caché (`suite_profile_cache`),
+   se setea al perfil ANTES de hacer la query. Las apps aparecen de inmediato
+   mientras la consulta a Supabase ocurre en background.
+3. **Fallback en timeout/error** — si la query falla o se aborta, se usa el caché.
+
+### SQL requerido
+Ejecutar `fix-profiles-rls-v3.sql`:
+- Elimina todas las policies existentes de profiles
+- Crea policies limpias: SELECT para `authenticated` Y `anon`
+- Corrige el perfil de admin
+
+### Archivos
+- `src/hooks/useAuth.js` — `loadProfile` con AbortController + caché inmediato
+
+---
+
 ## [2.4.9] — 2026-05-30 — Bugfix: health check Supabase incorrecto
 
 ### Causa
