@@ -73,19 +73,37 @@ function AppContent() {
   },[prefs.theme]);
 
   useEffect(() => {
-    function checkDb() {
+    let retryTimer = null;
+
+    async function checkDb() {
       if (!isConfigured) { setDb("error"); return; }
       setDb("checking");
-      const t = setTimeout(() => setDb("error"), 5000);
-      supabase.from("profiles").select("count", { count:"exact", head:true })
-        .then(({ error }) => { clearTimeout(t); setDb(error ? "error" : "ok"); })
-        .catch(() => { clearTimeout(t); setDb("error"); });
+      try {
+        // Usar el endpoint de salud de Supabase en lugar de una tabla (no requiere permisos)
+        const url = import.meta.env.VITE_SUPABASE_URL + "/rest/v1/";
+        const res = await Promise.race([
+          fetch(url, {
+            headers: { apikey: import.meta.env.VITE_SUPABASE_KEY },
+            method: "HEAD"
+          }),
+          new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), 4000))
+        ]);
+        setDb(res.ok ? "ok" : "error");
+      } catch {
+        setDb("error");
+        // Reintentar en 5 segundos si falla
+        retryTimer = setTimeout(checkDb, 5000);
+      }
     }
+
     checkDb();
-    // Reintentar conexión cada vez que el usuario vuelve a la app
+    // Reintentar al volver a foreground
     const onVisible = () => { if (document.visibilityState === "visible") checkDb(); };
     document.addEventListener("visibilitychange", onVisible);
-    return () => document.removeEventListener("visibilitychange", onVisible);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      if (retryTimer) clearTimeout(retryTimer);
+    };
   }, []);
 
   // ── Auth loading ──
@@ -181,7 +199,7 @@ function AppContent() {
               <div style={{width:6,height:6,borderRadius:"50%",background:dbColor,flexShrink:0,
                 animation:db==="checking"?"pulse 1.2s ease infinite":"none"}}/>
               <span style={{fontSize:"0.7rem",color:C.textMuted,fontWeight:500}}>
-                {db==="ok"?"Conectado":db==="error"?"Sin conexión":"Verificando..."}
+                {db==="ok"?"Conectado":db==="checking"?"Reconectando...":"Sin conexión"}
               </span>
             </div>
           </div>
@@ -367,8 +385,11 @@ function AppContent() {
             <div style={{background:C.card,border:"1px solid "+C.border,borderRadius:12,padding:"12px 14px",marginBottom:16}}>
               <div style={{fontSize:"0.7rem",color:C.textMuted,fontWeight:600,marginBottom:6,letterSpacing:0.5}}>CONEXIÓN</div>
               <div style={{display:"flex",alignItems:"center",gap:8}}>
-                <div style={{width:8,height:8,borderRadius:"50%",background:dbColor}}/>
-                <span style={{fontSize:"0.81rem",color:dbColor,fontWeight:600}}>{db==="ok"?"Supabase conectado ✓":"Sin conexión"}</span>
+                <div style={{width:8,height:8,borderRadius:"50%",background:dbColor,
+                  animation:db==="checking"?"pulse 1.2s ease infinite":"none"}}/>
+                <span style={{fontSize:"0.81rem",color:dbColor,fontWeight:600}}>
+                  {db==="ok"?"Supabase conectado ✓":db==="checking"?"Reconectando...":"Sin conexión"}
+                </span>
               </div>
             </div>
 

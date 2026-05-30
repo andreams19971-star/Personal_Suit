@@ -7,6 +7,14 @@
 
 ---
 
+## [2.4.3] — 2026-05-30 — Bugfix: useAuthProvider duplicado
+
+### Corregido
+- `useAuthProvider` declarado dos veces en `useAuth.js` (str_replace previo no eliminó la función vieja)
+- Build fallaba con `Identifier 'useAuthProvider' has already been declared`
+
+---
+
 ## [2.4.2] — 2026-05-30 — Bugfix: Reconexión automática al volver a la app
 
 ### Problema
