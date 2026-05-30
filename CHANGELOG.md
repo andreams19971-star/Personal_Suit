@@ -7,6 +7,43 @@
 
 ---
 
+## [2.4.5] — 2026-05-30 — Bugfix: Movimientos no se guardaban en Supabase
+
+### Causas identificadas (revisando CHANGELOG + código)
+
+1. **ID inválido** — `addTransaction` enviaba `id: 'tx-1716xxx'` a Supabase.
+   Si `transactions.id` es de tipo `uuid`, Supabase rechaza el insert con error de tipo.
+   El error se logeaba en consola pero NO se mostraba al usuario → parecía guardado (estado
+   local) pero desaparecía al recargar.
+
+2. **Errores silenciosos** — La función retornaba `void` sin propagar el error.
+   FinanzApp siempre mostraba "Movimiento registrado ✓" aunque Supabase fallara.
+
+3. **onlineRef potencialmente false** — Si `loadAll()` falla por RLS u otro error,
+   `onlineRef.current` queda en `false` y todos los inserts se omiten silenciosamente.
+
+### Solución
+
+- **`addTransaction` ahora omite el `id`** — Supabase genera el UUID con `gen_random_uuid()`.
+  Tras el insert exitoso, el estado local se actualiza con el UUID real de Supabase.
+- **Rollback en error** — si el insert falla, la transacción se elimina del estado local
+  (no queda "fantasma" visible pero no guardada).
+- **Retorna `{ data }` o `{ error }`** — FinanzApp puede mostrar toast de error real.
+- **Toast de error** — cuando falla, muestra "Error al guardar: [motivo]" en rojo.
+
+### SQL requerido
+Ejecutar `fix-transactions.sql` para:
+- Verificar tipo de columna `id` en transactions
+- Asegurar `DEFAULT gen_random_uuid()::text`
+- Crear política `auth_all` si no existe
+
+### Archivos
+- `src/hooks/useFinanzData.js` — `addTransaction` reescrito
+- `src/apps/FinanzApp.jsx` — `addTransaction` y `addTransfer` manejan errores
+- `fix-transactions.sql` — SQL para verificar/corregir la tabla
+
+---
+
 ## [2.4.4] — 2026-05-30 — Bugfix: Sin conexión persistente
 
 ### Causa

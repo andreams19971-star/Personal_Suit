@@ -199,8 +199,9 @@ export default function FlotaTracker({ onBack }) {
     }
   };
   const agregarGasto = async (carroId, gasto) => {
-    addExpense(carroId, gasto);
-    showToast("Gasto registrado ✓");
+    const r = await addExpense(carroId, gasto);
+    if (r?.error) showToast("Error: "+r.error,"err");
+    else showToast("Gasto registrado ✓");
     setModal(null);
     // Sincronizar con FinanzApp como egreso
     try {
@@ -221,8 +222,9 @@ export default function FlotaTracker({ onBack }) {
   };
 
   const agregarPagoDiario = (carroId, fecha, account, monto) => {
-    addWorkDay(carroId, fecha, account, monto);
-    showToast("Día agregado ✓");
+    const r = await addWorkDay(carroId, fecha, account, monto);
+    if (r?.error) showToast("Error: "+r.error,"err");
+    else showToast("Día agregado ✓");
     setModal(null);
   };
 
@@ -277,7 +279,7 @@ export default function FlotaTracker({ onBack }) {
       {/* MODALS */}
       {modal?.type==="gasto" && <GastoModal carroId={modal.carroId} carros={cars} onClose={()=>setModal(null)} onAdd={agregarGasto} accounts={ACCOUNTS}/>}
       {modal?.type==="dia"   && <DiaModal   carroId={modal.carroId} onClose={()=>setModal(null)} onAdd={agregarPagoDiario} cars={cars} accounts={ACCOUNTS}/>}
-      {editPago && <EditPagoModal carId={editPago.carId} pago={editPago.pago} accounts={ACCOUNTS} onClose={()=>setEditPago(null)} onSave={async(pagoId,updates)=>{ await updatePayment(editPago.carId,pagoId,updates); showToast("Registro actualizado ✓"); setEditPago(null); }}/>}
+      {editPago && <EditPagoModal carId={editPago.carId} pago={editPago.pago} accounts={ACCOUNTS} onClose={()=>setEditPago(null)} onSave={async(pagoId,updates)=>{ const r=await updatePayment(editPago.carId,pagoId,updates); if(r?.error){showToast("Error: "+r.error,"err");}else{showToast("Registro actualizado ✓");setEditPago(null);}}}/>}
       {showAddCar && <AddCarModal onClose={()=>setShowAddCar(false)} onSave={handleAddCar}/>}
 
       {/* SIDEBAR CONFIGURACIÓN */}

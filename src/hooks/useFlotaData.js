@@ -110,44 +110,74 @@ export function useFlotaData() {
   }
 
   async function updatePayment(carId, pagoId, updates) {
+    const prev_pago = (payments[carId]||[]).find(p=>p.id===pagoId)
     setPayments(prev => ({
       ...prev,
       [carId]: (prev[carId]||[]).map(p => p.id !== pagoId ? p : {...p, ...updates})
     }))
-    if (!onlineRef.current) return
+    if (!onlineRef.current) return { error:'Sin conexión' }
     const { error } = await supabase.from('car_payments').update({
       fecha:   updates.fecha,
       monto:   updates.monto,
       nota:    updates.nota || '',
       account: updates.account || 'cash',
     }).eq('id', pagoId)
-    if (error) console.error('[updatePayment]', error.message)
-    else console.log('[updatePayment] ✅', pagoId)
+    if (error) {
+      console.error('[updatePayment] ❌', error.message)
+      // Revertir
+      if (prev_pago) setPayments(prev => ({...prev, [carId]: (prev[carId]||[]).map(p=>p.id===pagoId?prev_pago:p)}))
+      return { error: error.message }
+    }
+    console.log('[updatePayment] ✅', pagoId)
+    return { data: true }
   }
 
   // ── Agregar día de trabajo ──
   async function addWorkDay(carId, fecha, account='cash', montoCustom=null) {
-    const car = cars.find(c => c.id === carId)
+    const car   = cars.find(c => c.id === carId)
     const monto = montoCustom || car?.valor_diario || 70000
-    const row = { id:'P'+Date.now(), car_id:carId, fecha, monto, pagado:false, nota:'', account }
-    setPayments(prev => ({...prev, [carId]: [row, ...(prev[carId]||[])]}))
-    if (!onlineRef.current) return
-    const { error } = await supabase.from('car_payments').insert([row])
-    if (error) console.error('[addWorkDay]', error.message)
-    else console.log('[addWorkDay] ✅', fecha, monto, account)
+    const localId = 'local-P-' + Date.now()
+    const localRow = { id:localId, car_id:carId, fecha, monto, pagado:false, nota:'', account }
+    setPayments(prev => ({...prev, [carId]: [localRow, ...(prev[carId]||[])]}))
+    if (!onlineRef.current) {
+      console.warn('[addWorkDay] offline'); return { error:'Sin conexión' }
+    }
+    // Omitir id para que Supabase genere UUID
+    const { data, error } = await supabase.from('car_payments')
+      .insert([{ car_id:carId, fecha, monto, pagado:false, nota:'', account }])
+      .select().single()
+    if (error) {
+      console.error('[addWorkDay] ❌', error.message)
+      setPayments(prev => ({...prev, [carId]: (prev[carId]||[]).filter(p=>p.id!==localId)}))
+      return { error: error.message }
+    }
+    // Reemplazar id local con UUID real de Supabase
+    setPayments(prev => ({...prev, [carId]: (prev[carId]||[]).map(p=>p.id===localId?data:p)}))
+    console.log('[addWorkDay] ✅', data.id)
+    return { data }
   }
 
   // ── Agregar gasto ──
   async function addExpense(carId, gasto) {
-    const row = { ...gasto, id:'E'+Date.now(), car_id:carId, account:gasto.account||'cash' }
-    setExpenses(prev => ({...prev, [carId]: [row, ...(prev[carId]||[])]}))
-    if (!onlineRef.current) return
-    const { error } = await supabase.from('car_expenses').insert([{
-      id: row.id, car_id: carId, fecha: gasto.fecha,
+    const localId = 'local-E-' + Date.now()
+    const localRow = { ...gasto, id:localId, car_id:carId, account:gasto.account||'cash' }
+    setExpenses(prev => ({...prev, [carId]: [localRow, ...(prev[carId]||[])]}))
+    if (!onlineRef.current) {
+      console.warn('[addExpense] offline'); return { error:'Sin conexión' }
+    }
+    const { data, error } = await supabase.from('car_expenses').insert([{
+      car_id: carId, fecha: gasto.fecha,
       category: gasto.categoria, amount: gasto.monto,
       note: gasto.nota||'', account: gasto.account||'cash'
-    }])
-    if (error) console.error('[addExpense]', error.message)
+    }]).select().single()
+    if (error) {
+      console.error('[addExpense] ❌', error.message)
+      setExpenses(prev => ({...prev, [carId]: (prev[carId]||[]).filter(e=>e.id!==localId)}))
+      return { error: error.message }
+    }
+    setExpenses(prev => ({...prev, [carId]: (prev[carId]||[]).map(e=>e.id===localId?{...localRow,id:data.id}:e)}))
+    console.log('[addExpense] ✅', data.id)
+    return { data }
   }
 
   // ── Eliminar gasto ──
