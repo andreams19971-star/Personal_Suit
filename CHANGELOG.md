@@ -7,6 +7,22 @@
 
 ---
 
+## [2.4.9] — 2026-05-30 — Bugfix: health check Supabase incorrecto
+
+### Causa
+El endpoint `HEAD /rest/v1/` de Supabase retorna 404 (ruta no existe).
+`res.ok` era siempre `false` → indicador siempre "Sin conexión" aunque Supabase funcionara.
+
+### Fix
+Cambiar a `GET /auth/v1/health` — endpoint oficial de salud de Supabase,
+retorna 200 si el servidor está activo. No requiere autenticación.
+Condición: `res.status < 500` (acepta 200, 401, 403, etc. — indica servidor activo).
+
+### Archivos
+- `src/App.jsx` — checkDb() usa `/auth/v1/health`
+
+---
+
 ## [2.4.8] — 2026-05-30 — Bugfix build: async faltante en agregarPagoDiario
 
 ### Error

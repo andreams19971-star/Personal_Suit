@@ -25,27 +25,35 @@ export function useAuthProvider() {
 
   async function loadProfile(userId) {
     if (!userId) return;
+    // Usar caché inmediatamente — las apps aparecen sin esperar a Supabase
+    const cached = loadProfileCache();
+    if (cached && cached.id === userId && mountedRef.current) {
+      setProfile(cached);
+    }
     try {
+      // AbortController: la query muere a los 5s si Supabase no responde
+      const controller = new AbortController();
+      const abortTimer = setTimeout(() => controller.abort(), 5000);
       const { data, error } = await supabase
-        .from("profiles").select("*").eq("id", userId).single();
+        .from("profiles").select("*").eq("id", userId).single()
+        .abortSignal(controller.signal);
+      clearTimeout(abortTimer);
       if (!mountedRef.current) return;
       if (!error && data) {
         setProfile(data);
-        saveProfileCache(data); // guardar para próxima vez
+        saveProfileCache(data);
         console.log("[Auth] ✅ Perfil cargado:", data.name, "admin:", data.is_admin);
         supabase.from("profiles")
           .update({ last_seen: new Date().toISOString() })
           .eq("id", userId).then(()=>{});
       } else {
         console.warn("[Auth] loadProfile error:", error?.message);
-        // Si falla pero tenemos caché, mantenerlo
-        const cached = loadProfileCache();
-        if (cached && !profile) setProfile(cached);
+        if (cached && mountedRef.current) setProfile(cached);
       }
     } catch(e) {
-      console.warn("[Auth] loadProfile catch:", e.message);
-      const cached = loadProfileCache();
-      if (cached && !profile) setProfile(cached);
+      console.warn("[Auth] loadProfile timeout:", e.message);
+      const c = loadProfileCache();
+      if (c && mountedRef.current) setProfile(c);
     }
   }
 
