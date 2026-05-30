@@ -182,10 +182,14 @@ export default function FinanzApp({ onBack }){
   const netBalance   = totalIncome - totalExpense;
 
   const addTransaction=async tx=>{
-    await dbAddTx({...tx,id:"tx-"+Date.now()});
-    showToast("Movimiento registrado ✓");
-    setShowAddModal(false);
-    setAddModalOpts({});
+    const result = await dbAddTx(tx);  // sin id — lo genera Supabase
+    if (result?.error) {
+      showToast("Error al guardar: "+result.error,"error");
+    } else {
+      showToast("Movimiento registrado ✓");
+      setShowAddModal(false);
+      setAddModalOpts({});
+    }
   };
   const deleteTransaction=async id=>{
     await dbDelTx(id);
@@ -199,11 +203,14 @@ export default function FinanzApp({ onBack }){
   const [editTx, setEditTx]=useState(null);
 
   const addTransfer = async (from, to, amount, date, note) => {
-    const id = Date.now();
-    await dbAddTx({ id:"tf-out-"+id, date, type:"expense", category:"transfer", subcategory:"Transferencia", account:from, amount, note:"Transferencia → "+(ACCOUNTS_DEF.find(a=>a.id===to)?.label||to)+(note?" · "+note:""), loan_id:null });
-    await dbAddTx({ id:"tf-in-"+id,  date, type:"income",  category:"transfer", subcategory:"Transferencia", account:to,   amount, note:"Transferencia ← "+(ACCOUNTS_DEF.find(a=>a.id===from)?.label||from)+(note?" · "+note:""), loan_id:null });
-    showToast("Transferencia realizada ✓");
-    setShowTransferModal(false);
+    const r1 = await dbAddTx({ date, type:"expense", category:"transfer", subcategory:"Transferencia", account:from, amount, note:"Transferencia → "+(ACCOUNTS_DEF.find(a=>a.id===to)?.label||to)+(note?" · "+note:""), loan_id:null });
+    const r2 = await dbAddTx({ date, type:"income",  category:"transfer", subcategory:"Transferencia", account:to,   amount, note:"Transferencia ← "+(ACCOUNTS_DEF.find(a=>a.id===from)?.label||from)+(note?" · "+note:""), loan_id:null });
+    if (r1?.error || r2?.error) {
+      showToast("Error en transferencia","error");
+    } else {
+      showToast("Transferencia realizada ✓");
+      setShowTransferModal(false);
+    }
   };
   const [showTransferModal, setShowTransferModal] = useState(false);
 

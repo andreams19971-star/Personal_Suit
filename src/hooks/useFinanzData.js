@@ -147,19 +147,33 @@ export function useFinanzData() {
   }
 
   async function addTransaction(tx) {
-    const newTx = { ...tx, id:'tx-'+Date.now() }
-    setTransactions(prev => [newTx, ...prev])
+    const localId = 'local-' + Date.now()
+    const newTx = { ...tx, id: localId }
+    setTransactions(prev => [newTx, ...prev])  // Optimistic update
+
     if (!onlineRef.current) {
-      console.warn('[addTransaction] ⚠️ offline — solo local')
-      return
+      console.warn('[addTransaction] ⚠️ offline — no guardado')
+      setTransactions(prev => prev.filter(t => t.id !== localId)) // revertir
+      return { error: 'Sin conexión — verifica tu internet e intenta de nuevo' }
     }
-    console.log('[addTransaction] Enviando a Supabase...', txToRow(newTx))
-    const { error } = await supabase.from('transactions').insert([txToRow(newTx)])
+
+    // Omitir id para que Supabase genere un UUID automáticamente
+    const { id: _skip, ...rowData } = txToRow(newTx)
+    console.log('[addTransaction] Enviando...', rowData)
+
+    const { data, error } = await supabase
+      .from('transactions').insert([rowData]).select().single()
+
     if (error) {
-      console.error('[addTransaction] ❌ ERROR:', error.message, error.code, error.details)
-    } else {
-      console.log('[addTransaction] ✅ Guardado en Supabase')
+      console.error('[addTransaction] ❌', error.message, error.code)
+      setTransactions(prev => prev.filter(t => t.id !== localId)) // revertir
+      return { error: error.message }
     }
+
+    // Reemplazar ID local con el UUID real de Supabase
+    setTransactions(prev => prev.map(t => t.id === localId ? rowToTx(data) : t))
+    console.log('[addTransaction] ✅ Guardado:', data.id)
+    return { data }
   }
 
   async function deleteTransaction(id) {

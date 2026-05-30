@@ -7,6 +7,23 @@
 
 ---
 
+## [2.4.4] — 2026-05-30 — Bugfix: Sin conexión persistente
+
+### Causa
+El health check de Supabase usaba `profiles.select("count")` pero el rol `anon` no tiene
+política SELECT en `profiles` (solo `authenticated`). La query siempre fallaba → "Sin conexión".
+
+### Solución
+- Health check ahora usa `HEAD /rest/v1/` de Supabase — no requiere permisos de tabla
+- Auto-retry cada 5 segundos cuando falla (no solo en visibilitychange)
+- Indicador actualizado: "Reconectando..." (con animación) mientras reintenta
+- Nunca queda atascado en "Sin conexión" para siempre
+
+### Archivos
+- `src/App.jsx` — nueva lógica de checkDb() con fetch HEAD + retryTimer
+
+---
+
 ## [2.4.3] — 2026-05-30 — Bugfix: useAuthProvider duplicado
 
 ### Corregido
