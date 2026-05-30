@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { usePlannerData } from "../hooks/usePlannerData.js";
 import { loadSetting, saveSetting } from "../hooks/useSettings.js";
 import { supabase } from "../supabase.js";
+import { showLocalNotification, requestPermission } from "../hooks/useNotifications.js";
 
 const C = {
   bg:"#09090B",surface:"#111113",card:"#18181B",card2:"#1C1C1F",
@@ -92,6 +93,33 @@ export default function Planner({ onBack }) {
       if (cats && Array.isArray(cats)) setTaskCats(cats);
     });
   }, []);
+
+  // Recordatorios automáticos — notificar tareas del día y de mañana
+  useEffect(() => {
+    if (!tasks.length) return;
+    requestPermission().then(perm => {
+      if (perm !== "granted") return;
+      const today    = td();
+      const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate()+1);
+      const tmrStr   = tomorrow.toISOString().slice(0,10);
+      const todayTasks = tasks.filter(t=>t.date===today&&(t.status==="pending"||t.status==="in_progress"));
+      const tmrTasks   = tasks.filter(t=>t.date===tmrStr&&t.status==="pending");
+      if (todayTasks.length > 0) {
+        showLocalNotification(
+          "📋 Tienes "+todayTasks.length+" tarea"+(todayTasks.length>1?"s":"")+" para hoy",
+          todayTasks.slice(0,3).map(t=>t.title).join(", "),
+          { tag:"planner-today" }
+        );
+      }
+      if (tmrTasks.length > 0) {
+        showLocalNotification(
+          "⏰ Mañana tienes "+tmrTasks.length+" tarea"+(tmrTasks.length>1?"s":""),
+          tmrTasks.slice(0,2).map(t=>t.title).join(", "),
+          { tag:"planner-tomorrow" }
+        );
+      }
+    });
+  }, [tasks.length]);
 
   // Reservas de apartamento desde Supabase
   const [aptReservations, setAptReservations] = useState([]);
@@ -196,11 +224,18 @@ export default function Planner({ onBack }) {
 // ─── TODAY VIEW ───────────────────────────────────────────────────────────────
 function TodayView({ tasks, allTasks, selDate, toggleTask, setTaskStatus, deleteTask, taskCats, setEditTask }) {
   const todayTasks = tasks;
-  const done = todayTasks.filter(t=>t.done).length;
+  const done  = todayTasks.filter(t=>t.done).length;
   const total = todayTasks.length;
-  const pct = total > 0 ? Math.round((done/total)*100) : 0;
+  const pct   = total > 0 ? Math.round((done/total)*100) : 0;
   const upcoming = allTasks.filter(t=>t.date>selDate&&!t.done).slice(0,3);
   const overdue  = allTasks.filter(t=>t.date<selDate&&!t.done).slice(0,3);
+
+  // Estadísticas de productividad
+  const totalTasks   = allTasks.length;
+  const doneTasks    = allTasks.filter(t=>t.done).length;
+  const inProgTasks  = allTasks.filter(t=>t.status==="in_progress").length;
+  const overdueTasks = allTasks.filter(t=>t.date<selDate&&!t.done).length;
+  const completionRate = totalTasks > 0 ? Math.round((doneTasks/totalTasks)*100) : 0;
 
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "¡Buenos días! ☀️" : hour < 18 ? "¡Buenas tardes! 🌤" : "¡Buenas noches! 🌙";
@@ -232,7 +267,35 @@ function TodayView({ tasks, allTasks, selDate, toggleTask, setTaskStatus, delete
         )}
       </div>
 
-      {/* TAREAS DE HOY */}
+      {/* PRODUCTIVIDAD GLOBAL */}
+      {totalTasks > 0 && (
+        <div style={{background:C.card,border:"1px solid "+C.border,borderRadius:14,padding:14}}>
+          <div style={{fontSize:12,fontWeight:700,color:C.textMuted,marginBottom:10}}>PRODUCTIVIDAD GENERAL</div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8}}>
+            {[
+              {label:"Total",    val:totalTasks,      color:C.textSub},
+              {label:"Hechas",   val:doneTasks,        color:C.green},
+              {label:"En curso", val:inProgTasks,      color:C.blue},
+              {label:"Vencidas", val:overdueTasks,     color:overdueTasks>0?C.red:C.textMuted},
+            ].map(s=>(
+              <div key={s.label} style={{textAlign:"center",background:C.bg,borderRadius:8,padding:"8px 4px"}}>
+                <div style={{fontSize:18,fontWeight:800,color:s.color}}>{s.val}</div>
+                <div style={{fontSize:9,color:C.textMuted,marginTop:2}}>{s.label.toUpperCase()}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{marginTop:10}}>
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:11,marginBottom:4}}>
+              <span style={{color:C.textMuted}}>Tasa de completado</span>
+              <span style={{color:completionRate>=70?C.green:completionRate>=40?C.yellow:C.red,fontWeight:700}}>{completionRate}%</span>
+            </div>
+            <div style={{height:4,borderRadius:2,background:C.border}}>
+              <div style={{height:"100%",borderRadius:2,width:completionRate+"%",background:completionRate>=70?C.green:completionRate>=40?C.yellow:C.red,transition:"width .8s"}}/>
+            </div>
+          </div>
+        </div>
+      )}
+
       {total === 0 ? (
         <div style={{textAlign:"center",padding:"28px 16px",color:C.textMuted,background:C.card,borderRadius:16,border:"1px solid "+C.border}}>
           <div style={{fontSize:36,marginBottom:8}}>📋</div>

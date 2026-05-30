@@ -1,5 +1,25 @@
 // Service Worker — Estrategia correcta por tipo de archivo
-const CACHE = 'suite-assets-v1';
+const CACHE = 'suite-assets-v2';  // Incrementar versión fuerza limpieza de caché
+
+// Keep-alive: ping cada 10 minutos para que Render no se duerma
+// Solo cuando hay una tab activa visible
+let keepAliveTimer = null;
+function startKeepAlive() {
+  if (keepAliveTimer) return;
+  keepAliveTimer = setInterval(() => {
+    fetch('/favicon.svg', { method:'HEAD', cache:'no-cache' })
+      .catch(()=>{}); // silencioso
+  }, 10 * 60 * 1000); // cada 10 min
+}
+function stopKeepAlive() {
+  if (keepAliveTimer) { clearInterval(keepAliveTimer); keepAliveTimer=null; }
+}
+
+// Escuchar mensajes de las tabs para activar/desactivar keep-alive
+self.addEventListener('message', e => {
+  if (e.data?.type === 'KEEP_ALIVE_START') startKeepAlive();
+  if (e.data?.type === 'KEEP_ALIVE_STOP')  stopKeepAlive();
+});
 
 self.addEventListener('install', () => self.skipWaiting());
 

@@ -30,7 +30,18 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-// ─── Bloquear zoom iOS ────────────────────────────────────────────────────────
+// ─── Keep-alive: evita que Render se duerma ──────────────────────────────────
+function sendKeepAlive(active) {
+  if (!('serviceWorker' in navigator) || !navigator.serviceWorker.controller) return;
+  navigator.serviceWorker.controller.postMessage({
+    type: active ? 'KEEP_ALIVE_START' : 'KEEP_ALIVE_STOP'
+  });
+}
+document.addEventListener('visibilitychange', () => {
+  sendKeepAlive(document.visibilityState === 'visible');
+});
+// Activar al cargar
+navigator.serviceWorker?.ready.then(() => sendKeepAlive(true));
 document.addEventListener('gesturestart',  e => e.preventDefault(), { passive: false })
 document.addEventListener('gesturechange', e => e.preventDefault(), { passive: false })
 document.addEventListener('gestureend',    e => e.preventDefault(), { passive: false })

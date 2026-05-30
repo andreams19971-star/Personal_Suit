@@ -1,13 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { supabase, isConfigured } from "./supabase.js";
 import { useAuthProvider, AuthContext } from "./hooks/useAuth.js";
-import FinanzApp      from "./apps/FinanzApp.jsx";
-import Planner        from "./apps/Planner.jsx";
-import FlotaTracker   from "./apps/FlotaTracker.jsx";
-import ApartamentoApp from "./apps/ApartamentoApp.jsx";
-import AuthScreen     from "./AuthScreen.jsx";
-import AdminPanel     from "./AdminPanel.jsx";
-import LockScreen     from "./LockScreen.jsx";
+import AuthScreen    from "./AuthScreen.jsx";
+import AdminPanel    from "./AdminPanel.jsx";
+import LockScreen    from "./LockScreen.jsx";
+import ErrorBoundary from "./ErrorBoundary.jsx";
+
+const FinanzApp      = lazy(() => import("./apps/FinanzApp.jsx"));
+const Planner        = lazy(() => import("./apps/Planner.jsx"));
+const FlotaTracker   = lazy(() => import("./apps/FlotaTracker.jsx"));
+const ApartamentoApp = lazy(() => import("./apps/ApartamentoApp.jsx"));
 
 const ALL_APPS = [
   { id:"finanz",      label:"Finanzas",      sub:"Ingresos, gastos y préstamos",  icon:"$",  accent:"#22C55E", bg:"#052010" },
@@ -32,6 +34,15 @@ const FONT_SIZES = [
 function loadPrefs() { try { return JSON.parse(localStorage.getItem("suite_prefs")||"{}"); } catch { return {}; } }
 function savePrefs(p) { try { localStorage.setItem("suite_prefs", JSON.stringify(p)); } catch {} }
 function getSystemTheme() { return window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"; }
+function getScheduledTheme(prefs) {
+  if (prefs.theme !== "schedule") return null;
+  const h = new Date().getHours();
+  const start = parseInt(prefs.darkFrom || "21");
+  const end   = parseInt(prefs.darkUntil || "7");
+  // Soporta rango que cruza medianoche (ej: 21-7)
+  if (start > end) return (h >= start || h < end) ? "dark" : "light";
+  return (h >= start && h < end) ? "dark" : "light";
+}
 
 function AppContent() {
   const auth = useAuthProvider();
@@ -45,7 +56,9 @@ function AppContent() {
 
   const setPref = (k,v) => { const n={...prefs,[k]:v}; setPrefs(n); savePrefs(n); };
 
-  const themeKey   = prefs.theme==="system"?getSystemTheme():(prefs.theme||"dark");
+  const themeKey = prefs.theme==="system"   ? getSystemTheme()
+                 : prefs.theme==="schedule" ? (getScheduledTheme(prefs)||"dark")
+                 : (prefs.theme||"dark");
   const C          = THEMES[themeKey]||THEMES.dark;
   const fontScale  = FONT_SIZES.find(f=>f.id===(prefs.fontSize||"medium"))?.scale||1;
 
@@ -103,10 +116,27 @@ function AppContent() {
   // Si el usuario está logueado pero el perfil no cargó → mostrar estado de reintento
   const profileMissing = auth.user && !auth.profile;
 
-  if (activeApp==="finanz")      return <AuthContext.Provider value={auth}><FinanzApp       onBack={()=>setActiveApp(null)}/></AuthContext.Provider>;
-  if (activeApp==="planner")     return <AuthContext.Provider value={auth}><Planner         onBack={()=>setActiveApp(null)}/></AuthContext.Provider>;
-  if (activeApp==="flota")       return <AuthContext.Provider value={auth}><FlotaTracker    onBack={()=>setActiveApp(null)}/></AuthContext.Provider>;
-  if (activeApp==="apartamento") return <AuthContext.Provider value={auth}><ApartamentoApp  onBack={()=>setActiveApp(null)}/></AuthContext.Provider>;
+  const AppLoader = () => (
+    <div style={{position:"absolute",inset:0,background:"#09090B",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:12}}>
+      <div style={{width:32,height:32,border:"2px solid #27272A",borderTop:"2px solid #22C55E",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>
+      <div style={{fontSize:12,color:"#52525B"}}>Cargando...</div>
+    </div>
+  );
+
+  const wrap = (App, back) => (
+    <AuthContext.Provider value={auth}>
+      <ErrorBoundary>
+        <Suspense fallback={<AppLoader/>}>
+          <App onBack={back}/>
+        </Suspense>
+      </ErrorBoundary>
+    </AuthContext.Provider>
+  );
+
+  if (activeApp==="finanz")      return wrap(FinanzApp,      ()=>setActiveApp(null));
+  if (activeApp==="planner")     return wrap(Planner,        ()=>setActiveApp(null));
+  if (activeApp==="flota")       return wrap(FlotaTracker,   ()=>setActiveApp(null));
+  if (activeApp==="apartamento") return wrap(ApartamentoApp, ()=>setActiveApp(null));
   if (showAdmin)                 return <AuthContext.Provider value={auth}><AdminPanel currentUser={auth.user} onClose={()=>setShowAdmin(false)}/></AuthContext.Provider>;
 
   const userName  = auth.profile?.name || prefs.name || "Usuario";
@@ -264,7 +294,7 @@ function AppContent() {
             <div style={{marginBottom:16}}>
               <div style={{fontSize:"0.7rem",color:C.textMuted,fontWeight:600,letterSpacing:0.5,marginBottom:8}}>TEMA</div>
               <div style={{display:"flex",gap:8}}>
-                {[{id:"dark",l:"Oscuro",p:"#09090B"},{id:"light",l:"Claro",p:"#FAFAFA"},{id:"black",l:"Negro",p:"#000000"},{id:"system",l:"Sistema",p:"linear-gradient(135deg,#09090B 50%,#FAFAFA 50%)"}].map(t=>{
+                {[{id:"dark",l:"Oscuro",p:"#09090B"},{id:"light",l:"Claro",p:"#FAFAFA"},{id:"black",l:"Negro",p:"#000000"},{id:"system",l:"Sistema",p:"linear-gradient(135deg,#09090B 50%,#FAFAFA 50%)"},{id:"schedule",l:"Horario",p:"linear-gradient(135deg,#09090B 50%,#EAB308 50%)"}].map(t=>{
                   const active=(prefs.theme||"dark")===t.id;
                   return(<button key={t.id} onClick={()=>setPref("theme",t.id)} style={{flex:1,padding:"10px 4px",borderRadius:10,cursor:"pointer",border:"1px solid "+(active?C.accent:C.border),background:active?C.accentDim:C.card,color:active?C.accent:C.textSub,fontSize:"0.7rem",fontWeight:600}}>
                     <div style={{width:22,height:22,borderRadius:6,background:t.p,border:"1px solid "+C.border,margin:"0 auto 6px"}}/>
@@ -273,6 +303,31 @@ function AppContent() {
                 })}
               </div>
             </div>
+
+            {/* Horario oscuro/claro */}
+            {prefs.theme==="schedule"&&(
+              <div style={{marginBottom:16,background:C.card,border:"1px solid "+C.border,borderRadius:12,padding:"12px 14px"}}>
+                <div style={{fontSize:"0.7rem",color:C.textMuted,fontWeight:600,marginBottom:10}}>HORARIO OSCURO</div>
+                <div style={{display:"flex",gap:10,alignItems:"center"}}>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:"0.7rem",color:C.textMuted,marginBottom:4}}>Desde</div>
+                    <input type="number" min="0" max="23" value={prefs.darkFrom||"21"}
+                      onChange={e=>setPref("darkFrom",e.target.value)}
+                      style={{width:"100%",background:C.bg,border:"1px solid "+C.border,borderRadius:8,padding:"8px",color:C.text,fontSize:14,textAlign:"center"}}/>
+                  </div>
+                  <div style={{color:C.textMuted,paddingTop:16}}>—</div>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:"0.7rem",color:C.textMuted,marginBottom:4}}>Hasta</div>
+                    <input type="number" min="0" max="23" value={prefs.darkUntil||"7"}
+                      onChange={e=>setPref("darkUntil",e.target.value)}
+                      style={{width:"100%",background:C.bg,border:"1px solid "+C.border,borderRadius:8,padding:"8px",color:C.text,fontSize:14,textAlign:"center"}}/>
+                  </div>
+                </div>
+                <div style={{fontSize:"0.7rem",color:C.textMuted,marginTop:8}}>
+                  Modo oscuro de las {prefs.darkFrom||"21"}:00 a las {prefs.darkUntil||"7"}:00
+                </div>
+              </div>
+            )}
 
             {/* Tamaño de letra */}
             <div style={{marginBottom:16}}>

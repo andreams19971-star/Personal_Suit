@@ -224,3 +224,6 @@ input, select, textarea, button { font-family: inherit; outline: none; -webkit-a
 .fa-view > * {
   max-width: 100%;
 }
+
+/* Spinner para lazy loading */
+@keyframes spin { to { transform: rotate(360deg); } }

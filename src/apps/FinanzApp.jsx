@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import * as XLSX from "xlsx";
 import { useFinanzData } from "../hooks/useFinanzData.js";
 import { useCardsData } from "../hooks/useCardsData.js";
 import { checkFinanzAlerts, requestPermission, showLocalNotification } from "../hooks/useNotifications.js";
@@ -240,7 +241,7 @@ export default function FinanzApp({ onBack }){
       )}
       <TopBar view={view} filterMonth={filterMonth} setFilterMonth={setFilterMonth} onMonthChange={loadMonth} setSidebarOpen={setSidebarOpen} openAddModal={openAddModal} onBack={onBack}/>
       <div className="fa-scroll" style={{paddingBottom:80}}>
-        {view==="dashboard" && <Dashboard transactions={transactions} accounts={computedAccounts} loans={loans} totalIncome={totalIncome} totalExpense={totalExpense} netBalance={netBalance} filterMonth={filterMonth} setView={setView} setSelAccount={setSelAccount} monthTxs={monthTxs} categories={categories}/>}
+        {view==="dashboard" && <Dashboard transactions={transactions} accounts={computedAccounts} loans={loans} totalIncome={totalIncome} totalExpense={totalExpense} netBalance={netBalance} filterMonth={filterMonth} setView={setView} setSelAccount={setSelAccount} monthTxs={monthTxs} categories={categories} settings={settings}/>}
         {view==="movements" && <Movements transactions={transactions} filterMonth={filterMonth} deleteTransaction={deleteTransaction} openAddModal={openAddModal} loans={loans} categories={categories} setEditTx={setEditTx}/>}
         {view==="accounts"  && <AccountsView accounts={computedAccounts} transactions={transactions} selAccount={selAccount} setSelAccount={setSelAccount} filterMonth={filterMonth} showToast={showToast} categories={categories}/>}
         {view==="cards"     && <CardsView cards={cards} addCharge={addCharge} deleteCharge={deleteCharge} updateCharge={updateCharge} markPaid={markPaid} saveCard={saveCard} addCard={addCard} filterMonth={filterMonth} showToast={showToast}/>}
@@ -318,7 +319,7 @@ function MobileNav({view,setView,openAddModal,loans}){
 }
 
 // ─── DASHBOARD ────────────────────────────────────────────────────────────────
-function Dashboard({transactions,accounts,loans,totalIncome,totalExpense,netBalance,filterMonth,setView,setSelAccount,monthTxs,categories=DEFAULT_CATEGORIES}){
+function Dashboard({transactions,accounts,loans,totalIncome,totalExpense,netBalance,filterMonth,setView,setSelAccount,monthTxs,categories=DEFAULT_CATEGORIES,settings={}}){
   const totalAssets=accounts.reduce((s,a)=>s+a.balance,0);
   const totalPending=loans.filter(l=>l.status==="active").reduce((s,l)=>s+l.balance,0);
   const expByCat={};
@@ -428,6 +429,37 @@ function Dashboard({transactions,accounts,loans,totalIncome,totalExpense,netBala
         </div>
       )}
 
+      {/* PRESUPUESTOS */}
+      {settings.budgets && Object.keys(settings.budgets).filter(k=>settings.budgets[k]>0).length>0&&(
+        <div className="fa-pad" style={{paddingTop:16,borderBottom:"1px solid "+C.border,paddingBottom:16}}>
+          <SectionHeader title="Presupuestos" action="Configurar" onAction={()=>setView("stats")}/>
+          <div style={{display:"grid",gap:10,marginTop:12}}>
+            {Object.entries(settings.budgets).filter(([,v])=>v>0).map(([catId,budget])=>{
+              const cat = categories.expense.find(c=>c.id===catId)||{label:catId,icon:"📦"};
+              const spent = monthTxs.filter(t=>t.type==="expense"&&t.category===catId).reduce((s,t)=>s+t.amount,0);
+              const pct   = Math.min(100, Math.round((spent/budget)*100));
+              const over  = spent > budget;
+              const color = over ? C.red : pct > 80 ? C.yellow : C.green;
+              return(
+                <div key={catId}>
+                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:5,alignItems:"center"}}>
+                    <span style={{fontSize:13,color:C.textSub}}>{cat.icon} {cat.label}</span>
+                    <span style={{fontSize:12,fontWeight:700,color}}>
+                      {fmtShort(spent)} / {fmtShort(budget)}
+                      {over && <span style={{fontSize:10,marginLeft:4,color:C.red}}>▲ {pct-100}%</span>}
+                    </span>
+                  </div>
+                  <div style={{height:4,borderRadius:2,background:C.border}}>
+                    <div style={{height:"100%",borderRadius:2,background:color,width:pct+"%",transition:"width .4s ease"}}/>
+                  </div>
+                  {over&&<div style={{fontSize:10,color:C.red,marginTop:3}}>Excedido en {fmtCOP(spent-budget)}</div>}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* RECIENTES */}
       <div className="fa-pad" style={{paddingTop:16,paddingBottom:16}}>
         <SectionHeader title="Movimientos recientes" action="Ver todos" onAction={()=>setView("movements")}/>
@@ -451,14 +483,20 @@ function Movements({transactions,filterMonth,deleteTransaction,openAddModal,loan
   filtered.forEach(t=>{(grouped[t.date]=grouped[t.date]||[]).push(t);});
   const sortedDates=Object.keys(grouped).sort((a,b)=>b.localeCompare(a));
 
-  function exportCSV() {
-    const rows=[["Fecha","Tipo","Categoría","Subcategoría","Cuenta","Monto","Descripción"]];
-    filtered.forEach(t=>rows.push([t.date,t.type==="income"?"Ingreso":"Gasto",t.category||"",t.subcategory||"",t.account||"",t.amount,t.note||""]));
-    const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(",")).join("\n");
-    const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8"});
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement("a");
-    a.href=url; a.download="FinanzApp-"+filterMonth+".csv"; a.click(); URL.revokeObjectURL(url);
+  function exportXLSX() {
+    const wb = XLSX.utils.book_new();
+    // Hoja 1: Movimientos del mes
+    const txRows = [["Fecha","Tipo","Categoría","Subcategoría","Cuenta","Monto","Descripción"]];
+    filtered.forEach(t=>txRows.push([t.date,t.type==="income"?"Ingreso":"Gasto",t.category||"",t.subcategory||"",t.account||"",t.amount,t.note||""]));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(txRows), "Movimientos");
+    // Hoja 2: Resumen por categoría
+    const catMap = {};
+    filtered.filter(t=>t.type==="expense").forEach(t=>{catMap[t.category]=(catMap[t.category]||0)+t.amount;});
+    const catRows = [["Categoría","Total"]];
+    Object.entries(catMap).sort((a,b)=>b[1]-a[1]).forEach(([k,v])=>catRows.push([k,v]));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(catRows), "Por Categoría");
+    // Descargar
+    XLSX.writeFile(wb, "FinanzApp-"+filterMonth+".xlsx");
   }
 
   function exportPDF() {
@@ -487,7 +525,7 @@ function Movements({transactions,filterMonth,deleteTransaction,openAddModal,loan
           ))}
         </div>
         <div style={{display:"flex",gap:6}}>
-          <button onClick={exportCSV} style={{padding:"6px 10px",borderRadius:8,border:"1px solid "+C.border,background:C.card,color:C.textSub,cursor:"pointer",fontSize:11,fontWeight:600}}>📊 Excel</button>
+          <button onClick={exportXLSX} style={{padding:"6px 10px",borderRadius:8,border:"1px solid "+C.border,background:C.card,color:C.textSub,cursor:"pointer",fontSize:11,fontWeight:600}}>📊 Excel</button>
           <button onClick={exportPDF} style={{padding:"6px 10px",borderRadius:8,border:"1px solid "+C.border,background:C.card,color:C.textSub,cursor:"pointer",fontSize:11,fontWeight:600}}>🖨 PDF</button>
         </div>
       </div>
@@ -1161,6 +1199,37 @@ function Stats({monthTxs,totalIncome,totalExpense,transactions,filterMonth,categ
           </div>
         </div>
       </div>
+
+      {/* COMPARATIVO MES ANTERIOR */}
+      {last6.length>=2&&(()=>{
+        const curr = last6[last6.length-1];
+        const prev = last6[last6.length-2];
+        const expDiff = curr.exp - prev.exp;
+        const incDiff = curr.inc - prev.inc;
+        return(
+          <div style={{background:C.card,border:"1px solid "+C.border,borderRadius:16,padding:16}}>
+            <div style={{fontSize:14,fontWeight:700,marginBottom:12}}>Vs. mes anterior</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+              {[
+                {label:"Gastos", diff:expDiff, prev:prev.exp, invert:true},
+                {label:"Ingresos",diff:incDiff,prev:prev.inc, invert:false},
+              ].map(item=>{
+                const pct = item.prev>0?Math.round(Math.abs(item.diff/item.prev)*100):0;
+                const up  = item.diff > 0;
+                const good = item.invert ? !up : up;
+                const color = item.diff===0 ? C.textMuted : good ? C.green : C.red;
+                return(
+                  <div key={item.label} style={{background:C.bg,borderRadius:10,padding:"10px 12px"}}>
+                    <div style={{fontSize:10,color:C.textMuted,fontWeight:600,marginBottom:4}}>{item.label.toUpperCase()}</div>
+                    <div style={{fontSize:16,fontWeight:800,color}}>{item.diff===0?"=":(up?"▲":"▼")+" "+pct+"%"}</div>
+                    <div style={{fontSize:11,color:C.textMuted,marginTop:2}}>{item.diff===0?"Sin cambio":(up?"+":" ")+fmtShort(item.diff)}</div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* TOP GASTO DEL DÍA */}
       {topDay && (
