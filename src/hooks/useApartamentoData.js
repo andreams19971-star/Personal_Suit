@@ -72,19 +72,25 @@ export function useApartamentoData() {
 
   async function addReservation(res) {
     const nights = Math.max(1, Math.round((new Date(res.checkOut)-new Date(res.checkIn))/86400000))
-    const newRes = { ...res, id:'RES'+Date.now(), nights, total:0, paid:0, status:'reserved' }
+    const localId = 'local-RES-' + Date.now()
+    const newRes = { ...res, id:localId, nights, total:0, paid:0, status:'reserved' }
     setReservations(prev => [newRes, ...prev])
-
-    if (!onlineRef.current) return
-    const { error } = await supabase.from('apt_reservations').insert([{
-      id: newRes.id, room_id: newRes.roomId, guest: newRes.guest,
-      phone: newRes.phone||'', check_in: newRes.checkIn, check_out: newRes.checkOut,
-      nights: newRes.nights, platform: newRes.platform||'Directo',
-      status: newRes.status, notes: newRes.notes||'', total: 0, paid: 0,
-      gender: newRes.gender||null,
-    }])
-    if (error) console.error('[addReservation]', error.message)
-    else console.log('[addReservation] ✅')
+    if (!onlineRef.current) return { error:'Sin conexión' }
+    const { data, error } = await supabase.from('apt_reservations').insert([{
+      room_id:newRes.roomId, guest:newRes.guest,
+      phone:newRes.phone||'', check_in:newRes.checkIn, check_out:newRes.checkOut,
+      nights:newRes.nights, platform:newRes.platform||'Directo',
+      status:newRes.status, notes:newRes.notes||'', total:0, paid:0,
+      gender:newRes.gender||null,
+    }]).select().single()
+    if (error) {
+      console.error('[addReservation] ❌', error.message)
+      setReservations(prev => prev.filter(r => r.id !== localId))
+      return { error: error.message }
+    }
+    setReservations(prev => prev.map(r => r.id===localId ? {...newRes, id:data.id} : r))
+    console.log('[addReservation] ✅', data.id)
+    return { data }
   }
 
   async function updateReservationStatus(id, status) {
@@ -106,13 +112,16 @@ export function useApartamentoData() {
   }
 
   async function addExpense(exp) {
-    const newExp = { ...exp, id:'E'+Date.now() }
+    const localId = 'local-E-' + Date.now()
+    const newExp = { ...exp, id:localId }
     setExpenses(prev => [newExp, ...prev])
     if (!onlineRef.current) return
-    await supabase.from('apt_expenses').insert([{
-      id: newExp.id, room_id: newExp.room||null, fecha: newExp.date,
-      category: newExp.category, amount: newExp.amount, note: newExp.note||''
-    }])
+    const { data, error } = await supabase.from('apt_expenses').insert([{
+      room_id:exp.room||null, fecha:exp.date,
+      category:exp.category, amount:exp.amount, note:exp.note||''
+    }]).select().single()
+    if (error) { console.error('[addExpense] ❌', error.message); setExpenses(prev=>prev.filter(e=>e.id!==localId)); return }
+    setExpenses(prev => prev.map(e => e.id===localId ? {...newExp,id:data.id} : e))
   }
 
   async function deleteExpense(id) {

@@ -7,6 +7,32 @@
 
 ---
 
+## [2.4.6] — 2026-05-30 — Bugfix: FlotaTracker edición/guardado silenciosa
+
+### Causa (misma raíz que v2.4.5)
+- `addWorkDay` enviaba `id:'P'+Date.now()` — inválido para columna `uuid`
+- `addExpense` enviaba `id:'E'+Date.now()` — mismo problema
+- Registros solo en estado local → `updatePayment` hacía `WHERE id='P...'` sin match → 0 rows updated
+- Errores silenciosos: UI mostraba ✓ aunque Supabase fallara
+
+### Solución
+- `addWorkDay` y `addExpense` omiten `id` → Supabase genera UUID
+- Rollback automático si el insert falla
+- `updatePayment` retorna `{data}` o `{error}` + revierte estado local en error
+- FlotaTracker muestra toast rojo con mensaje real si falla
+
+### Archivos
+- `src/hooks/useFlotaData.js` — `addWorkDay`, `addExpense`, `updatePayment`
+- `src/apps/FlotaTracker.jsx` — manejo de errores en handlers
+
+### SQL requerido
+El mismo `fix-transactions.sql` aplica para `car_payments` y `car_expenses`:
+- Verificar tipo de columna `id`
+- Asegurar `DEFAULT gen_random_uuid()::text`
+- Asegurar política `auth_all` para `authenticated`
+
+---
+
 ## [2.4.5] — 2026-05-30 — Bugfix: Movimientos no se guardaban en Supabase
 
 ### Causas identificadas (revisando CHANGELOG + código)

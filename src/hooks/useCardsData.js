@@ -55,17 +55,33 @@ export function useCardsData() {
   }
 
   async function addCharge(cardId, charge) {
-    const row = { ...charge, id:'ch-'+Date.now(), card_id:cardId }
+    const localId = 'local-ch-' + Date.now()
+    const row = { ...charge, id:localId, card_id:cardId }
     setCards(prev => prev.map(c => {
       if (c.id !== cardId) return c
-      return { ...c, balance: (c.balance||0) + charge.amount, charges: [row, ...(c.charges||[])] }
+      return { ...c, balance:(c.balance||0)+charge.amount, charges:[row,...(c.charges||[])] }
     }))
-    if (!onlineRef.current) return
-    const { error } = await supabase.from('card_charges').insert([{ id:row.id, card_id:cardId, date:charge.date, amount:charge.amount, category:charge.category, note:charge.note||'', installments:charge.installments||1 }])
-    if (error) console.error('[addCharge]', error.message)
-    // Update balance in credit_cards
+    if (!onlineRef.current) return { error:'Sin conexión' }
+    const { data, error } = await supabase.from('card_charges').insert([{
+      card_id:cardId, date:charge.date, amount:charge.amount,
+      category:charge.category, note:charge.note||'', installments:charge.installments||1
+    }]).select().single()
+    if (error) {
+      console.error('[addCharge] ❌', error.message)
+      setCards(prev => prev.map(c => c.id!==cardId ? c : {...c,
+        balance:Math.max(0,(c.balance||0)-charge.amount),
+        charges:(c.charges||[]).filter(x=>x.id!==localId)
+      }))
+      return { error: error.message }
+    }
+    // Reemplazar ID local con UUID real
+    setCards(prev => prev.map(c => c.id!==cardId ? c : {...c,
+      charges:(c.charges||[]).map(ch => ch.id===localId ? {...ch,id:data.id} : ch)
+    }))
+    // Actualizar balance en credit_cards
     const card = cards.find(c => c.id === cardId)
-    if (card) await supabase.from('credit_cards').update({ balance: (card.balance||0) + charge.amount }).eq('id', cardId)
+    if (card) await supabase.from('credit_cards').update({ balance:(card.balance||0)+charge.amount }).eq('id', cardId)
+    return { data }
   }
 
   async function deleteCharge(cardId, chargeId) {
@@ -100,10 +116,21 @@ export function useCardsData() {
   }
 
   async function addCard(data) {
-    const newCard = { ...data, id:'card-'+Date.now(), balance:0, charges:[] }
+    const localId = 'local-card-' + Date.now()
+    const newCard = { ...data, id:localId, balance:0, charges:[] }
     setCards(prev => [...prev, newCard])
-    if (!onlineRef.current) return
-    await supabase.from('credit_cards').insert([{ id:newCard.id, name:data.name, bank:data.bank, last4:data.last4, color:data.color, card_limit:data.limit, cut_day:data.cutDay, pay_day:data.payDay, balance:0 }])
+    if (!onlineRef.current) return { error:'Sin conexión' }
+    const { data:saved, error } = await supabase.from('credit_cards').insert([{
+      name:data.name, bank:data.bank, last4:data.last4, color:data.color,
+      card_limit:data.limit, cut_day:data.cutDay, pay_day:data.payDay, balance:0
+    }]).select().single()
+    if (error) {
+      console.error('[addCard] ❌', error.message)
+      setCards(prev => prev.filter(c => c.id !== localId))
+      return { error: error.message }
+    }
+    setCards(prev => prev.map(c => c.id===localId ? {...newCard,id:saved.id} : c))
+    return { data: saved }
   }
 
   async function updateCharge(cardId, chargeId, updates) {
