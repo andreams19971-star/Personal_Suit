@@ -168,9 +168,11 @@ export function useFlotaData() {
       console.warn('[addExpense] offline'); return { error:'Sin conexión' }
     }
     const { data, error } = await supabase.from('car_expenses').insert([{
-      car_id: carId, fecha: gasto.fecha,
-      category: gasto.categoria, amount: gasto.monto,
-      note: gasto.nota||'',
+      car_id:   carId,
+      fecha:    gasto.fecha,
+      categoria: gasto.categoria,
+      monto:    gasto.monto,
+      nota:     gasto.nota || '',
       ...(gasto.account ? { account: gasto.account } : {})
     }]).select().single()
     if (error) {

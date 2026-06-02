@@ -7,6 +7,40 @@
 
 ---
 
+## [2.6.1] — 2026-05-30 — Bugfix: columnas faltantes en Supabase
+
+### Causa raíz
+El SETUP.sql con las migraciones nunca se ejecutó en Supabase. Al agregar un gasto
+de carro el error era: `Could not find the 'account' column of 'car_expenses' in the schema`.
+
+### Columnas faltantes identificadas (4 tablas)
+
+| Tabla | Columna | Necesaria para |
+|-------|---------|----------------|
+| `car_expenses` | `account` | Selector de cuenta en gastos de carro |
+| `car_payments` | `account` | Selector de cuenta en días de trabajo |
+| `apt_reservations` | `gender` | Control de géneros M/F |
+| `tasks` | `status`, `subcategory` | Estados de tarea (pending/in_progress/done) |
+
+### Fix en dos partes
+
+**1. SQL** (`fix-missing-columns.sql`) — agrega las columnas con `IF NOT EXISTS`
+
+**2. Código resiliente** — si la columna no existe aún en BD, los inserts omiten ese campo
+   en lugar de fallar:
+   - `addExpense`: `...(account ? { account } : {})`
+   - `addWorkDay`: `...(account ? { account } : {})`
+   - `addReservation`: `...(gender ? { gender } : {})`
+   - `addTask`: reintenta sin `status`/`subcategory` si Supabase retorna error de columna
+
+### Archivos
+- `src/hooks/useFlotaData.js`
+- `src/hooks/useApartamentoData.js`
+- `src/hooks/usePlannerData.js`
+- `fix-missing-columns.sql` (nuevo)
+
+---
+
 ## [2.6.0] — 2026-05-30 — Aplicar todas las sugerencias del análisis
 
 ### ✅ SW Network First
