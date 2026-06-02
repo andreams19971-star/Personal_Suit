@@ -25,15 +25,10 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
   const url = new URL(e.request.url);
-  // No interceptar Supabase ni externos
   if (url.hostname !== self.location.hostname) return;
 
-  // HTML — SIEMPRE de la red, nunca del caché
-  if (
-    url.pathname === '/' ||
-    url.pathname.endsWith('.html') ||
-    !url.pathname.includes('.')
-  ) {
+  // HTML — siempre red, nunca caché
+  if (url.pathname === '/' || url.pathname.endsWith('.html') || !url.pathname.includes('.')) {
     e.respondWith(
       fetch(e.request, { cache:'no-store' })
         .catch(() => caches.match(e.request))
@@ -41,24 +36,8 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  // Assets con hash — Cache First (inmutables por diseño de Vite)
-  if (url.pathname.startsWith('/assets/')) {
-    e.respondWith(
-      caches.match(e.request).then(cached => {
-        if (cached) return cached;
-        return fetch(e.request).then(res => {
-          if (res.ok) {
-            const clone = res.clone();
-            caches.open(CACHE).then(c => c.put(e.request, clone));
-          }
-          return res;
-        });
-      })
-    );
-    return;
-  }
-
-  // Otros — Network First
+  // TODOS los assets: Network First — evita servir chunks obsoletos
+  // (cuando el proyecto esté estable cambiar /assets/ a Cache First)
   e.respondWith(
     fetch(e.request, { cache:'no-cache' })
       .then(res => {
@@ -68,7 +47,7 @@ self.addEventListener('fetch', e => {
         }
         return res;
       })
-      .catch(() => caches.match(e.request))
+      .catch(() => caches.match(e.request)) // fallback offline
   );
 });
 

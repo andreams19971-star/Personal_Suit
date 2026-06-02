@@ -182,6 +182,8 @@ export default function FinanzApp({ onBack }){
   const netBalance   = totalIncome - totalExpense;
 
   const addTransaction=async tx=>{
+    if (!tx.amount || tx.amount <= 0) { showToast("El monto debe ser mayor a 0","error"); return; }
+    if (!tx.account)                  { showToast("Selecciona una cuenta","error"); return; }
     const result = await dbAddTx(tx);  // sin id — lo genera Supabase
     if (result?.error) {
       showToast("Error al guardar: "+result.error,"error");

@@ -7,6 +7,69 @@
 
 ---
 
+## [2.6.0] — 2026-05-30 — Aplicar todas las sugerencias del análisis
+
+### ✅ SW Network First
+- Todos los assets ahora usan **Network First** mientras el proyecto esté en desarrollo activo
+- Previene el problema de chunks obsoletos en caché
+- Fallback offline sigue funcionando
+- Nota: cambiar `/assets/` a Cache First cuando el proyecto esté estable
+
+### ✅ onlineRef no bloquea silenciosamente
+- Eliminados todos los `if (!onlineRef.current) return` silenciosos en los 5 hooks
+- Ahora intenta el insert de todas formas y retorna el error real de Supabase
+- El usuario recibe feedback concreto en lugar de un ✓ falso
+
+### ✅ SETUP.sql único (186 líneas)
+- Un solo archivo `SETUP.sql` reemplaza los 8 SQLs dispersos de versiones anteriores
+- Cubre: columnas nuevas, UUIDs, profiles, triggers, RLS, RPC admin, marcar admin
+- Seguro de re-ejecutar (IF NOT EXISTS + EXCEPTION handlers)
+
+### ✅ Validaciones antes de insert
+- `addTask`: valida título no vacío antes del optimistic update
+- `addReservation`: valida huésped, fechas, y que salida > entrada
+- `addTransaction`: valida monto > 0 y cuenta seleccionada
+
+### ❌ Dividir FinanzApp.jsx — pospuesto
+La extracción automática requiere resolver ~50 dependencias cruzadas entre componentes.
+Se hará en una sesión dedicada con testing manual. Catalogado para próxima sesión.
+
+### Archivos modificados
+- `public/sw.js`
+- `src/hooks/useFinanzData.js`, `useFlotaData.js`, `usePlannerData.js`,
+  `useApartamentoData.js`, `useCardsData.js`
+- `src/apps/FinanzApp.jsx`
+- `src/hooks/useApartamentoData.js`
+- `src/hooks/usePlannerData.js`
+- `SETUP.sql` (nuevo, reemplaza todos los SQL anteriores)
+
+---
+
+## [2.5.1] — 2026-05-30 — Bugfix: SW cacheaba chunks obsoletos
+
+### Problema
+El SW tenía cacheado `FinanzApp-B9y9GJIo.js` (hash anterior). Al hacer un nuevo deploy,
+Vite genera un nuevo hash para ese chunk pero el SW seguía sirviendo el viejo.
+El viejo archivo ya no existe en el servidor → `Failed to fetch dynamically imported module` → 404.
+
+### Causa raíz
+El SW usaba `Cache-First` para `/assets/` pero al activar solo eliminaba caches con
+nombre diferente al actual. Si el cache `suite-assets-v2` contenía chunks obsoletos,
+seguían ahí indefinidamente.
+
+### Solución
+- **CACHE='suite-v3'** — nombre nuevo fuerza limpieza al activar
+- **Activate limpia TODOS los caches** sin excepción (antes filtraba por nombre)
+- **`clients.navigate(c.url)`** — recarga todas las tabs al activar el nuevo SW,
+  eliminando cualquier referencia a chunks obsoletos
+- **HTML con `cache:'no-store'`** — más agresivo que `no-cache`, garantiza
+  que el HTML nunca quede en el caché del browser
+
+### Archivos
+- `public/sw.js` — versión v3, limpieza total
+
+---
+
 ## [2.5.0] — 2026-05-30 — Fix: loadProfile con timeout propio + caché inmediato
 
 ### Causa raíz del timeout
@@ -425,6 +488,55 @@ ALTER TABLE tasks ADD COLUMN IF NOT EXISTS subcategory text;
 
 ### Supabase tablas iniciales
 `transactions`, `loans`, `account_balances`, `credit_cards`, `card_charges`, `tasks`, `goals`, `notes`, `cars`, `car_payments`, `car_expenses`, `apt_rooms`, `apt_reservations`, `apt_expenses`, `app_settings`
+
+---
+
+
+## 📋 Análisis y Sugerencias — 2026-05-30
+
+### 🔴 Urgente — Estabilidad
+
+**SW Cache frágil (v1→v2→v3 ya)**
+El mismo problema ha ocurrido 3 veces. Mientras el proyecto esté en desarrollo
+activo con deploys frecuentes, usar `Network First` para todo es más seguro.
+Cache-First solo tiene sentido en producción estable.
+
+**`fix-all-tables-uuid.sql` — ejecutarlo YA**
+Desde v2.4.5 hasta v2.4.7 se corrigieron 10 funciones de insert. Todas dependen
+de que las columnas `id` tengan `DEFAULT gen_random_uuid()::text` en Supabase.
+Sin ese SQL, los datos no se guardan aunque el código esté correcto.
+
+**`onlineRef` demasiado estricto**
+Si `loadAll()` falla por cualquier razón, `onlineRef.current = false` y todos los
+inserts se bloquean. Debería intentar el insert de todas formas y dejar que Supabase
+retorne el error real. El check de `onlineRef` solo debería bloquear si NO hay internet.
+
+### 🟡 Arquitectura
+
+**Dividir `FinanzApp.jsx` (1,970 líneas)**
+Archivo con mayor concentración de bugs en el historial. Cada fix tiene riesgo de
+introducir nuevos errores. Dividir en: `Dashboard.jsx`, `Movements.jsx`,
+`CardsView.jsx`, `Stats.jsx`, `LoansView.jsx`.
+
+**Un solo `SETUP.sql` completo**
+El CHANGELOG tiene 8 SQLs distintos. Alguien que instale desde cero no sabe cuáles
+ejecutar ni en qué orden. Crear `SETUP.sql` único que los combine todos en orden correcto.
+
+**Validación antes de insert**
+Los hooks hacen insert optimista (agregan al estado local primero, rollback si falla).
+Mejor: validar campos requeridos ANTES de agregar al estado para no mostrar datos
+que pueden desaparecer al recargar.
+
+### 🟢 Features de alto valor
+
+**Offline real con IndexedDB**
+La app tiene historial frecuente de problemas de conectividad. Con IndexedDB se podría
+crear/editar datos sin internet y sincronizar al reconectar. Resolvería el 80% de
+las quejas de conexión de esta sesión.
+
+**Render paid ($7/mes)**
+Múltiples bugs de "timeout", "Sin conexión", "Cargando perfil" tienen origen en los
+cold starts del free tier (30-60s de espera). A $7/mes desaparece por completo.
 
 ---
 

@@ -75,7 +75,7 @@ export function useFlotaData() {
       [carId]: (prev[carId]||[]).map(p => p.id === pagoId ? updatedPago : p)
     }))
 
-    if (!onlineRef.current) return newPagado
+    if (!onlineRef.current) console.warn('[offline] toggle...')
 
     // Upsert — works even if record doesn't exist in DB yet
     const { error } = await supabase.from('car_payments').upsert({
@@ -103,7 +103,7 @@ export function useFlotaData() {
       ...prev,
       [carId]: (prev[carId]||[]).filter(p => p.id !== pagoId)
     }))
-    if (!onlineRef.current) return
+    if (!onlineRef.current) console.warn('[offline] intentando igualmente...')
     const { error } = await supabase.from('car_payments').delete().eq('id', pagoId)
     if (error) console.error('[deletePayment]', error.message)
     else console.log('[deletePayment] ✅', pagoId)
@@ -144,7 +144,9 @@ export function useFlotaData() {
     }
     // Omitir id para que Supabase genere UUID
     const { data, error } = await supabase.from('car_payments')
-      .insert([{ car_id:carId, fecha, monto, pagado:false, nota:'', account }])
+      .insert([{ car_id:carId, fecha, monto, pagado:false, nota:'',
+        ...(account ? { account } : {})
+      }])
       .select().single()
     if (error) {
       console.error('[addWorkDay] ❌', error.message)
@@ -168,7 +170,8 @@ export function useFlotaData() {
     const { data, error } = await supabase.from('car_expenses').insert([{
       car_id: carId, fecha: gasto.fecha,
       category: gasto.categoria, amount: gasto.monto,
-      note: gasto.nota||'', account: gasto.account||'cash'
+      note: gasto.nota||'',
+      ...(gasto.account ? { account: gasto.account } : {})
     }]).select().single()
     if (error) {
       console.error('[addExpense] ❌', error.message)
@@ -186,14 +189,14 @@ export function useFlotaData() {
       ...prev,
       [carId]: (prev[carId]||[]).filter(e => e.id !== expId)
     }))
-    if (!onlineRef.current) return
+    if (!onlineRef.current) console.warn('[offline] intentando igualmente...')
     await supabase.from('car_expenses').delete().eq('id', expId)
   }
 
   // ── Actualizar datos del carro ──
   async function updateCar(carId, updates) {
     setCars(prev => prev.map(c => c.id !== carId ? c : {...c, ...updates}))
-    if (!onlineRef.current) return
+    if (!onlineRef.current) console.warn('[offline] intentando igualmente...')
     const { error } = await supabase.from('cars').update(updates).eq('id', carId)
     if (error) console.error('[updateCar]', error.message)
   }
@@ -211,7 +214,7 @@ export function useFlotaData() {
       icon: data.icon || '🚗', activo: true,
     }
     setCars(prev => [...prev, newCar])
-    if (!onlineRef.current) return
+    if (!onlineRef.current) console.warn('[offline] intentando igualmente...')
     const { error } = await supabase.from('cars').insert([newCar])
     if (error) console.error('[addCar]', error.message)
     else console.log('[addCar] ✅', newCar.nombre)
@@ -220,7 +223,7 @@ export function useFlotaData() {
   // ── Eliminar carro (soft delete) ──
   async function deleteCar(carId) {
     setCars(prev => prev.filter(c => c.id !== carId))
-    if (!onlineRef.current) return
+    if (!onlineRef.current) console.warn('[offline] intentando igualmente...')
     await supabase.from('cars').update({ activo: false }).eq('id', carId)
   }
 

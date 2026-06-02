@@ -130,7 +130,7 @@ export function useFinanzData() {
       [accountId]: newBalance,
       [accountId+"_meta"]: meta
     }))
-    if (!onlineRef.current) return
+    if (!onlineRef.current) console.warn('[offline] intentando igualmente...')
     const row = {
       id: accountId,
       initial_balance: newBalance,
@@ -178,13 +178,13 @@ export function useFinanzData() {
 
   async function deleteTransaction(id) {
     setTransactions(prev => prev.filter(t => t.id !== id))
-    if (!onlineRef.current) return
+    if (!onlineRef.current) console.warn('[offline] intentando igualmente...')
     await supabase.from('transactions').delete().eq('id', id)
   }
 
   async function updateTransaction(id, updates) {
     setTransactions(prev => prev.map(t => t.id !== id ? t : { ...t, ...updates }))
-    if (!onlineRef.current) return
+    if (!onlineRef.current) console.warn('[offline] intentando igualmente...')
     const { error } = await supabase.from('transactions').update({
       date:        updates.date,
       type:        updates.type,
@@ -204,7 +204,7 @@ export function useFinanzData() {
     const expTx   = { id:'tx-'+Date.now(), date:data.date, type:'expense', category:'loans_out', subcategory:data.subcategory||'Préstamo personal', account:data.account, amount:data.amount, note:'Préstamo a '+data.debtor, loanId }
     setLoans(prev        => [newLoan, ...prev])
     setTransactions(prev => [expTx,   ...prev])
-    if (!onlineRef.current) return
+    if (!onlineRef.current) console.warn('[offline] intentando igualmente...')
     const [lr, tr] = await Promise.all([
       supabase.from('loans').insert([{ id:newLoan.id, debtor:newLoan.debtor, amount:newLoan.amount, balance:newLoan.balance, date:newLoan.date, account:newLoan.account, note:newLoan.note, status:newLoan.status, payments:[] }]),
       supabase.from('transactions').insert([txToRow(expTx)]),
@@ -223,7 +223,7 @@ export function useFinanzData() {
     const incomeTx   = { id:'tx-'+Date.now(), date:payData.date, type:'income', category:'loan_pay', subcategory:payData.note||'Abono', account:payData.account, amount:amt, note:'Cobro a '+loan.debtor, loanId:loan.id }
     setLoans(prev        => prev.map(l => l.id !== loan.id ? l : updLoan))
     setTransactions(prev => [incomeTx, ...prev])
-    if (!onlineRef.current) return
+    if (!onlineRef.current) console.warn('[offline] intentando igualmente...')
     const [lr, tr] = await Promise.all([
       supabase.from('loans').update({ balance:newBalance, status:updLoan.status, payments:updLoan.payments }).eq('id', loan.id),
       supabase.from('transactions').insert([txToRow(incomeTx)]),

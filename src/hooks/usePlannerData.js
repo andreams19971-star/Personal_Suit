@@ -91,14 +91,22 @@ export function usePlannerData() {
   }
 
   async function addTask(t) {
+    if (!t.title?.trim()) return { error: 'El título es obligatorio' }
     const localId = 'local-T-' + Date.now()
-    const row = { id:localId, title:t.title, date:t.date, category:t.category||'other',
-      subcategory:t.subcategory||null, priority:t.priority||'medium',
-      note:t.note||null, done:false, status:'pending' }
+    const row = { id:localId, title:t.title, date:t.date||null, category:t.category||'other',
+      priority:t.priority||'medium', note:t.note||null, done:false,
+      ...(t.subcategory ? { subcategory:t.subcategory } : {}),
+      status:'pending' }
     setTasks(p => [row, ...p])
-    if (!onlineRef.current) return { error:'Sin conexión' }
+    console.warn('[offline] intentando igualmente...')
     const { id:_skip, ...rowData } = row
-    const { data, error } = await supabase.from('tasks').insert([rowData]).select().single()
+    // Si 'status' o 'subcategory' no existen en BD, Supabase retorna error — intentar sin ellos
+    let { data, error } = await supabase.from('tasks').insert([rowData]).select().single()
+    if (error && (error.message.includes('status') || error.message.includes('subcategory'))) {
+      const { status:_s, subcategory:_sc, ...safeRow } = rowData
+      const res = await supabase.from('tasks').insert([safeRow]).select().single()
+      data = res.data; error = res.error
+    }
     if (error) {
       console.error('[addTask] ❌', error.message)
       setTasks(p => p.filter(t => t.id !== localId))
@@ -111,7 +119,7 @@ export function usePlannerData() {
   async function setTaskStatus(id, status) {
     const done = status === 'done'
     setTasks(p => p.map(t => t.id!==id ? t : {...t, status, done}))
-    if (!onlineRef.current) return
+    if (!onlineRef.current) console.warn('[offline] intentando igualmente...')
     await supabase.from('tasks').update({ status, done }).eq('id', id)
   }
   async function toggleTask(id) {
@@ -122,12 +130,12 @@ export function usePlannerData() {
       nextStatus = CYCLE[t.status||'pending'] || 'pending'
       return {...t, status:nextStatus, done:nextStatus==='done'}
     }))
-    if (!onlineRef.current) return
+    if (!onlineRef.current) console.warn('[offline] intentando igualmente...')
     await supabase.from('tasks').update({ status:nextStatus, done:nextStatus==='done' }).eq('id', id)
   }
   async function deleteTask(id) {
     setTasks(p => p.filter(t => t.id!==id))
-    if (!onlineRef.current) return
+    if (!onlineRef.current) console.warn('[offline] intentando igualmente...')
     await supabase.from('tasks').delete().eq('id', id)
   }
   async function updateTask(id, updates) {
@@ -146,7 +154,7 @@ export function usePlannerData() {
     const localId = 'local-H-' + Date.now()
     const local = { ...h, id:localId, completions:{} }
     setHabits(p => [...p, local])
-    if (!onlineRef.current) return
+    if (!onlineRef.current) console.warn('[offline] intentando igualmente...')
     const { id:_skip, ...rowData } = local
     const { data, error } = await supabase.from('habits').insert([{...rowData, completions:{}}]).select().single()
     if (error) { console.error('[addHabit] ❌', error.message); setHabits(p=>p.filter(h=>h.id!==localId)); return }
@@ -160,7 +168,7 @@ export function usePlannerData() {
   }
   async function deleteHabit(id) {
     setHabits(p => p.filter(h => h.id!==id))
-    if (!onlineRef.current) return
+    if (!onlineRef.current) console.warn('[offline] intentando igualmente...')
     await supabase.from('habits').delete().eq('id', id)
   }
 
@@ -168,7 +176,7 @@ export function usePlannerData() {
     const localId = 'local-G-' + Date.now()
     const local = { ...g, id:localId }
     setGoals(p => [...p, local])
-    if (!onlineRef.current) return
+    if (!onlineRef.current) console.warn('[offline] intentando igualmente...')
     const { id:_skip, ...rowData } = local
     const { data, error } = await supabase.from('goals').insert([rowData]).select().single()
     if (error) { console.error('[addGoal] ❌', error.message); setGoals(p=>p.filter(g=>g.id!==localId)); return }
@@ -176,12 +184,12 @@ export function usePlannerData() {
   }
   async function updateGoalProgress(id, val) {
     setGoals(p => p.map(g => g.id!==id ? g : { ...g, current:Math.min(g.target,Math.max(0,val)) }))
-    if (!onlineRef.current) return
+    if (!onlineRef.current) console.warn('[offline] intentando igualmente...')
     await supabase.from('goals').update({ current:val }).eq('id', id)
   }
   async function deleteGoal(id) {
     setGoals(p => p.filter(g => g.id!==id))
-    if (!onlineRef.current) return
+    if (!onlineRef.current) console.warn('[offline] intentando igualmente...')
     await supabase.from('goals').delete().eq('id', id)
   }
 
@@ -189,7 +197,7 @@ export function usePlannerData() {
     const localId = 'local-N-' + Date.now()
     const local = { ...n, id:localId, date:td() }
     setNotes(p => [local,...p])
-    if (!onlineRef.current) return
+    if (!onlineRef.current) console.warn('[offline] intentando igualmente...')
     const { id:_skip, ...rowData } = local
     const { data, error } = await supabase.from('notes').insert([rowData]).select().single()
     if (error) { console.error('[addNote] ❌', error.message); setNotes(p=>p.filter(n=>n.id!==localId)); return }
@@ -197,7 +205,7 @@ export function usePlannerData() {
   }
   async function deleteNote(id) {
     setNotes(p => p.filter(n => n.id!==id))
-    if (!onlineRef.current) return
+    if (!onlineRef.current) console.warn('[offline] intentando igualmente...')
     await supabase.from('notes').delete().eq('id', id)
   }
 

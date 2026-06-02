@@ -71,6 +71,10 @@ export function useApartamentoData() {
   }
 
   async function addReservation(res) {
+    if (!res.guest?.trim())   return { error: 'El nombre del huésped es obligatorio' }
+    if (!res.checkIn)         return { error: 'La fecha de entrada es obligatoria' }
+    if (!res.checkOut)        return { error: 'La fecha de salida es obligatoria' }
+    if (res.checkOut <= res.checkIn) return { error: 'La salida debe ser después de la entrada' }
     const nights = Math.max(1, Math.round((new Date(res.checkOut)-new Date(res.checkIn))/86400000))
     const localId = 'local-RES-' + Date.now()
     const newRes = { ...res, id:localId, nights, total:0, paid:0, status:'reserved' }
@@ -81,7 +85,7 @@ export function useApartamentoData() {
       phone:newRes.phone||'', check_in:newRes.checkIn, check_out:newRes.checkOut,
       nights:newRes.nights, platform:newRes.platform||'Directo',
       status:newRes.status, notes:newRes.notes||'', total:0, paid:0,
-      gender:newRes.gender||null,
+      ...(newRes.gender ? { gender:newRes.gender } : {})
     }]).select().single()
     if (error) {
       console.error('[addReservation] ❌', error.message)
@@ -98,7 +102,7 @@ export function useApartamentoData() {
       const updated = prev.map(r => r.id!==id ? r : {...r, status})
       return updated
     })
-    if (!onlineRef.current) return
+    if (!onlineRef.current) console.warn('[offline] intentando igualmente...')
     await supabase.from('apt_reservations').update({ status }).eq('id', id)
   }
 
@@ -107,7 +111,7 @@ export function useApartamentoData() {
       const updated = prev.filter(r => r.id!==id)
       return updated
     })
-    if (!onlineRef.current) return
+    if (!onlineRef.current) console.warn('[offline] intentando igualmente...')
     await supabase.from('apt_reservations').delete().eq('id', id)
   }
 
@@ -115,7 +119,7 @@ export function useApartamentoData() {
     const localId = 'local-E-' + Date.now()
     const newExp = { ...exp, id:localId }
     setExpenses(prev => [newExp, ...prev])
-    if (!onlineRef.current) return
+    if (!onlineRef.current) console.warn('[offline] intentando igualmente...')
     const { data, error } = await supabase.from('apt_expenses').insert([{
       room_id:exp.room||null, fecha:exp.date,
       category:exp.category, amount:exp.amount, note:exp.note||''
@@ -126,13 +130,13 @@ export function useApartamentoData() {
 
   async function deleteExpense(id) {
     setExpenses(prev => prev.filter(e => e.id!==id))
-    if (!onlineRef.current) return
+    if (!onlineRef.current) console.warn('[offline] intentando igualmente...')
     await supabase.from('apt_expenses').delete().eq('id', id)
   }
 
   async function updateRoom(roomId, updates) {
     setRooms(prev => prev.map(r => r.id!==roomId ? r : {...r, ...updates}))
-    if (!onlineRef.current) return
+    if (!onlineRef.current) console.warn('[offline] intentando igualmente...')
     await supabase.from('apt_rooms').update({
       name: updates.name, description: updates.description,
       base_price: updates.basePrice||0, amenities: updates.amenities||[]

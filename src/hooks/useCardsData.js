@@ -92,7 +92,7 @@ export function useCardsData() {
       amount = ch?.amount || 0
       return { ...c, balance: Math.max(0, (c.balance||0) - amount), charges: c.charges.filter(x => x.id !== chargeId) }
     }))
-    if (!onlineRef.current) return
+    if (!onlineRef.current) console.warn('[offline] intentando igualmente...')
     await supabase.from('card_charges').delete().eq('id', chargeId)
     const card = cards.find(c => c.id === cardId)
     if (card) await supabase.from('credit_cards').update({ balance: Math.max(0, (card.balance||0) - amount) }).eq('id', cardId)
@@ -100,14 +100,14 @@ export function useCardsData() {
 
   async function markPaid(cardId) {
     setCards(prev => prev.map(c => c.id !== cardId ? c : { ...c, balance: 0, charges: [] }))
-    if (!onlineRef.current) return
+    if (!onlineRef.current) console.warn('[offline] intentando igualmente...')
     await supabase.from('card_charges').delete().eq('card_id', cardId)
     await supabase.from('credit_cards').update({ balance: 0 }).eq('id', cardId)
   }
 
   async function saveCard(cardId, updates) {
     setCards(prev => prev.map(c => c.id !== cardId ? c : { ...c, ...updates }))
-    if (!onlineRef.current) return
+    if (!onlineRef.current) console.warn('[offline] intentando igualmente...')
     await supabase.from('credit_cards').update({
       name: updates.name, bank: updates.bank, last4: updates.last4,
       color: updates.color, card_limit: updates.limit,
@@ -141,7 +141,7 @@ export function useCardsData() {
       return { ...c, balance: (c.balance||0)+diff,
         charges: c.charges.map(ch => ch.id !== chargeId ? ch : {...ch,...updates}) }
     }))
-    if (!onlineRef.current) return
+    if (!onlineRef.current) console.warn('[offline] intentando igualmente...')
     await supabase.from('card_charges').update({
       date: updates.date, amount: updates.amount,
       category: updates.category, note: updates.note||'', installments: updates.installments||1
