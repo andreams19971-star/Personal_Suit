@@ -7,6 +7,29 @@
 
 ---
 
+## [2.6.2] — 2026-05-30 — Bugfix: columnas car_expenses en español
+
+### Error
+`Could not find the 'amount' column of 'car_expenses' in the schema cache`
+
+### Causa
+La tabla `car_expenses` fue creada con columnas en español (`monto`, `categoria`, `nota`)
+pero el insert enviaba columnas en inglés (`amount`, `category`, `note`).
+Los datos SÍ cargan (SELECT funciona) pero el INSERT fallaba con esas columnas inexistentes.
+
+Contraste con `apt_expenses` que sí usa inglés (`amount`, `category`, `note`) y funciona.
+
+### Fix
+Cambiar el insert de `car_expenses` a usar los nombres correctos:
+- `amount` → `monto`
+- `category` → `categoria`
+- `note` → `nota`
+
+### Archivos
+- `src/hooks/useFlotaData.js` — `addExpense` línea 170
+
+---
+
 ## [2.6.1] — 2026-05-30 — Bugfix: columnas faltantes en Supabase
 
 ### Causa raíz
