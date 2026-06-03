@@ -1,9 +1,8 @@
 // finanz/CardsView.jsx
-import {{ useState, useEffect }} from "react";
-import * as XLSX from "xlsx";
-import {{ C, fmtCOP, fmtShort, today, td, MONTHS, ACCOUNTS_DEF, DEFAULT_CATEGORIES }} from "./shared.js";
+import { useState, useEffect, useRef } from "react";
+import { C, fmtCOP, fmtShort, today, td, MONTHS, ACCOUNTS_DEF, DEFAULT_CATEGORIES } from "./shared.js";
 
-function CardsView({ cards, addCharge, deleteCharge, updateCharge, markPaid, saveCard, addCard, filterMonth, showToast }) {
+export function CardsView({ cards, addCharge, deleteCharge, updateCharge, markPaid, saveCard, addCard, filterMonth, showToast }) {
   const [selCard, setSelCard] = useState(cards[0]?.id || null);
   const [showAddCharge, setShowAddCharge] = useState(false);
   const [showEditCard, setShowEditCard] = useState(null);
@@ -168,3 +167,173 @@ function CardsView({ cards, addCharge, deleteCharge, updateCharge, markPaid, sav
   );
 }
 
+export function ChargeModal({ card, onClose, onAdd, cats }) {
+  const [form, setForm] = useState({ date:today(), amount:"", category:"Supermercado", note:"", installments:1 });
+  const set = (k,v) => setForm(f=>({...f,[k]:v}));
+  return (
+    <div style={{position:"fixed",inset:0,background:"#000000BB",zIndex:500,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:C.surface,borderRadius:"22px 22px 0 0",width:"100%",maxWidth:480,padding:"18px 18px 36px",maxHeight:"90vh",overflowY:"auto",borderTop:"1px solid "+(card.color)+"55",animation:"fa-slideUp .3s ease"}}>
+        <div style={{width:32,height:3,background:C.border,borderRadius:2,margin:"0 auto 16px"}}/>
+        <div style={{display:"flex",justifyContent:"space-between",marginBottom:14}}>
+          <div style={{fontSize:16,fontWeight:800}}>💳 Gasto en {card.name}</div>
+          <button onClick={onClose} style={{background:C.card,border:"1px solid "+(C.border),borderRadius:6,padding:"4px 8px",color:C.text,cursor:"pointer"}}>✕</button>
+        </div>
+        <div style={{background:C.redDim,border:"1px solid "+(C.red)+"33",borderRadius:14,padding:14,marginBottom:12}}>
+          <div style={{fontSize:11,color:C.textMuted,marginBottom:3}}>MONTO</div>
+          <div style={{display:"flex",alignItems:"center",gap:6}}>
+            <span style={{fontSize:20,color:C.textMuted}}>$</span>
+            <input type="number" value={form.amount} onChange={e=>set("amount",e.target.value)} placeholder="0"
+              style={{flex:1,background:"transparent",border:"none",fontSize:24,fontWeight:900,color:C.red}}/>
+          </div>
+        </div>
+        <div style={{display:"grid",gap:10}}>
+          {[["Categoría","select"],["Fecha","date"],["Descripción","text"]].map(([label,type])=>{
+            const key = label==="Categoría"?"category":label==="Fecha"?"date":"note";
+            return (
+              <div key={key}>
+                <div style={{fontSize:10,color:C.textMuted,fontWeight:700,marginBottom:4}}>{label.toUpperCase()}</div>
+                {type==="select"
+                  ? <select value={form[key]} onChange={e=>set(key,e.target.value)} style={{width:"100%",background:C.card,border:"1px solid "+(C.border),borderRadius:9,padding:"9px 11px",color:C.text,fontSize:13}}>
+                      {cats.map(c=><option key={c}>{c}</option>)}
+                    </select>
+                  : <input type={type} value={form[key]} onChange={e=>set(key,e.target.value)} placeholder={label==="Descripción"?"Ej: Mercado Éxito":""}
+                      style={{width:"100%",background:C.card,border:"1px solid "+(C.border),borderRadius:9,padding:"9px 11px",color:C.text,fontSize:13}}/>
+                }
+              </div>
+            );
+          })}
+          <div>
+            <div style={{fontSize:10,color:C.textMuted,fontWeight:700,marginBottom:4}}>CUOTAS</div>
+            <div style={{display:"flex",gap:6}}>
+              {[1,3,6,12,24,36].map(n=>(
+                <button key={n} onClick={()=>set("installments",n)} style={{flex:1,padding:"8px 4px",borderRadius:8,border:"1px solid "+(form.installments===n?card.color:C.border),background:form.installments===n?card.color+"22":"transparent",color:form.installments===n?card.color:C.textSub,cursor:"pointer",fontSize:12,fontWeight:600}}>
+                  {n===1?"Cont.":n+"x"}
+                </button>
+              ))}
+            </div>
+          </div>
+          {form.installments > 1 && form.amount && (
+            <div style={{background:C.card,borderRadius:9,padding:"8px 12px",fontSize:12,color:C.textSub}}>
+              Cuota mensual: <strong style={{color:card.color}}>{fmtCOP(parseFloat(form.amount)/form.installments)}</strong> × {form.installments} meses
+            </div>
+          )}
+        </div>
+        <button onClick={()=>form.amount&&onAdd({...form,amount:parseFloat(form.amount)})}
+          style={{width:"100%",marginTop:16,padding:13,borderRadius:12,border:"none",background:form.amount?card.color:C.border,color:form.amount?"#000":C.textMuted,fontWeight:800,fontSize:15,cursor:"pointer"}}>
+          Registrar Gasto
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export function EditChargeModal({ charge, card, cats, onClose, onSave }) {
+  const [form, setForm] = useState({
+    date:         charge.date,
+    amount:       charge.amount,
+    category:     charge.category,
+    note:         charge.note || "",
+    installments: charge.installments || 1,
+  });
+  const set = (k,v) => setForm(f=>({...f,[k]:v}));
+  return (
+    <div style={{position:"fixed",inset:0,background:"#000000BB",zIndex:500,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:C.surface,borderRadius:"22px 22px 0 0",width:"100%",maxWidth:480,padding:"18px 18px 36px",maxHeight:"90vh",overflowY:"auto",borderTop:"1px solid "+((card?.color)||C.accent)+"55",animation:"fa-slideUp .3s ease"}}>
+        <div style={{width:32,height:3,background:C.border,borderRadius:2,margin:"0 auto 16px"}}/>
+        <div style={{display:"flex",justifyContent:"space-between",marginBottom:14}}>
+          <div style={{fontSize:16,fontWeight:800}}>✏️ Editar gasto</div>
+          <button onClick={onClose} style={{background:C.card,border:"1px solid "+C.border,borderRadius:6,padding:"4px 8px",color:C.text,cursor:"pointer"}}>✕</button>
+        </div>
+        <div style={{display:"grid",gap:12}}>
+          <MF label="Monto">
+            <div style={{background:C.redDim,border:"1px solid "+C.red+"33",borderRadius:12,padding:"10px 14px",display:"flex",alignItems:"center",gap:6}}>
+              <span style={{color:C.textMuted,fontSize:16}}>$</span>
+              <input type="number" value={form.amount} onChange={e=>set("amount",parseFloat(e.target.value)||0)}
+                style={{flex:1,background:"transparent",border:"none",fontSize:22,fontWeight:900,color:C.red}}/>
+            </div>
+          </MF>
+          <MF label="Categoría">
+            <select value={form.category} onChange={e=>set("category",e.target.value)} style={{width:"100%",background:C.card,border:"1px solid "+C.border,borderRadius:9,padding:"9px 11px",color:C.text,fontSize:13}}>
+              {cats.map(c=><option key={c}>{c}</option>)}
+            </select>
+          </MF>
+          <MF label="Fecha">
+            <input type="date" value={form.date} onChange={e=>set("date",e.target.value)} style={{width:"100%",background:C.card,border:"1px solid "+C.border,borderRadius:9,padding:"9px 11px",color:C.text,fontSize:13}}/>
+          </MF>
+          <MF label="Descripción">
+            <input value={form.note} onChange={e=>set("note",e.target.value)} placeholder="Opcional..."
+              style={{width:"100%",background:C.card,border:"1px solid "+C.border,borderRadius:9,padding:"9px 11px",color:C.text,fontSize:13}}/>
+          </MF>
+        </div>
+        <button onClick={()=>onSave(charge.id, form)}
+          style={{width:"100%",marginTop:16,padding:13,borderRadius:12,border:"none",background:C.red,color:"#fff",fontWeight:800,fontSize:15,cursor:"pointer"}}>
+          Guardar cambios
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export function CardEditModal({ card, onClose, onSave }) {
+  const [form, setForm] = useState({
+    name:    card?.name    || "",
+    bank:    card?.bank    || "",
+    last4:   card?.last4   || "",
+    limit:   card?.limit   || 5000000,
+    cutDay:  card?.cutDay  || 25,
+    payDay:  card?.payDay  || 10,
+    color:   card?.color   || "#60A5FA",
+  });
+  const set = (k,v) => setForm(f=>({...f,[k]:v}));
+  const COLORS = ["#60A5FA","#FFD166","#FB923C","#A78BFA","#F472B6","#34D399","#F87171","#00D97E"];
+  return (
+    <div style={{position:"fixed",inset:0,background:"#000000BB",zIndex:500,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:C.surface,borderRadius:"22px 22px 0 0",width:"100%",maxWidth:480,padding:"18px 18px 36px",maxHeight:"90vh",overflowY:"auto",borderTop:"1px solid "+(C.border),animation:"fa-slideUp .3s ease"}}>
+        <div style={{width:32,height:3,background:C.border,borderRadius:2,margin:"0 auto 16px"}}/>
+        <div style={{display:"flex",justifyContent:"space-between",marginBottom:14}}>
+          <div style={{fontSize:16,fontWeight:800}}>{card?"Editar tarjeta":"Nueva tarjeta"}</div>
+          <button onClick={onClose} style={{background:C.card,border:"1px solid "+(C.border),borderRadius:6,padding:"4px 8px",color:C.text,cursor:"pointer"}}>✕</button>
+        </div>
+        <div style={{display:"grid",gap:10}}>
+          {[["Nombre",form.name,"name","Ej: Visa Bancolombia"],["Banco",form.bank,"bank","Ej: Bancolombia"],["Últimos 4 dígitos",form.last4,"last4","0000"]].map(([label,val,key,ph])=>(
+            <div key={key}>
+              <div style={{fontSize:10,color:C.textMuted,fontWeight:700,marginBottom:4}}>{label.toUpperCase()}</div>
+              <input value={val} onChange={e=>set(key,e.target.value)} placeholder={ph}
+                style={{width:"100%",background:C.card,border:"1px solid "+(C.border),borderRadius:9,padding:"9px 11px",color:C.text,fontSize:13}}/>
+            </div>
+          ))}
+          <div>
+            <div style={{fontSize:10,color:C.textMuted,fontWeight:700,marginBottom:4}}>LÍMITE DE CRÉDITO</div>
+            <input type="number" value={form.limit} onChange={e=>set("limit",parseFloat(e.target.value)||0)}
+              style={{width:"100%",background:C.card,border:"1px solid "+(C.border),borderRadius:9,padding:"9px 11px",color:C.text,fontSize:13}}/>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+            <div>
+              <div style={{fontSize:10,color:C.textMuted,fontWeight:700,marginBottom:4}}>DÍA DE CORTE</div>
+              <input type="number" value={form.cutDay} onChange={e=>set("cutDay",parseInt(e.target.value)||1)} min="1" max="31"
+                style={{width:"100%",background:C.card,border:"1px solid "+(C.border),borderRadius:9,padding:"9px 11px",color:C.text,fontSize:13}}/>
+            </div>
+            <div>
+              <div style={{fontSize:10,color:C.textMuted,fontWeight:700,marginBottom:4}}>DÍA DE PAGO</div>
+              <input type="number" value={form.payDay} onChange={e=>set("payDay",parseInt(e.target.value)||1)} min="1" max="31"
+                style={{width:"100%",background:C.card,border:"1px solid "+(C.border),borderRadius:9,padding:"9px 11px",color:C.text,fontSize:13}}/>
+            </div>
+          </div>
+          <div>
+            <div style={{fontSize:10,color:C.textMuted,fontWeight:700,marginBottom:8}}>COLOR DE TARJETA</div>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+              {COLORS.map(col=>(
+                <button key={col} onClick={()=>set("color",col)}
+                  style={{width:32,height:32,borderRadius:"50%",background:col,border:form.color===col?"3px solid #fff":"2px solid transparent",cursor:"pointer"}}/>
+              ))}
+            </div>
+          </div>
+        </div>
+        <button onClick={()=>form.name&&onSave(form)}
+          style={{width:"100%",marginTop:16,padding:13,borderRadius:12,border:"none",background:form.name?form.color:C.border,color:form.name?"#000":C.textMuted,fontWeight:800,fontSize:15,cursor:"pointer"}}>
+          {card?"Guardar cambios":"Agregar tarjeta"}
+        </button>
+      </div>
+    </div>
+  );
+}

@@ -1,9 +1,9 @@
 // finanz/Stats.jsx
-import {{ useState, useEffect }} from "react";
-import * as XLSX from "xlsx";
-import {{ C, fmtCOP, fmtShort, today, td, MONTHS, ACCOUNTS_DEF, DEFAULT_CATEGORIES }} from "./shared.js";
+import { useState, useEffect, useRef } from "react";
+import { C, fmtCOP, fmtShort, today, td, MONTHS, ACCOUNTS_DEF, DEFAULT_CATEGORIES } from "./shared.js";
+import { TxRow, SectionHeader, EmptyState, Pill, StatCard, MF } from "./Helpers.jsx";
 
-function Stats({monthTxs,totalIncome,totalExpense,transactions,filterMonth,categories=DEFAULT_CATEGORIES}){
+export function Stats({monthTxs,totalIncome,totalExpense,transactions,filterMonth,categories=DEFAULT_CATEGORIES}){
   const expByCat={},incByCat={};
   monthTxs.filter(t=>t.type==="expense").forEach(t=>{
     const cat=categories.expense.find(c=>c.id===t.category);
@@ -207,4 +207,3 @@ function Stats({monthTxs,totalIncome,totalExpense,transactions,filterMonth,categ
     </div>
   );
 }
-

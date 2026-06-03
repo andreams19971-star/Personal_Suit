@@ -1,276 +1,8 @@
 // finanz/Modals.jsx
-import { useState } from "react";
-import { C, fmtCOP, today, td, ACCOUNTS_DEF, DEFAULT_CATEGORIES } from "./shared.js";
+import { useState, useEffect, useRef } from "react";
+import { C, fmtCOP, fmtShort, today, td, MONTHS, ACCOUNTS_DEF, DEFAULT_CATEGORIES } from "./shared.js";
 
-}
-
-// ─── ACCOUNTS MANAGER ────────────────────────────────────────────────────────
-const ACCOUNT_ICONS = ["💵","💳","🏦","💜","🔵","🟡","🔴","🟢","⚫","🟠","💰","🏧"];
-const ACCOUNT_COLORS = ["#00D97E","#A78BFA","#4D9EFF","#FFD166","#FF4D6A","#FB923C","#34D399","#F472B6","#60A5FA","#FBBF24"];
-
-function AccountsManager({accounts, updateAccountBalance, showToast}) {
-  const [editId, setEditId] = useState(null);
-  const [newAcc, setNewAcc] = useState(null);
-  const [editForm, setEditForm] = useState({});
-
-  const startEdit = (acc) => {
-    setEditId(acc.id);
-    setEditForm({ label: acc.label, icon: acc.icon, initialBalance: acc.initialBalance });
-  };
-
-  const saveEdit = async () => {
-    if (!editForm.label) return;
-    await updateAccountBalance(editId, parseFloat(editForm.initialBalance) || 0, editForm);
-    showToast("Cuenta actualizada ✓");
-    setEditId(null);
-  };
-
-  return (
-    <div style={{display:"grid",gap:12}}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-        <div style={{fontSize:12,color:C.textMuted,fontWeight:700}}>MIS CUENTAS</div>
-        <button onClick={()=>setNewAcc({label:"",icon:"💵",color:C.accentText,initialBalance:0})}
-          style={{background:C.accentDim,border:"1px solid "+(C.accentText)+"44",color:C.accentText,borderRadius:8,padding:"5px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>
-          + Nueva cuenta
-        </button>
-      </div>
-      <div style={{fontSize:11,color:C.textMuted,marginTop:-6}}>Configura nombre, ícono y saldo inicial de cada cuenta</div>
-
-      {/* Nueva cuenta form */}
-      {newAcc && (
-        <div style={{background:C.card,border:"1px solid "+(C.accentText)+"44",borderRadius:14,padding:14}}>
-          <div style={{fontSize:12,fontWeight:700,color:C.accentText,marginBottom:10}}>+ NUEVA CUENTA</div>
-          <div style={{display:"grid",gap:8}}>
-            <div>
-              <div style={{fontSize:10,color:C.textMuted,marginBottom:4}}>NOMBRE</div>
-              <input value={newAcc.label} onChange={e=>setNewAcc(a=>({...a,label:e.target.value}))} placeholder="Ej: Efectivo, Nequi..."
-                style={{width:"100%",background:C.bg,border:"1px solid "+(C.border),borderRadius:8,padding:"8px 10px",color:C.text,fontSize:13}}/>
-            </div>
-            <div>
-              <div style={{fontSize:10,color:C.textMuted,marginBottom:6}}>ÍCONO</div>
-              <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                {ACCOUNT_ICONS.map(ic=>(
-                  <button key={ic} onClick={()=>setNewAcc(a=>({...a,icon:ic}))}
-                    style={{width:34,height:34,borderRadius:8,border:"1px solid "+(newAcc.icon===ic?C.accent:C.border),background:newAcc.icon===ic?C.accentDim:"transparent",cursor:"pointer",fontSize:16}}>
-                    {ic}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div>
-              <div style={{fontSize:10,color:C.textMuted,marginBottom:6}}>COLOR</div>
-              <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                {ACCOUNT_COLORS.map(col=>(
-                  <button key={col} onClick={()=>setNewAcc(a=>({...a,color:col}))}
-                    style={{width:28,height:28,borderRadius:"50%",background:col,border:newAcc.color===col?"3px solid #fff":"2px solid transparent",cursor:"pointer"}}>
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div>
-              <div style={{fontSize:10,color:C.textMuted,marginBottom:4}}>SALDO INICIAL</div>
-              <input type="number" value={newAcc.initialBalance} onChange={e=>setNewAcc(a=>({...a,initialBalance:parseFloat(e.target.value)||0}))} placeholder="0"
-                style={{width:"100%",background:C.bg,border:"1px solid "+(C.border),borderRadius:8,padding:"8px 10px",color:C.text,fontSize:13}}/>
-            </div>
-            <div style={{display:"flex",gap:8}}>
-              <button onClick={async()=>{
-                if(!newAcc.label)return;
-                const id=newAcc.label.toLowerCase().replace(/\s+/g,"-")+"-"+Date.now();
-                await updateAccountBalance(id, newAcc.initialBalance, {label:newAcc.label,icon:newAcc.icon,color:newAcc.color,isNew:true});
-                showToast((newAcc.label)+" creada ✓");
-                setNewAcc(null);
-              }} style={{flex:1,background:C.accent,border:"none",borderRadius:8,padding:"9px",color:"#000",fontWeight:700,fontSize:13,cursor:"pointer"}}>
-                Crear cuenta
-              </button>
-              <button onClick={()=>setNewAcc(null)}
-                style={{background:C.card,border:"1px solid "+(C.border),borderRadius:8,padding:"9px 12px",color:C.textSub,cursor:"pointer",fontSize:13}}>
-                Cancelar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Cuentas existentes */}
-      {accounts.map(acc=>(
-        <div key={acc.id} style={{background:C.card,border:"1px solid "+(editId===acc.id?acc.color+"66":C.border),borderRadius:14,overflow:"hidden"}}>
-          {editId===acc.id ? (
-            <div style={{padding:14}}>
-              <div style={{fontSize:12,fontWeight:700,color:acc.color,marginBottom:10}}>EDITANDO: {acc.label}</div>
-              <div style={{display:"grid",gap:8}}>
-                <div>
-                  <div style={{fontSize:10,color:C.textMuted,marginBottom:4}}>NOMBRE</div>
-                  <input value={editForm.label} onChange={e=>setEditForm(f=>({...f,label:e.target.value}))}
-                    style={{width:"100%",background:C.bg,border:"1px solid "+(C.border),borderRadius:8,padding:"8px 10px",color:C.text,fontSize:13}}/>
-                </div>
-                <div>
-                  <div style={{fontSize:10,color:C.textMuted,marginBottom:6}}>ÍCONO</div>
-                  <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                    {ACCOUNT_ICONS.map(ic=>(
-                      <button key={ic} onClick={()=>setEditForm(f=>({...f,icon:ic}))}
-                        style={{width:32,height:32,borderRadius:8,border:"1px solid "+(editForm.icon===ic?C.accent:C.border),background:editForm.icon===ic?C.accentDim:"transparent",cursor:"pointer",fontSize:15}}>
-                        {ic}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <div style={{fontSize:10,color:C.textMuted,marginBottom:4}}>SALDO INICIAL</div>
-                  <input type="number" value={editForm.initialBalance} onChange={e=>setEditForm(f=>({...f,initialBalance:e.target.value}))}
-                    style={{width:"100%",background:C.bg,border:"1px solid "+(C.border),borderRadius:8,padding:"8px 10px",color:C.text,fontSize:13}}/>
-                </div>
-                <div style={{display:"flex",gap:8}}>
-                  <button onClick={saveEdit} style={{flex:1,background:C.accent,border:"none",borderRadius:8,padding:"9px",color:"#000",fontWeight:700,fontSize:13,cursor:"pointer"}}>Guardar</button>
-                  <button onClick={()=>setEditId(null)} style={{background:C.card,border:"1px solid "+(C.border),borderRadius:8,padding:"9px 12px",color:C.textSub,cursor:"pointer",fontSize:13}}>Cancelar</button>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div style={{padding:"12px 14px",display:"flex",alignItems:"center",gap:10}}>
-              <span style={{fontSize:20,flexShrink:0}}>{acc.icon}</span>
-              <div style={{flex:1,minWidth:0}}>
-                <div style={{fontWeight:700,fontSize:14}}>{acc.label}</div>
-                <div style={{fontSize:11,color:C.accentText}}>Saldo actual: {fmtCOP(acc.balance)}</div>
-                <div style={{fontSize:11,color:C.textMuted}}>Inicial: {fmtCOP(acc.initialBalance)}</div>
-              </div>
-              <button onClick={()=>startEdit(acc)}
-                style={{background:C.accentDim,border:"1px solid "+(C.accentText)+"33",color:C.accentText,borderRadius:8,padding:"6px 10px",fontSize:11,fontWeight:700,cursor:"pointer",flexShrink:0}}>
-                ✏️ Editar
-              </button>
-            </div>
-          )}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// ─── CATEGORIES MANAGER ───────────────────────────────────────────────────────
-const CAT_ICONS = ["💼","🏪","📈","🤝","💰","🏠","🍽️","🚗","🏥","📚","🎮","👗","🏦","💳","📦","✈️","🐾","🎵","🌿","⚡"];
-
-function CategoriesManager({ categories, saveCategories, showToast }) {
-  const [type, setType]   = useState("income");
-  const [editCat, setEditCat] = useState(null); // {idx, ...cat} or "new"
-  const [editSub, setEditSub] = useState(null); // {catIdx, subIdx} or null
-
-  const cats = categories[type];
-
-  const addCategory = (cat) => {
-    const updated = { ...categories, [type]: [...cats, { ...cat, id: "cat_"+Date.now(), subs: [] }] };
-    saveCategories(updated);
-    setEditCat(null);
-    showToast("Categoría creada ✓");
-  };
-
-  const updateCategory = (idx, updates) => {
-    const list = cats.map((c,i) => i===idx ? {...c,...updates} : c);
-    saveCategories({ ...categories, [type]: list });
-    setEditCat(null);
-    showToast("Categoría actualizada ✓");
-  };
-
-  const deleteCategory = (idx) => {
-    saveCategories({ ...categories, [type]: cats.filter((_,i)=>i!==idx) });
-    showToast("Categoría eliminada","err");
-  };
-
-  const addSub = (catIdx, sub) => {
-    const list = cats.map((c,i) => i!==catIdx ? c : {...c, subs:[...(c.subs||[]), sub]});
-    saveCategories({ ...categories, [type]: list });
-    setEditSub(null);
-  };
-
-  const deleteSub = (catIdx, subIdx) => {
-    const list = cats.map((c,i) => i!==catIdx ? c : {...c, subs:c.subs.filter((_,j)=>j!==subIdx)});
-    saveCategories({ ...categories, [type]: list });
-  };
-
-  return (
-    <div style={{display:"grid",gap:12}}>
-      <div style={{display:"flex",gap:6}}>
-        {[["income","Ingresos"],["expense","Gastos"]].map(([t,l])=>(
-          <button key={t} onClick={()=>setType(t)} style={{flex:1,padding:"8px",borderRadius:9,border:"1px solid "+(type===t?C.accent:C.border),background:type===t?C.accentDim:"transparent",color:type===t?C.accent:C.textSub,cursor:"pointer",fontWeight:700,fontSize:12}}>{l}</button>
-        ))}
-      </div>
-
-      <button onClick={()=>setEditCat("new")} style={{background:C.accentDim,border:"1px solid "+(C.accentText)+"44",color:C.accentText,borderRadius:9,padding:"9px",fontWeight:700,fontSize:12,cursor:"pointer"}}>+ Nueva categoría</button>
-
-      {editCat==="new" && (
-        <CatForm onSave={addCategory} onCancel={()=>setEditCat(null)}/>
-      )}
-
-      {cats.map((cat,idx)=>(
-        <div key={cat.id||idx} style={{background:C.card,border:"1px solid "+(C.border),borderRadius:14,overflow:"hidden"}}>
-          <div style={{padding:"10px 12px",display:"flex",alignItems:"center",gap:8}}>
-            <span style={{fontSize:20,flexShrink:0}}>{cat.icon}</span>
-            <div style={{flex:1,minWidth:0}}>
-              <div style={{fontSize:13,fontWeight:700}}>{cat.label}</div>
-              <div style={{fontSize:10,color:C.textMuted}}>{(cat.subs||[]).length} subcategorías</div>
-            </div>
-            <button onClick={()=>setEditCat(editCat===idx?null:idx)} style={{background:C.accentDim,color:C.accentText,border:"1px solid "+(C.accentText)+"33",borderRadius:6,padding:"4px 8px",fontSize:10,fontWeight:700,cursor:"pointer",flexShrink:0}}>✏️</button>
-            <button onClick={()=>deleteCategory(idx)} style={{background:C.redDim,color:C.red,border:"1px solid "+(C.red)+"33",borderRadius:6,padding:"4px 8px",fontSize:10,fontWeight:700,cursor:"pointer",flexShrink:0}}>🗑</button>
-          </div>
-          {editCat===idx && (
-            <div style={{padding:"0 12px 12px",borderTop:"1px solid "+(C.border)}}>
-              <CatForm initial={cat} onSave={(u)=>updateCategory(idx,u)} onCancel={()=>setEditCat(null)}/>
-            </div>
-          )}
-          {/* Subcategorías */}
-          <div style={{padding:"0 12px 10px"}}>
-            <div style={{display:"flex",flexWrap:"wrap",gap:4,marginBottom:6}}>
-              {(cat.subs||[]).map((sub,si)=>(
-                <div key={si} style={{display:"flex",alignItems:"center",gap:3,background:C.bg,border:"1px solid "+(C.border),borderRadius:100,padding:"3px 8px"}}>
-                  <span style={{fontSize:11,color:C.textSub}}>{sub}</span>
-                  <button onClick={()=>deleteSub(idx,si)} style={{background:"none",border:"none",color:C.textMuted,cursor:"pointer",fontSize:11,lineHeight:1,padding:"0 1px"}}>✕</button>
-                </div>
-              ))}
-              <button onClick={()=>setEditSub(editSub?.catIdx===idx?null:{catIdx:idx,val:""})}
-                style={{background:"transparent",border:"1px dashed "+(C.border),borderRadius:100,padding:"3px 8px",fontSize:11,color:C.textMuted,cursor:"pointer"}}>+ sub</button>
-            </div>
-            {editSub?.catIdx===idx && (
-              <div style={{display:"flex",gap:6}}>
-                <input value={editSub.val} onChange={e=>setEditSub(s=>({...s,val:e.target.value}))} placeholder="Nueva subcategoría..."
-                  onKeyDown={e=>{if(e.key==="Enter"&&editSub.val){addSub(idx,editSub.val);setEditSub(null);}}}
-                  style={{flex:1,background:C.bg,border:"1px solid "+(C.border),borderRadius:7,padding:"5px 8px",color:C.text,fontSize:12}}/>
-                <button onClick={()=>{if(editSub.val)addSub(idx,editSub.val);setEditSub(null);}}
-                  style={{background:C.accent,color:"#000",border:"none",borderRadius:7,padding:"5px 10px",fontWeight:700,fontSize:12,cursor:"pointer"}}>OK</button>
-              </div>
-            )}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function CatForm({ initial, onSave, onCancel }) {
-  const [form, setForm] = useState({ label: initial?.label||"", icon: initial?.icon||"📦" });
-  return (
-    <div style={{display:"grid",gap:8,paddingTop:10}}>
-      <input value={form.label} onChange={e=>setForm(f=>({...f,label:e.target.value}))} placeholder="Nombre de la categoría"
-        style={{width:"100%",background:C.bg,border:"1px solid "+(C.border),borderRadius:8,padding:"8px 10px",color:C.text,fontSize:13}}/>
-      <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
-        {CAT_ICONS.map(ic=>(
-          <button key={ic} onClick={()=>setForm(f=>({...f,icon:ic}))}
-            style={{width:32,height:32,borderRadius:7,border:"1px solid "+(form.icon===ic?C.accent:C.border),background:form.icon===ic?C.accentDim:"transparent",cursor:"pointer",fontSize:16}}>
-            {ic}
-          </button>
-        ))}
-      </div>
-      <div style={{display:"flex",gap:6}}>
-        <button onClick={()=>form.label&&onSave(form)} style={{flex:1,background:C.accent,border:"none",borderRadius:8,padding:"8px",color:"#000",fontWeight:700,fontSize:12,cursor:"pointer"}}>
-          {initial?"Guardar":"Crear"}
-        </button>
-        <button onClick={onCancel} style={{background:C.card,border:"1px solid "+(C.border),borderRadius:8,padding:"8px 10px",color:C.textSub,cursor:"pointer",fontSize:12}}>Cancelar</button>
-      </div>
-    </div>
-  );
-}
-
-}
-
-// ─── ADD MODAL ────────────────────────────────────────────────────────────────
-function AddModal({onClose,onAdd,accounts,opts,categories=DEFAULT_CATEGORIES}){
+export function AddModal({onClose,onAdd,accounts,opts,categories=DEFAULT_CATEGORIES}){
   const [type,setType]=useState(opts.type||"expense");
   const [form,setForm]=useState({date:today(),category:opts.category||"",subcategory:"",account:accounts[0]?.id||"",amount:"",note:opts.note||""});
   const cats=categories[type];
@@ -328,8 +60,7 @@ function AddModal({onClose,onAdd,accounts,opts,categories=DEFAULT_CATEGORIES}){
   );
 }
 
-// ─── LOAN MODAL ───────────────────────────────────────────────────────────────
-function LoanModal({onClose,onAdd,accounts,cards=[]}){
+export function LoanModal({onClose,onAdd,accounts,cards=[]}){
   const [sourceType,setSourceType]=useState("account"); // account | card
   const [form,setForm]=useState({debtor:"",amount:"",date:today(),account:accounts[0]?.id||"",cardId:"",subcategory:"Préstamo personal",note:""});
   const set=(k,v)=>setForm(f=>({...f,[k]:v}));
@@ -387,8 +118,7 @@ function LoanModal({onClose,onAdd,accounts,cards=[]}){
   );
 }
 
-// ─── PAY MODAL ────────────────────────────────────────────────────────────────
-function PayModal({onClose,loan,onPay,accounts}){
+export function PayModal({onClose,loan,onPay,accounts}){
   const [form,setForm]=useState({date:today(),amount:"",account:accounts[0]?.id||"",note:""});
   const set=(k,v)=>setForm(f=>({...f,[k]:v}));
   const amt=parseFloat(form.amount)||0;
@@ -448,4 +178,166 @@ function PayModal({onClose,loan,onPay,accounts}){
   );
 }
 
-// ─── MICRO COMPONENTS ─────────────────────────────────────────────────────────
+export function EditTxModal({tx,onClose,onSave,accounts,categories=DEFAULT_CATEGORIES}){
+  const [form,setForm]=useState({
+    date:tx.date, type:tx.type, category:tx.category,
+    subcategory:tx.subcategory||"", account:tx.account,
+    amount:tx.amount, note:tx.note||""
+  });
+  const set=(k,v)=>setForm(f=>({...f,[k]:v,...(k==="category"?{subcategory:""}:{})}));
+  const cats=categories[form.type]||[];
+  const cat=cats.find(c=>c.id===form.category);
+  return(
+    <div style={{position:"fixed",inset:0,background:"#000000CC",zIndex:500,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:C.surface,borderRadius:"20px 20px 0 0",width:"100%",maxWidth:480,padding:"16px 16px 36px",maxHeight:"90vh",overflowY:"auto",borderTop:"1px solid "+C.accent+"55"}}>
+        <div style={{width:32,height:3,background:C.border,borderRadius:2,margin:"0 auto 14px"}}/>
+        <div style={{display:"flex",justifyContent:"space-between",marginBottom:14}}>
+          <div style={{fontSize:16,fontWeight:800}}>✏️ Editar movimiento</div>
+          <button onClick={onClose} style={{background:C.card,border:"1px solid "+C.border,borderRadius:6,padding:"4px 8px",color:C.text,cursor:"pointer"}}>✕</button>
+        </div>
+        <div style={{display:"grid",gap:10}}>
+          <div>
+            <div style={{fontSize:10,color:C.textMuted,fontWeight:700,marginBottom:4}}>TIPO</div>
+            <div style={{display:"flex",gap:8}}>
+              {["income","expense"].map(t=>(
+                <button key={t} onClick={()=>set("type",t)} style={{flex:1,padding:"8px",borderRadius:9,border:"1px solid "+(form.type===t?C.accent:C.border),background:form.type===t?C.accentDim:"transparent",color:form.type===t?C.accent:C.textSub,cursor:"pointer",fontWeight:700,fontSize:12}}>
+                  {t==="income"?"💰 Ingreso":"💸 Gasto"}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <div style={{fontSize:10,color:C.textMuted,fontWeight:700,marginBottom:4}}>MONTO</div>
+            <input type="number" value={form.amount} onChange={e=>set("amount",parseFloat(e.target.value)||0)}
+              style={{width:"100%",background:C.card,border:"1px solid "+C.border,borderRadius:9,padding:"9px 11px",color:C.text,fontSize:16,fontWeight:800}}/>
+          </div>
+          <div>
+            <div style={{fontSize:10,color:C.textMuted,fontWeight:700,marginBottom:4}}>CATEGORÍA</div>
+            <select value={form.category} onChange={e=>set("category",e.target.value)} style={{width:"100%",background:C.card,border:"1px solid "+C.border,borderRadius:9,padding:"9px 11px",color:C.text,fontSize:13}}>
+              {cats.map(c=><option key={c.id} value={c.id}>{c.icon} {c.label}</option>)}
+            </select>
+          </div>
+          {cat?.subs?.length>0&&(
+            <div>
+              <div style={{fontSize:10,color:C.textMuted,fontWeight:700,marginBottom:4}}>SUBCATEGORÍA</div>
+              <select value={form.subcategory} onChange={e=>set("subcategory",e.target.value)} style={{width:"100%",background:C.card,border:"1px solid "+C.border,borderRadius:9,padding:"9px 11px",color:C.text,fontSize:13}}>
+                <option value="">Sin subcategoría</option>
+                {cat.subs.map(s=><option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+          )}
+          <div>
+            <div style={{fontSize:10,color:C.textMuted,fontWeight:700,marginBottom:4}}>CUENTA</div>
+            <select value={form.account} onChange={e=>set("account",e.target.value)} style={{width:"100%",background:C.card,border:"1px solid "+C.border,borderRadius:9,padding:"9px 11px",color:C.text,fontSize:13}}>
+              {accounts.map(a=><option key={a.id} value={a.id}>{a.icon} {a.label}</option>)}
+            </select>
+          </div>
+          <div>
+            <div style={{fontSize:10,color:C.textMuted,fontWeight:700,marginBottom:4}}>FECHA</div>
+            <input type="date" value={form.date} onChange={e=>set("date",e.target.value)} style={{width:"100%",background:C.card,border:"1px solid "+C.border,borderRadius:9,padding:"9px 11px",color:C.text,fontSize:13}}/>
+          </div>
+          <div>
+            <div style={{fontSize:10,color:C.textMuted,fontWeight:700,marginBottom:4}}>DESCRIPCIÓN</div>
+            <input value={form.note} onChange={e=>set("note",e.target.value)} placeholder="Opcional..."
+              style={{width:"100%",background:C.card,border:"1px solid "+C.border,borderRadius:9,padding:"9px 11px",color:C.text,fontSize:13}}/>
+          </div>
+        </div>
+        <button onClick={()=>onSave(tx.id,form)}
+          style={{width:"100%",marginTop:14,padding:13,borderRadius:12,border:"none",background:C.accent,color:"#000",fontWeight:800,fontSize:15,cursor:"pointer"}}>
+          Guardar cambios
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export function TransferModal({onClose, onTransfer, accounts}) {
+  const [form, setForm] = useState({ from:"cash", to:"nequi", amount:"", date:today(), note:"" });
+  const set = (k,v) => setForm(f=>({...f,[k]:v}));
+  const ok = form.from && form.to && form.from !== form.to && parseFloat(form.amount) > 0;
+  const fromAcc = accounts.find(a=>a.id===form.from);
+  const toAcc   = accounts.find(a=>a.id===form.to);
+  return (
+    <div style={{position:"fixed",inset:0,background:"#000000BB",zIndex:500,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:C.surface,borderRadius:"22px 22px 0 0",width:"100%",maxWidth:480,padding:"18px 18px 36px",maxHeight:"90vh",overflowY:"auto",borderTop:"1px solid "+C.accent+"55",animation:"fa-slideUp .3s ease"}}>
+        <div style={{width:32,height:3,background:C.border,borderRadius:2,margin:"0 auto 16px"}}/>
+        <div style={{display:"flex",justifyContent:"space-between",marginBottom:14}}>
+          <div style={{fontSize:16,fontWeight:800}}>↔️ Transferencia entre cuentas</div>
+          <button onClick={onClose} style={{background:C.card,border:"1px solid "+C.border,borderRadius:6,padding:"4px 8px",color:C.text,cursor:"pointer"}}>✕</button>
+        </div>
+
+        {/* Preview visual */}
+        {ok && (
+          <div style={{background:C.accentDim,border:"1px solid "+C.accent+"44",borderRadius:12,padding:"12px 16px",marginBottom:12,display:"flex",alignItems:"center",gap:8,textAlign:"center",justifyContent:"center"}}>
+            <div>
+              <div style={{fontSize:18}}>{fromAcc?.icon}</div>
+              <div style={{fontSize:11,fontWeight:700,color:C.red}}>{fromAcc?.label}</div>
+              <div style={{fontSize:12,color:C.red}}>-{fmtCOP(parseFloat(form.amount))}</div>
+            </div>
+            <div style={{fontSize:20,color:C.accent}}>→</div>
+            <div>
+              <div style={{fontSize:18}}>{toAcc?.icon}</div>
+              <div style={{fontSize:11,fontWeight:700,color:C.green}}>{toAcc?.label}</div>
+              <div style={{fontSize:12,color:C.green}}>+{fmtCOP(parseFloat(form.amount))}</div>
+            </div>
+          </div>
+        )}
+
+        <div style={{display:"grid",gap:12}}>
+          <MF label="Monto">
+            <div style={{background:C.accentDim,border:"1px solid "+C.accent+"33",borderRadius:12,padding:"10px 14px",display:"flex",alignItems:"center",gap:6}}>
+              <span style={{color:C.textMuted,fontSize:16}}>$</span>
+              <input type="number" value={form.amount} onChange={e=>set("amount",e.target.value)} placeholder="0"
+                style={{flex:1,background:"transparent",border:"none",fontSize:22,fontWeight:900,color:C.accent}}/>
+            </div>
+          </MF>
+          <MF label="Desde">
+            <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+              {accounts.map(a=>(
+                <button key={a.id} onClick={()=>set("from",a.id)} style={{flex:"1 1 auto",padding:"8px 6px",borderRadius:9,
+                  border:"1px solid "+(form.from===a.id?C.red:C.border),
+                  background:form.from===a.id?C.redDim:"transparent",
+                  color:form.from===a.id?C.red:C.textSub,
+                  cursor:"pointer",fontSize:11,fontWeight:600,textAlign:"center",
+                  opacity:form.to===a.id?0.3:1}}>
+                  {a.icon} {a.label}
+                </button>
+              ))}
+            </div>
+          </MF>
+          <MF label="Hacia">
+            <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+              {accounts.map(a=>(
+                <button key={a.id} onClick={()=>set("to",a.id)} style={{flex:"1 1 auto",padding:"8px 6px",borderRadius:9,
+                  border:"1px solid "+(form.to===a.id?C.green:C.border),
+                  background:form.to===a.id?C.greenDim:"transparent",
+                  color:form.to===a.id?C.green:C.textSub,
+                  cursor:"pointer",fontSize:11,fontWeight:600,textAlign:"center",
+                  opacity:form.from===a.id?0.3:1}}>
+                  {a.icon} {a.label}
+                </button>
+              ))}
+            </div>
+          </MF>
+          {form.from === form.to && form.from && (
+            <div style={{fontSize:12,color:C.red,textAlign:"center"}}>⚠️ La cuenta origen y destino deben ser diferentes</div>
+          )}
+          <MF label="Fecha">
+            <input type="date" value={form.date} onChange={e=>set("date",e.target.value)}
+              style={{width:"100%",background:C.card,border:"1px solid "+C.border,borderRadius:9,padding:"9px 11px",color:C.text,fontSize:13}}/>
+          </MF>
+          <MF label="Nota (opcional)">
+            <input value={form.note} onChange={e=>set("note",e.target.value)} placeholder="Descripción..."
+              style={{width:"100%",background:C.card,border:"1px solid "+C.border,borderRadius:9,padding:"9px 11px",color:C.text,fontSize:13}}/>
+          </MF>
+        </div>
+        <button onClick={()=>ok&&onTransfer(form.from,form.to,parseFloat(form.amount),form.date,form.note)}
+          style={{width:"100%",marginTop:16,padding:13,borderRadius:12,border:"none",
+            background:ok?C.accent:C.border,color:ok?"#000":C.textMuted,
+            fontWeight:800,fontSize:15,cursor:ok?"pointer":"default"}}>
+          Transferir
+        </button>
+      </div>
+    </div>
+  );
+}

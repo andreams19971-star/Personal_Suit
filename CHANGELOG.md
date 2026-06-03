@@ -7,6 +7,81 @@
 
 ---
 
+## [2.6.4] — 2026-05-31 — Bugfix: movimientos de tarjetas no se guardan
+
+### Causas identificadas
+
+**1. Seed con IDs hardcodeados rompía loadAll**
+Cuando no había tarjetas, `loadAll` intentaba insertar `DEFAULT_CARDS` con IDs
+`'C1'`/`'C2'`. Si la columna `id` de `credit_cards` es de tipo `uuid`, ese insert
+fallaba → todo el `loadAll` caía al `catch` → `onlineRef.current = false` →
+ningún `addCharge`/`addCard` guardaba (retornaban 'Sin conexión').
+
+**2. addCharge/addCard bloqueaban si onlineRef era false**
+A diferencia de los otros hooks (corregidos en v2.6.0), estos dos aún tenían
+`if (!onlineRef.current) return { error:'Sin conexión' }`, bloqueando el insert.
+
+**3. Posibles columnas/políticas faltantes en Supabase**
+`card_charges` puede no tener política `auth_all` o columnas `installments`/`note`.
+
+### Solución
+- **Eliminado el seed automático** de tarjetas — la lista arranca vacía y el usuario
+  crea las suyas (evita el insert con IDs hardcodeados inválidos)
+- **addCharge y addCard** ahora intentan el insert aunque `onlineRef` sea false
+  (consistente con el resto de hooks tras v2.6.0)
+- **Fallback offline** usa `[]` en vez de `DEFAULT_CARDS`
+- **SQL `fix-cards.sql`** — verifica/corrige columnas, UUID default y políticas RLS
+  de `credit_cards` y `card_charges`
+
+### Archivos
+- `src/hooks/useCardsData.js`
+- `fix-cards.sql` (nuevo)
+
+---
+
+## [2.6.3] — 2026-05-30 — Fix: apps no cargan al volver a la app
+
+### Problema
+Al cerrar y volver a abrir la app en pocos segundos, las apps no cargaban.
+
+### Causas identificadas
+
+**1. `clients.navigate(c.url)` en el SW activate**
+Forzaba un reload de todas las tabs cuando se instalaba un nuevo SW.
+Si el usuario tenía la app abierta y llegaba una nueva versión en background,
+el reload ocurría en plena sesión sin aviso.
+
+**2. Network First para TODOS los assets**
+Con Render Free (cold start 15-60s), cada chunk de React.lazy esperaba la red.
+Al reabrir la app, todos los assets (`vendor-react.js`, `FinanzApp.js`, etc.)
+pedían a la red antes de servir del caché. Con cold start = app cargando indefinidamente.
+
+### Solución — SW v4
+
+| Tipo de archivo | Estrategia anterior | Estrategia v4 |
+|----------------|---------------------|---------------|
+| HTML | Network First | Network First + timeout 5s → caché si red lenta |
+| `/assets/*.js` (con hash) | Network First ❌ | **Cache First** ✅ — inmutables por hash |
+| Otros | Network First | Network First |
+| `clients.navigate()` | Sí ❌ | **Eliminado** ✅ |
+
+**Por qué Cache First es SEGURO para assets con hash:**
+Vite genera nombres como `FinanzApp-B9y9GJIo.js`. El hash cambia si cambia el contenido.
+Al hacer un nuevo deploy, el nuevo main bundle referencia `FinanzApp-NewHash.js` (nuevo nombre).
+El archivo viejo `B9y9GJIo.js` queda en caché pero nadie lo referencia → irrelevante.
+El nuevo hash no está en caché → cache miss → se descarga fresco → se cachea para siempre.
+
+**Resultado:**
+- Abre la app: assets del caché (instantáneo) + HTML de la red (verifica versión)
+- Sin internet: funciona con caché
+- Nuevo deploy: HTML actualizado → nuevos hashes → cache miss → descarga nueva versión
+- Sin reloads inesperados al volver a la app
+
+### Archivos
+- `public/sw.js` — v4
+
+---
+
 ## [2.6.2] — 2026-05-30 — Bugfix: columnas car_expenses en español
 
 ### Error

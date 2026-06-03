@@ -1,6 +1,11 @@
-// finanz/shared.js — Paleta, formateadores y constantes compartidas
-import { useState, useEffect } from "react";
+// finanz/shared.js — Constantes y utilidades compartidas
 
+import { useState, useEffect } from "react";
+import * as XLSX from "xlsx";
+import { useFinanzData } from "../hooks/useFinanzData.js";
+import { useCardsData } from "../hooks/useCardsData.js";
+import { checkFinanzAlerts, requestPermission, showLocalNotification } from "../hooks/useNotifications.js";
+import { loadSetting, saveSetting } from "../hooks/useSettings.js";
 
 // ─── PALETTE ─────────────────────────────────────────────────────────────────
 const C = {
@@ -64,43 +69,6 @@ const fmtShort = v => {
 const today  = () => new Date().toISOString().slice(0,10);
 const MONTHS  = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
 
-// ─── SEED ─────────────────────────────────────────────────────────────────────
-function seedTx(){
-  const now=new Date(); let id=1; const tx=[];
-  const add=(days,type,cat,sub,acc,amount,note,loanId=null)=>{
-    const d=new Date(now); d.setDate(d.getDate()-days);
-    tx.push({id:id++,date:d.toISOString().slice(0,10),type,category:cat,subcategory:sub,account:acc,amount,note,loanId});
-  };
-  add(0,"income","salary","Empresa","bancolombia",4200000,"Sueldo mensual");
-  add(1,"expense","food","Mercado","nequi",320000,"Éxito");
-  add(2,"expense","transport","Gasolina","cash",85000,"Full tanque");
-  add(3,"expense","housing","Arriendo","bbva",950000,"Arriendo mes");
-  add(4,"expense","entertain","Streaming","nequi",52900,"Netflix+Spotify");
-  add(5,"income","business","Ventas","nequi",800000,"Proyecto web");
-  add(6,"expense","food","Restaurante","cash",45000,"Almuerzo");
-  add(7,"expense","health","Gimnasio","nequi",120000,"Mes gym");
-  add(9,"income","salary","Bonificación","bancolombia",500000,"Bonificación Q3");
-  add(14,"expense","savings","Fondo emergencia","savings_acc",400000,"Ahorro mensual");
-  add(16,"expense","debt","Tarjeta crédito","bbva",650000,"Pago tarjeta");
-  add(18,"income","investment","Intereses","savings_acc",95000,"Rendimientos CDT");
-  add(25,"expense","health","Farmacia","cash",55000,"Medicamentos");
-  return tx;
-}
 
-function seedLoans(){
-  const now=new Date();
-  const d=days=>{const x=new Date(now);x.setDate(x.getDate()-days);return x.toISOString().slice(0,10);};
-  return [
-    {id:"L1",debtor:"Carlos Rodríguez", amount:500000,  balance:500000, date:d(45),account:"cash",       note:"Préstamo personal",status:"active",payments:[]},
-    {id:"L2",debtor:"María González",   amount:1200000, balance:800000, date:d(60),account:"nequi",      note:"Auxilio médico",   status:"active",payments:[
-      {id:"P1",date:d(30),amount:200000,note:"Primer abono"},
-      {id:"P2",date:d(10),amount:200000,note:"Segundo abono"},
-    ]},
-    {id:"L3",debtor:"Andrés Martínez",  amount:300000,  balance:0,      date:d(90),account:"bancolombia",note:"Préstamo trabajo", status:"paid",  payments:[
-      {id:"P3",date:d(60),amount:150000,note:"Primer pago"},
-      {id:"P4",date:d(20),amount:150000,note:"Pago final"},
-    ]},
-    {id:"L4",debtor:"Luisa Fernández",  amount:750000,  balance:750000, date:d(5), account:"nequi",      note:"Para viaje",       status:"active",payments:[]},
-  ];
-}
-
+export { C, DEFAULT_CATEGORIES, ACCOUNTS_DEF, fmtCOP, fmtShort, today, MONTHS };
+export const td = today;

@@ -1,9 +1,9 @@
 // finanz/Dashboard.jsx
-import {{ useState, useEffect }} from "react";
-import * as XLSX from "xlsx";
-import {{ C, fmtCOP, fmtShort, today, td, MONTHS, ACCOUNTS_DEF, DEFAULT_CATEGORIES }} from "./shared.js";
+import { useState, useEffect, useRef } from "react";
+import { C, fmtCOP, fmtShort, today, td, MONTHS, ACCOUNTS_DEF, DEFAULT_CATEGORIES } from "./shared.js";
+import { TxRow, SectionHeader, EmptyState, Pill, StatCard, MF } from "./Helpers.jsx";
 
-function Dashboard({transactions,accounts,loans,totalIncome,totalExpense,netBalance,filterMonth,setView,setSelAccount,monthTxs,categories=DEFAULT_CATEGORIES,settings={}}){
+export function Dashboard({transactions,accounts,loans,totalIncome,totalExpense,netBalance,filterMonth,setView,setSelAccount,monthTxs,categories=DEFAULT_CATEGORIES,settings={}}){
   const totalAssets=accounts.reduce((s,a)=>s+a.balance,0);
   const totalPending=loans.filter(l=>l.status==="active").reduce((s,l)=>s+l.balance,0);
   const expByCat={};
@@ -155,4 +155,3 @@ function Dashboard({transactions,accounts,loans,totalIncome,totalExpense,netBala
     </div>
   );
 }
-

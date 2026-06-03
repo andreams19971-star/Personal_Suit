@@ -25,12 +25,8 @@ export function useCardsData() {
       if (cr.error || chr.error) throw new Error((cr.error || chr.error).message)
 
       let loadedCards = cr.data || []
-      if (loadedCards.length === 0) {
-        const { data: inserted } = await supabase.from('credit_cards').insert(
-          DEFAULT_CARDS.map(c => ({ id:c.id, name:c.name, bank:c.bank, last4:c.last4, color:c.color, card_limit:c.limit, cut_day:c.cutDay, pay_day:c.payDay, balance:0 }))
-        ).select()
-        loadedCards = inserted || []
-      }
+      // NO sembrar tarjetas automáticamente — dejar vacío para que el usuario cree las suyas.
+      // (El seed con IDs hardcodeados 'C1'/'C2' rompía loadAll si la columna id es uuid)
 
       const chargesByCard = {}
       ;(chr.data || []).forEach(ch => {
@@ -49,7 +45,7 @@ export function useCardsData() {
       console.log('[CardsData] ✅ Online')
     } catch(err) {
       console.warn('[CardsData] Offline →', err.message)
-      setCards(DEFAULT_CARDS)
+      setCards([])
       setOnlineState(false)
     } finally { setLoading(false) }
   }
@@ -61,7 +57,7 @@ export function useCardsData() {
       if (c.id !== cardId) return c
       return { ...c, balance:(c.balance||0)+charge.amount, charges:[row,...(c.charges||[])] }
     }))
-    if (!onlineRef.current) return { error:'Sin conexión' }
+    if (!onlineRef.current) console.warn('[addCharge] offline — intentando igualmente...')
     const { data, error } = await supabase.from('card_charges').insert([{
       card_id:cardId, date:charge.date, amount:charge.amount,
       category:charge.category, note:charge.note||'', installments:charge.installments||1
@@ -119,7 +115,7 @@ export function useCardsData() {
     const localId = 'local-card-' + Date.now()
     const newCard = { ...data, id:localId, balance:0, charges:[] }
     setCards(prev => [...prev, newCard])
-    if (!onlineRef.current) return { error:'Sin conexión' }
+    if (!onlineRef.current) console.warn('[addCard] offline — intentando igualmente...')
     const { data:saved, error } = await supabase.from('credit_cards').insert([{
       name:data.name, bank:data.bank, last4:data.last4, color:data.color,
       card_limit:data.limit, cut_day:data.cutDay, pay_day:data.payDay, balance:0

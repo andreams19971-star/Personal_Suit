@@ -1,9 +1,9 @@
 // finanz/LoansView.jsx
-import {{ useState, useEffect }} from "react";
-import * as XLSX from "xlsx";
-import {{ C, fmtCOP, fmtShort, today, td, MONTHS, ACCOUNTS_DEF, DEFAULT_CATEGORIES }} from "./shared.js";
+import { useState, useEffect, useRef } from "react";
+import { C, fmtCOP, fmtShort, today, td, MONTHS, ACCOUNTS_DEF, DEFAULT_CATEGORIES } from "./shared.js";
+import { TxRow, SectionHeader, EmptyState, Pill, StatCard, MF } from "./Helpers.jsx";
 
-function LoansView({loans,transactions,setShowLoanModal,setShowPayModal,accounts,showToast,categories=DEFAULT_CATEGORIES}){
+export function LoansView({loans,transactions,setShowLoanModal,setShowPayModal,accounts,showToast,categories=DEFAULT_CATEGORIES}){
   const [filter,setFilter]=useState("active");
   const [selLoan,setSelLoan]=useState(null);
   const filtered=loans.filter(l=>filter==="all"||l.status===filter);
@@ -85,3 +85,72 @@ function LoansView({loans,transactions,setShowLoanModal,setShowPayModal,accounts
   );
 }
 
+export function LoanDetail({loan,transactions,onBack,setShowPayModal,accounts,categories=DEFAULT_CATEGORIES}){
+  const acc=accounts.find(a=>a.id===loan.account);
+  const pct=Math.round(((loan.amount-loan.balance)/loan.amount)*100);
+  const loanTx=transactions.filter(t=>t.loanId===loan.id);
+  return(
+    <div style={{padding:"16px",display:"grid",gap:16,boxSizing:"border-box"}} className="fa-fade-up">
+      <button onClick={onBack} style={{display:"flex",alignItems:"center",gap:6,background:"none",border:"none",color:C.orange,cursor:"pointer",fontWeight:600,fontSize:14,padding:0}}>← Volver a Préstamos</button>
+      <div style={{background:"linear-gradient(135deg,"+(C.orangeDim)+","+(C.card)+")",border:"1px solid "+(C.orange)+"44",borderRadius:20,padding:20}}>
+        <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:16}}>
+          <div style={{width:52,height:52,borderRadius:16,background:C.orangeDim,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24}}>{loan.status==="paid"?"✅":"👤"}</div>
+          <div>
+            <div style={{fontSize:20,fontWeight:800}}>{loan.debtor}</div>
+            <div style={{fontSize:12,color:C.textMuted}}>{loan.note} · desde {loan.date}</div>
+          </div>
+          {loan.status==="paid"&&<span style={{marginLeft:"auto",background:C.accentDim,color:C.accentText,borderRadius:100,fontSize:11,fontWeight:700,padding:"4px 10px"}}>✓ Saldado</span>}
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12,marginBottom:16}}>
+          <div style={{textAlign:"center"}}>
+            <div style={{fontSize:11,color:C.textMuted,marginBottom:2}}>PRESTADO</div>
+            <div style={{fontSize:15,fontWeight:800}}>{fmtCOP(loan.amount)}</div>
+          </div>
+          <div style={{textAlign:"center"}}>
+            <div style={{fontSize:11,color:C.accentText,marginBottom:2}}>COBRADO</div>
+            <div style={{fontSize:15,fontWeight:800,color:C.accentText}}>{fmtCOP(loan.amount-loan.balance)}</div>
+          </div>
+          <div style={{textAlign:"center"}}>
+            <div style={{fontSize:11,color:C.orange,marginBottom:2}}>PENDIENTE</div>
+            <div style={{fontSize:15,fontWeight:800,color:C.orange}}>{fmtCOP(loan.balance)}</div>
+          </div>
+        </div>
+        <div style={{marginBottom:6,display:"flex",justifyContent:"space-between"}}>
+          <span style={{fontSize:12,color:C.textMuted}}>Progreso de cobro</span>
+          <span style={{fontSize:12,fontWeight:700,color:loan.status==="paid"?C.accentText:C.orange}}>{pct}%</span>
+        </div>
+        <div style={{height:10,borderRadius:5,background:C.border}}>
+          <div style={{height:"100%",borderRadius:5,background:loan.status==="paid"?C.accent:C.orange,width:(pct)+"%",transition:"width 1s ease"}}/>
+        </div>
+        <div style={{fontSize:11,color:C.textMuted,marginTop:6}}>Cuenta: {acc?.icon} {acc?.label}</div>
+      </div>
+      {loan.status==="active"&&(
+        <button onClick={()=>setShowPayModal(loan)} className="fa-btn" style={{background:C.orange,color:"#fff",border:"none",borderRadius:14,padding:14,fontWeight:800,fontSize:15,cursor:"pointer"}}>+ Registrar Abono / Pago</button>
+      )}
+      <div>
+        <div style={{fontSize:13,fontWeight:700,color:C.textMuted,marginBottom:10}}>HISTORIAL DE PAGOS ({loan.payments.length})</div>
+        {loan.payments.length===0&&<EmptyState label="Sin pagos registrados aún"/>}
+        <div style={{background:C.card,border:"1px solid "+(C.border),borderRadius:16,overflow:"hidden"}}>
+          {[...loan.payments].reverse().map((p,i)=>(
+            <div key={p.id} className="fa-tx-row" style={{padding:"12px 16px",borderBottom:i<loan.payments.length-1?"1px solid "+(C.border):"none",display:"flex",alignItems:"center",gap:12}}>
+              <div style={{width:36,height:36,borderRadius:10,background:C.accentDim,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>💸</div>
+              <div style={{flex:1}}>
+                <div style={{fontSize:14,fontWeight:600}}>{p.note||"Abono"}</div>
+                <div style={{fontSize:11,color:C.textMuted}}>{p.date}</div>
+              </div>
+              <div style={{fontSize:15,fontWeight:800,color:C.accentText}}>+{fmtCOP(p.amount)}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+      {loanTx.length>0&&(
+        <div>
+          <div style={{fontSize:13,fontWeight:700,color:C.textMuted,marginBottom:10}}>MOVIMIENTOS VINCULADOS</div>
+          <div style={{background:C.card,border:"1px solid "+(C.border),borderRadius:16,overflow:"hidden"}}>
+            {loanTx.map((tx,i)=><TxRow key={tx.id} tx={tx} showDivider={i<loanTx.length-1} categories={categories}/>)}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
