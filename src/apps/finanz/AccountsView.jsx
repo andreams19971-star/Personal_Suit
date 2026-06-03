@@ -1,6 +1,7 @@
 // finanz/AccountsView.jsx
-import {{ useState, useEffect }} from "react";
-import {{ C, fmtCOP, fmtShort, today, td, MONTHS, ACCOUNTS_DEF, DEFAULT_CATEGORIES }} from "./shared.js";
+import { useState, useEffect } from "react";
+import { C, fmtCOP, fmtShort, today, td, MONTHS, ACCOUNTS_DEF, DEFAULT_CATEGORIES } from "./shared.js";
+import { TxRow, EmptyState, SectionHeader } from "./Helpers.jsx";
 
 function AccountsView({accounts,transactions,selAccount,setSelAccount,filterMonth,showToast,categories=DEFAULT_CATEGORIES,deleteTransaction,setEditTx}){
   const active=selAccount||accounts[0]?.id;

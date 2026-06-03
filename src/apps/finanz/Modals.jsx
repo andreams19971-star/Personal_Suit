@@ -1,6 +1,7 @@
 // finanz/Modals.jsx
 import { useState, useEffect, useRef } from "react";
 import { C, fmtCOP, fmtShort, today, td, MONTHS, ACCOUNTS_DEF, DEFAULT_CATEGORIES } from "./shared.js";
+import { MF, SectionHeader, EmptyState } from "./Helpers.jsx";
 
 export function AddModal({onClose,onAdd,accounts,opts,categories=DEFAULT_CATEGORIES}){
   const [type,setType]=useState(opts.type||"expense");

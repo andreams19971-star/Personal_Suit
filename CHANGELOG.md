@@ -7,6 +7,26 @@
 
 ---
 
+## [2.7.1] — 2026-06-02 — Bugfix: shared.js tenía imports incorrectos
+
+### Error de build
+`Could not resolve "../hooks/useFinanzData.js" from "src/apps/finanz/shared.js"`
+
+### Causa
+Al extraer `shared.js`, el script de Python copió las primeras líneas de FinanzApp.jsx
+que incluían los imports de los hooks (`useFinanzData`, `useCardsData`, XLSX, etc.).
+`shared.js` solo debe exportar constantes — no importa nada.
+
+También: `AccountsView.jsx`, `MobileNav.jsx` y `Movements.jsx` heredaron `import XLSX`
+innecesariamente (solo `Movements.jsx` lo necesita por `exportXLSX`).
+
+### Fix
+- Eliminados imports de hooks y XLSX de `shared.js`
+- Eliminado import XLSX de `AccountsView.jsx` y `MobileNav.jsx`
+- Mantenido import XLSX en `Movements.jsx` (necesario para exportar)
+
+---
+
 ## [2.7.0] — 2026-06-02 — FinanzApp dividida en módulos
 
 ### Estructura anterior
