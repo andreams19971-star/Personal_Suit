@@ -1,6 +1,5 @@
 // finanz/AccountsView.jsx
 import {{ useState, useEffect }} from "react";
-import * as XLSX from "xlsx";
 import {{ C, fmtCOP, fmtShort, today, td, MONTHS, ACCOUNTS_DEF, DEFAULT_CATEGORIES }} from "./shared.js";
 
 function AccountsView({accounts,transactions,selAccount,setSelAccount,filterMonth,showToast,categories=DEFAULT_CATEGORIES,deleteTransaction,setEditTx}){

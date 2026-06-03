@@ -1,5 +1,6 @@
 // finanz/Movements.jsx
 import { useState, useEffect, useRef } from "react";
+import * as XLSX from "xlsx";
 import { C, fmtCOP, fmtShort, today, td, MONTHS, ACCOUNTS_DEF, DEFAULT_CATEGORIES } from "./shared.js";
 import { TxRow, SectionHeader, EmptyState, Pill, StatCard, MF } from "./Helpers.jsx";
 

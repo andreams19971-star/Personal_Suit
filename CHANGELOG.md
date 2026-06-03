@@ -7,6 +7,38 @@
 
 ---
 
+## [2.7.0] — 2026-06-02 — FinanzApp dividida en módulos
+
+### Estructura anterior
+Un solo archivo `FinanzApp.jsx` de 2,049 líneas.
+Cada cambio tenía riesgo de romper funcionalidades no relacionadas.
+
+### Nueva estructura (10 archivos, promedio 180 líneas cada uno)
+
+```
+src/apps/
+  FinanzApp.jsx          (219 líneas — shell: hooks, estado, render principal)
+  finanz/
+    shared.js            (74  líneas — C, fmtCOP, fmtShort, ACCOUNTS_DEF, etc.)
+    Helpers.jsx          (32  líneas — TxRow, SectionHeader, EmptyState, Pill, StatCard, MF)
+    TopBar.jsx           (57  líneas — TopBar, MobileNav)
+    Dashboard.jsx        (157 líneas — sección inicio)
+    Movements.jsx        (124 líneas — Movements + AccountsView)
+    LoansView.jsx        (156 líneas — LoansView + LoanDetail)
+    CardsView.jsx        (339 líneas — CardsView + ChargeModal + EditChargeModal + CardEditModal)
+    Stats.jsx            (209 líneas — Stats)
+    Sidebar.jsx          (370 líneas — Sidebar + AccountsManager + CategoriesManager + CatForm)
+    Modals.jsx           (343 líneas — AddModal + LoanModal + PayModal + EditTxModal + TransferModal)
+```
+
+### Beneficios
+- Cambios aislados: editar Stats no toca Movements, editar Modals no toca Dashboard
+- Code splitting de Vite mejorado: cada módulo puede ser un chunk separado
+- Más fácil de debuggear: errores apuntan al archivo exacto
+- Todos los archivos tienen exports nombrados y pasan la verificación de sintaxis
+
+---
+
 ## [2.6.4] — 2026-05-31 — Bugfix: movimientos de tarjetas no se guardan
 
 ### Causas identificadas

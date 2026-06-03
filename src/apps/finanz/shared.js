@@ -1,12 +1,5 @@
 // finanz/shared.js — Constantes y utilidades compartidas
 
-import { useState, useEffect } from "react";
-import * as XLSX from "xlsx";
-import { useFinanzData } from "../hooks/useFinanzData.js";
-import { useCardsData } from "../hooks/useCardsData.js";
-import { checkFinanzAlerts, requestPermission, showLocalNotification } from "../hooks/useNotifications.js";
-import { loadSetting, saveSetting } from "../hooks/useSettings.js";
-
 // ─── PALETTE ─────────────────────────────────────────────────────────────────
 const C = {
   bg:"#09090B",surface:"#111113",card:"#18181B",card2:"#1C1C1F",
