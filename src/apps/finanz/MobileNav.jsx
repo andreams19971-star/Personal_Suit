@@ -1,6 +1,6 @@
 // finanz/MobileNav.jsx
 import {{ useState, useEffect }} from "react";
-import {{ C, fmtCOP, fmtShort, today, today, MONTHS, ACCOUNTS_DEF, DEFAULT_CATEGORIES }} from "./shared.js";
+import {{ C, fmtCOP, fmtShort, today, MONTHS, ACCOUNTS_DEF, DEFAULT_CATEGORIES }} from "./shared.js";
 
 function MobileNav({view,setView,openAddModal,loans}){
   const badge=loans.filter(l=>l.status==="active").length;

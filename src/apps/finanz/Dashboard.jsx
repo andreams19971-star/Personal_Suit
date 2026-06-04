@@ -1,6 +1,6 @@
 // finanz/Dashboard.jsx
 import { useState, useEffect, useRef } from "react";
-import { C, fmtCOP, fmtShort, today, today, MONTHS, ACCOUNTS_DEF, DEFAULT_CATEGORIES } from "./shared.js";
+import { C, fmtCOP, fmtShort, today, MONTHS, ACCOUNTS_DEF, DEFAULT_CATEGORIES } from "./shared.js";
 import { TxRow, SectionHeader, EmptyState, Pill, StatCard, MF } from "./Helpers.jsx";
 
 export function Dashboard({transactions,accounts,loans,totalIncome,totalExpense,netBalance,filterMonth,setView,setSelAccount,monthTxs,categories=DEFAULT_CATEGORIES,settings={}}){

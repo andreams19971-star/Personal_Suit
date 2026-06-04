@@ -4,7 +4,7 @@ import { useFinanzData } from "../hooks/useFinanzData.js";
 import { useCardsData }  from "../hooks/useCardsData.js";
 import { checkFinanzAlerts, requestPermission, showLocalNotification } from "../hooks/useNotifications.js";
 import { loadSetting, saveSetting } from "../hooks/useSettings.js";
-import { C, fmtCOP, fmtShort, today, today, MONTHS, ACCOUNTS_DEF, DEFAULT_CATEGORIES } from "./finanz/shared.js";
+import { C, fmtCOP, fmtShort, today, MONTHS, ACCOUNTS_DEF, DEFAULT_CATEGORIES } from "./finanz/shared.js";
 import { TxRow, SectionHeader, EmptyState, Pill, StatCard, MF } from "./finanz/Helpers.jsx";
 import { TopBar, MobileNav } from "./finanz/TopBar.jsx";
 import { Dashboard }     from "./finanz/Dashboard.jsx";

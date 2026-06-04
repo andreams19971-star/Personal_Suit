@@ -1,7 +1,7 @@
 // finanz/Movements.jsx
 import { useState, useEffect, useRef } from "react";
 import * as XLSX from "xlsx";
-import { C, fmtCOP, fmtShort, today, today, MONTHS, ACCOUNTS_DEF, DEFAULT_CATEGORIES } from "./shared.js";
+import { C, fmtCOP, fmtShort, today, MONTHS, ACCOUNTS_DEF, DEFAULT_CATEGORIES } from "./shared.js";
 import { TxRow, SectionHeader, EmptyState, Pill, StatCard, MF } from "./Helpers.jsx";
 
 export function Movements({transactions,filterMonth,deleteTransaction,openAddModal,loans,categories=DEFAULT_CATEGORIES,setEditTx}){
