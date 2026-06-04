@@ -10,19 +10,22 @@ const DEFAULT_ROOMS = [
 ]
 
 export function useApartamentoData() {
-  const { user } = useAuth();
-  const userId = user?.id;
   const [rooms,        setRooms]        = useState(DEFAULT_ROOMS)
   const [reservations, setReservations] = useState([])
   const [expenses,     setExpenses]     = useState([])
   const [loading,      setLoading]      = useState(true)
   const [online,       setOnline]       = useState(false)
   const onlineRef = useRef(false)
+  const userIdRef = useRef(null)
   const setOnlineState = v => { onlineRef.current = v; setOnline(v) }
 
   useEffect(() => { loadAll() }, [])
 
   async function loadAll() {
+    const { data: { session } } = await supabase.auth.getSession();
+    const userId = session?.user?.id;
+    if (!userId) { console.warn("[Data] No userId — skipping load"); return; }
+    userIdRef.current = userId;
     setLoading(true)
     try {
       const [rr, resr, er] = await Promise.all([
@@ -78,6 +81,7 @@ export function useApartamentoData() {
     if (!res.checkOut)        return { error: 'La fecha de salida es obligatoria' }
     if (res.checkOut <= res.checkIn) return { error: 'La salida debe ser después de la entrada' }
     const nights = Math.max(1, Math.round((new Date(res.checkOut)-new Date(res.checkIn))/86400000))
+    const userId = userIdRef.current;
     const localId = 'local-RES-' + Date.now()
     const newRes = { ...res, id:localId, nights, total:0, paid:0, status:'reserved' }
     setReservations(prev => [newRes, ...prev])

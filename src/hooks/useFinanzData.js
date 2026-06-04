@@ -36,8 +36,6 @@ function txToRow(tx) {
 }
 
 export function useFinanzData() {
-  const { user } = useAuth();
-  const userId = user?.id;
   const [transactions, setTransactions] = useState([])
   const [loans,        setLoans]        = useState([])
   const [accountBalances, setAccountBalances] = useState({
@@ -46,6 +44,7 @@ export function useFinanzData() {
   const [loading,      setLoading]      = useState(true)
   const [online,       setOnline]       = useState(false)
   const onlineRef = useRef(false)
+  const userIdRef = useRef(null)
 
   const setOnlineState = (val) => {
     onlineRef.current = val
@@ -75,6 +74,10 @@ export function useFinanzData() {
   }, [])
 
   async function loadAll() {
+    const { data: { session } } = await supabase.auth.getSession();
+    const userId = session?.user?.id;
+    if (!userId) { console.warn("[Data] No userId — skipping load"); return; }
+    userIdRef.current = userId;
     setLoading(true)
     try {
       // Carga en paralelo: los últimos 2 meses de transacciones + todos los préstamos
@@ -149,6 +152,7 @@ export function useFinanzData() {
   }
 
   async function addTransaction(tx) {
+    const userId = userIdRef.current;
     const localId = 'local-' + Date.now()
     const newTx = { ...tx, id: localId }
     setTransactions(prev => [newTx, ...prev])  // Optimistic update

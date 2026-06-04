@@ -7,17 +7,20 @@ const DEFAULT_CARDS = [
 ]
 
 export function useCardsData() {
-  const { user } = useAuth();
-  const userId = user?.id;
   const [cards,   setCards]   = useState([])
   const [loading, setLoading] = useState(true)
   const [online,  setOnline]  = useState(false)
   const onlineRef = useRef(false)
+  const userIdRef = useRef(null)
   const setOnlineState = v => { onlineRef.current = v; setOnline(v) }
 
   useEffect(() => { loadAll() }, [])
 
   async function loadAll() {
+    const { data: { session } } = await supabase.auth.getSession();
+    const userId = session?.user?.id;
+    if (!userId) { console.warn("[Data] No userId — skipping load"); return; }
+    userIdRef.current = userId;
     setLoading(true)
     try {
       const [cr, chr] = await Promise.all([
@@ -53,6 +56,7 @@ export function useCardsData() {
   }
 
   async function addCharge(cardId, charge) {
+    const userId = userIdRef.current;
     const localId = 'local-ch-' + Date.now()
     const row = { ...charge, id:localId, card_id:cardId }
     setCards(prev => prev.map(c => {

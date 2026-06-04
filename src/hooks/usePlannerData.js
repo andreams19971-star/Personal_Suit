@@ -38,8 +38,6 @@ function parseComp(v) {
 }
 
 export function usePlannerData() {
-  const { user } = useAuth();
-  const userId = user?.id;
   const [tasks,   setTasks]   = useState([])
   const [habits,  setHabits]  = useState([])
   const [goals,   setGoals]   = useState([])
@@ -47,11 +45,16 @@ export function usePlannerData() {
   const [loading, setLoading] = useState(true)
   const [online,  setOnline]  = useState(false)
   const onlineRef = useRef(false)
+  const userIdRef = useRef(null)
   const setOnlineState = v => { onlineRef.current = v; setOnline(v) }
 
   useEffect(() => { loadAll() }, [])
 
   async function loadAll() {
+    const { data: { session } } = await supabase.auth.getSession();
+    const userId = session?.user?.id;
+    if (!userId) { console.warn("[Data] No userId — skipping load"); return; }
+    userIdRef.current = userId;
     setLoading(true)
     try {
       const loadTable = async (table) => {
@@ -94,6 +97,7 @@ export function usePlannerData() {
 
   async function addTask(t) {
     if (!t.title?.trim()) return { error: 'El título es obligatorio' }
+    const userId = userIdRef.current;
     const localId = 'local-T-' + Date.now()
     const row = { id:localId, title:t.title, date:t.date||null, category:t.category||'other',
       priority:t.priority||'medium', note:t.note||null, done:false,

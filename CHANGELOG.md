@@ -7,6 +7,45 @@
 
 ---
 
+## [2.9.0] — 2026-06-03 — CRÍTICO: Aislamiento de datos por usuario
+
+### Problema
+Todos los usuarios veían los datos de todos los demás usuarios.
+Las tablas de datos no tenían columna `user_id` y las políticas RLS
+usaban `USING (true)` — cualquier usuario autenticado podía ver todo.
+
+### Solución completa (SQL + código)
+
+**SQL: `fix-user-isolation.sql`**
+1. Agrega columna `user_id uuid REFERENCES auth.users(id)` a las 16 tablas
+2. Migra datos existentes al usuario admin (andreams1997@gmail.com)
+3. Reemplaza políticas `anon_all`/`auth_all` con `user_data`:
+   `USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id)`
+
+**Código: 5 hooks actualizados**
+- Todos los `SELECT` ahora incluyen `.eq('user_id', userId)`
+- Todos los `INSERT` ahora incluyen `user_id: userId`
+- `useAuth` importado en cada hook para obtener el userId actual
+
+**useAuth.js: limpieza de caché entre usuarios**
+Al evento `SIGNED_IN`, si el perfil en caché es de otro usuario
+(ids diferentes), se limpia el caché antes de cargar el nuevo perfil.
+
+**useSettings.js: settings aislados por usuario**
+`loadSetting` y `saveSetting` aceptan `userId` y filtran por él.
+
+### Archivos
+- `fix-user-isolation.sql` — ejecutar en Supabase
+- `src/hooks/useFinanzData.js`
+- `src/hooks/useCardsData.js`
+- `src/hooks/usePlannerData.js`
+- `src/hooks/useFlotaData.js`
+- `src/hooks/useApartamentoData.js`
+- `src/hooks/useSettings.js`
+- `src/hooks/useAuth.js`
+
+---
+
 ## [2.8.4] — 2026-06-03 — Bugfix: `Notification` no definida en iOS Safari PWA
 
 ### Error

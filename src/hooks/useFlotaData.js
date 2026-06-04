@@ -10,19 +10,22 @@ const DEFAULT_CARS = [
 ]
 
 export function useFlotaData() {
-  const { user } = useAuth();
-  const userId = user?.id;
   const [cars,     setCars]     = useState([])
   const [payments, setPayments] = useState({})
   const [expenses, setExpenses] = useState({})
   const [loading,  setLoading]  = useState(true)
   const [online,   setOnline]   = useState(false)
   const onlineRef = useRef(false)
+  const userIdRef = useRef(null)
   const setOnlineState = v => { onlineRef.current = v; setOnline(v) }
 
   useEffect(() => { loadAll() }, [])
 
   async function loadAll() {
+    const { data: { session } } = await supabase.auth.getSession();
+    const userId = session?.user?.id;
+    if (!userId) { console.warn("[Data] No userId — skipping load"); return; }
+    userIdRef.current = userId;
     setLoading(true)
     try {
       const [cr, pr, er] = await Promise.all([
@@ -138,6 +141,7 @@ export function useFlotaData() {
   async function addWorkDay(carId, fecha, account='cash', montoCustom=null) {
     const car   = cars.find(c => c.id === carId)
     const monto = montoCustom || car?.valor_diario || 70000
+    const userId = userIdRef.current;
     const localId = 'local-P-' + Date.now()
     const localRow = { id:localId, car_id:carId, fecha, monto, pagado:false, nota:'', account }
     setPayments(prev => ({...prev, [carId]: [localRow, ...(prev[carId]||[])]}))
