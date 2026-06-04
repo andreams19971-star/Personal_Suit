@@ -1,6 +1,6 @@
 // apartamento/DashboardView.jsx
 import { useState, useEffect } from "react";
-import { C, today, fmtCOP } from "./shared.js";
+import { C, STATUS_CONFIG, fmt, fmtCOP, today } from "./shared.js";
 
 export function DashboardView({rooms,reservations,expenses,totalExpenses,occupancyRate,getRoomStatus,setModal,updateReservationStatus,showToast}) {
   const today = today();

@@ -1,6 +1,6 @@
 // planner/CalendarView.jsx
 import { useState, useEffect } from "react";
-import { C, today } from "./shared.js";
+import { C, DAYS, MONTHS, today } from "./shared.js";
 
 export function CalendarView({ tasks, aptReservations=[], calDate, setCalDate, selDate, setSelDate, toggleTask, setTaskStatus, deleteTask, setShowTaskModal, taskCats, setEditTask }) {
   const year = calDate.getFullYear();

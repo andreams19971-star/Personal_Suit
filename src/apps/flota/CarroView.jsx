@@ -1,6 +1,6 @@
 // flota/CarroView.jsx
 import { useState, useEffect } from "react";
-import { C, CAR1, CAR2, today, fmtCOP, fmtShort, ACCOUNTS, MONTHS } from "./shared.js";
+import { ACCOUNTS, C, CAR1, CAR2, DAYS_ES, MONTHS, fmt, fmtCOP, fmtShort, today } from "./shared.js";
 
 export function CarroView({carro,stats,pagos,filterMonth,marcarPagado,eliminarPago,editarPago,setModal}) {
   const pagosMes = pagos.filter(p=>p.fecha.startsWith(filterMonth));

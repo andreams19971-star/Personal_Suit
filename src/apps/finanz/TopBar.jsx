@@ -1,6 +1,6 @@
 // finanz/TopBar.jsx
 import { useState, useEffect, useRef } from "react";
-import { C, fmtCOP, fmtShort, today, MONTHS, ACCOUNTS_DEF, DEFAULT_CATEGORIES } from "./shared.js";
+import { ACCOUNTS_DEF, C, DEFAULT_CATEGORIES, MONTHS, fmtCOP, fmtShort, today } from "./shared.js";
 
 export function TopBar({view,filterMonth,setFilterMonth,onMonthChange,setSidebarOpen,openAddModal,onBack}){
   const titles={dashboard:"Dashboard",movements:"Movimientos",accounts:"Cuentas",loans:"Por cobrar",stats:"Estadísticas"};

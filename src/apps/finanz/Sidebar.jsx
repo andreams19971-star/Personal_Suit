@@ -1,6 +1,6 @@
 // finanz/Sidebar.jsx
 import { useState } from "react";
-import { C, fmtCOP, ACCOUNTS_DEF, DEFAULT_CATEGORIES } from "./shared.js";
+import { ACCOUNTS_DEF, C, DEFAULT_CATEGORIES, fmtCOP } from "./shared.js";
 import { AccountsManager } from "./AccountsManager.jsx";
 import { CategoriesManager } from "./CategoriesManager.jsx";
 

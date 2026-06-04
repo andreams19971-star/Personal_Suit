@@ -1,6 +1,6 @@
 // apartamento/CalendarView.jsx
 import { useState, useEffect } from "react";
-import { C, today, fmtCOP } from "./shared.js";
+import { C, MONTHS, STATUS_CONFIG, fmt, fmtCOP, today } from "./shared.js";
 
 export function CalendarView({reservations,rooms,calMonth,setCalMonth,setModal}) {
   const year=calMonth.getFullYear(),month=calMonth.getMonth();

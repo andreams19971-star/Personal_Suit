@@ -1,6 +1,6 @@
 // flota/Modals.jsx
 import { useState, useEffect } from "react";
-import { C, CAR1, CAR2, today, fmtCOP, fmtShort, ACCOUNTS, MONTHS } from "./shared.js";
+import { ACCOUNTS, C, CAR1, CAR1_DIM, CAR2, CAR2_DIM, CARRO1_DIARIO, MONTHS, fmt, fmtCOP, fmtShort, today } from "./shared.js";
 
 export function EditPagoModal({carId, pago, accounts, onClose, onSave}) {
   const [form, setForm] = useState({

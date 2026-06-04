@@ -1,6 +1,6 @@
 // planner/TaskRow.jsx
 import { useState, useEffect } from "react";
-import { C, today } from "./shared.js";
+import { C, PRIORITIES, today } from "./shared.js";
 
 export function TaskRow({ task, onToggle, onSetStatus, onDelete, onEdit, taskCats, muted, accent }) {
   const [expanded, setExpanded] = useState(false);

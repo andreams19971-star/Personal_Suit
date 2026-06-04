@@ -1,6 +1,6 @@
 // finanz/AccountsManager.jsx
 import { useState } from "react";
-import { C, fmtCOP, ACCOUNTS_DEF, DEFAULT_CATEGORIES } from "./shared.js";
+import { ACCOUNTS_DEF, C, DEFAULT_CATEGORIES, fmtCOP } from "./shared.js";
 
 export function AccountsManager({accounts, updateAccountBalance, showToast}) {
   const [editId, setEditId] = useState(null);

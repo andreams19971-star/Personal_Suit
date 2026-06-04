@@ -1,6 +1,6 @@
 // planner/Modals.jsx
 import { useState, useEffect } from "react";
-import { C, today } from "./shared.js";
+import { C, DEFAULT_TASK_CATS, HABIT_ICONS, PRIORITIES, today } from "./shared.js";
 
 export function TaskModal({ onClose, onAdd, defaultDate, taskCats=DEFAULT_TASK_CATS }) {
   const [form, setForm] = useState({ title:"", category: taskCats[0]?.id||"other", subcategory:"", priority:"medium", date: defaultDate||today(), note:"", hasDate:!!defaultDate });

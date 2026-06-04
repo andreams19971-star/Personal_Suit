@@ -1,6 +1,6 @@
 // flota/Dashboard.jsx
 import { useState, useEffect } from "react";
-import { C, CAR1, CAR2, today, fmtCOP, fmtShort, ACCOUNTS, MONTHS } from "./shared.js";
+import { ACCOUNTS, C, CAR1, CAR1_DIM, CAR2, CAR2_DIM, CARRO1_DIARIO, CARRO2_MENSUAL, MONTHS, fmt, fmtCOP, fmtShort, today } from "./shared.js";
 
 export function Dashboard({carros,getStats,totalEsperado,totalCobrado,totalPendiente,totalGastos,totalNeto,filterMonth,setView}) {
   const pctCobrado = totalEsperado > 0 ? Math.round((totalCobrado/totalEsperado)*100) : 0;

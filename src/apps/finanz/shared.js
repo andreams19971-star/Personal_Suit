@@ -1,7 +1,7 @@
 // finanz/shared.js — Constantes y utilidades compartidas
 
 // ─── PALETTE ─────────────────────────────────────────────────────────────────
-const C = {
+export const C = {
   bg:"#09090B",surface:"#111113",card:"#18181B",card2:"#1C1C1F",
   border:"#27272A",borderSub:"#1C1C1F",
   text:"#FAFAFA",textSub:"#A1A1AA",textMuted:"#52525B",
@@ -15,7 +15,7 @@ const C = {
   textSub:"#A1A1AA",
 };
 
-const DEFAULT_CATEGORIES = {
+export const DEFAULT_CATEGORIES = {
   income:[
     {id:"salary",    label:"Sueldo",        icon:"💼",subs:["Empresa","Freelance","Bonificación","Horas extra"]},
     {id:"business",  label:"Negocio",        icon:"🏪",subs:["Ventas","Servicios","Comisiones"]},
@@ -41,7 +41,7 @@ const DEFAULT_CATEGORIES = {
   ],
 };
 
-const ACCOUNTS_DEF = [
+export const ACCOUNTS_DEF = [
   {id:"cash",        label:"Efectivo",    icon:"💵",color:C.accentText},
   {id:"nequi",       label:"Nequi",       icon:"💜",color:C.purple},
   {id:"bbva",        label:"BBVA",        icon:"🔵",color:C.blue},
@@ -50,17 +50,15 @@ const ACCOUNTS_DEF = [
   {id:"savings_acc", label:"Ahorros",     icon:"🏦",color:"#34D399"},
 ];
 
-const fmtCOP   = v => new Intl.NumberFormat("es-CO",{style:"currency",currency:"COP",maximumFractionDigits:0}).format(v||0);
+export const fmtCOP   = v => new Intl.NumberFormat("es-CO",{style:"currency",currency:"COP",maximumFractionDigits:0}).format(v||0);
 // Formato compacto para espacios pequeños: $2.7M, $484k, $22.6M
-const fmtShort = v => {
+export const fmtShort = v => {
   const n = Math.abs(v||0);
   const s = v < 0 ? "-" : "";
   if (n >= 1000000) return s+"$"+(n/1000000).toFixed(1).replace(".0","")+"M";
   if (n >= 1000)    return s+"$"+(n/1000).toFixed(0)+"k";
   return s+"$"+n;
 };
-const today  = () => new Date().toISOString().slice(0,10);
-const MONTHS  = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+export const today  = () => new Date().toISOString().slice(0,10);
+export const MONTHS  = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
 
-
-export { C, DEFAULT_CATEGORIES, ACCOUNTS_DEF, fmtCOP, fmtShort, today, MONTHS };

@@ -1,6 +1,6 @@
 // apartamento/Modals.jsx
 import { useState, useEffect } from "react";
-import { C, today, fmtCOP } from "./shared.js";
+import { C, PLATFORMS, STATUS_CONFIG, fmtCOP, today } from "./shared.js";
 
 export function ReservationModal({rooms, reservations=[], onClose, onAdd, editData}) {
   const [form,setForm]=useState({

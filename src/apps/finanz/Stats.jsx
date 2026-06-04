@@ -1,6 +1,6 @@
 // finanz/Stats.jsx
 import { useState, useEffect, useRef } from "react";
-import { C, fmtCOP, fmtShort, today, MONTHS, ACCOUNTS_DEF, DEFAULT_CATEGORIES } from "./shared.js";
+import { ACCOUNTS_DEF, C, DEFAULT_CATEGORIES, MONTHS, fmtCOP, fmtShort, today } from "./shared.js";
 import { TxRow, SectionHeader, EmptyState, Pill, StatCard, MF } from "./Helpers.jsx";
 
 export function Stats({monthTxs,totalIncome,totalExpense,transactions,filterMonth,categories=DEFAULT_CATEGORIES}){

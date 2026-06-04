@@ -1,6 +1,6 @@
 // apartamento/RoomsView.jsx
 import { useState, useEffect } from "react";
-import { C, today, fmtCOP } from "./shared.js";
+import { C, STATUS_CONFIG, fmt, fmtCOP, today } from "./shared.js";
 
 export function RoomsView({rooms,reservations,getRoomStatus,setModal,updateReservationStatus,deleteReservation}) {
   const [selRoom, setSelRoom] = useState(rooms[0]?.id);

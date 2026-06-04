@@ -1,6 +1,6 @@
 // apartamento/FinancesView.jsx
 import { useState, useEffect } from "react";
-import { C, today, fmtCOP } from "./shared.js";
+import { C, fmt, fmtCOP, today } from "./shared.js";
 
 export function FinancesView({reservations,expenses,totalExpenses,setModal,deleteExpense}) {
   const neto = -totalExpenses;

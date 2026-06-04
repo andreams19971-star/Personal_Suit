@@ -7,6 +7,32 @@
 
 ---
 
+## [2.8.2] — 2026-06-03 — Bugfix: exports faltantes en shared.js + td() residual
+
+### Error
+`"C" is not exported by "src/apps/planner/shared.js"`
+
+### Causas
+
+**1. shared.js sin exports**
+Los 3 `shared.js` nuevos (planner, flota, apartamento) tenían las constantes
+definidas pero sin la keyword `export`. Vite/Rollup no puede importar constantes
+no exportadas aunque existan en el archivo.
+
+**2. `fmtCOP`/`fmtShort` ausentes en flota y apartamento**
+Estos archivos los usan pero no estaban en sus `shared.js`.
+
+**3. `td()` como llamada de función (no solo como alias)**
+El fix de v2.8.0 eliminó `const td = today` (el alias) pero no las llamadas
+`td()` que quedaron en 12 archivos. `td` ya no existe → ReferenceError en runtime.
+
+### Fix
+- `export const`/`export function` aplicado a todos los símbolos en los 3 shared.js
+- `fmtCOP` y `fmtShort` agregados a `flota/shared.js` y `apartamento/shared.js`
+- 12 archivos: `td()` → `today()`
+
+---
+
 ## [2.8.1] — 2026-06-03 — Bugfix: `today` duplicado en imports
 
 ### Error

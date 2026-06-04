@@ -1,6 +1,6 @@
 // flota/GastosView.jsx
 import { useState, useEffect } from "react";
-import { C, CAR1, CAR2, today, fmtCOP, fmtShort, ACCOUNTS, MONTHS } from "./shared.js";
+import { ACCOUNTS, C, CAR1, CAR2, MONTHS, fmt, fmtCOP, fmtShort, today } from "./shared.js";
 
 export function GastosView({carros,filterMonth,setModal,totalGastos}) {
   const allGastos = carros.flatMap(c =>
