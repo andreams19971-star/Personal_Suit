@@ -152,14 +152,8 @@ export function useFinanzData() {
   }
 
   async function addTransaction(tx) {
-    // Fallback: si loadAll no completó aún, obtener userId directo de Supabase
-    let userId = userIdRef.current;
-    if (!userId) {
-      const { data: { session } } = await supabase.auth.getSession();
-      userId = session?.user?.id;
-      if (userId) userIdRef.current = userId;
-    }
-    if (!userId) return { error: "No autenticado — inicia sesión nuevamente" };
+    // userId del ref (seteado en loadAll). El trigger de BD lo garantiza también.
+    const userId = userIdRef.current || (await supabase.auth.getSession()).data?.session?.user?.id;
     const localId = 'local-' + Date.now()
     const newTx = { ...tx, id: localId }
     setTransactions(prev => [newTx, ...prev])  // Optimistic update

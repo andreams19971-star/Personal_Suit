@@ -7,6 +7,36 @@
 
 ---
 
+## [2.9.3] — 2026-06-04 — Auditoría completa: bugs de aislamiento y módulos
+
+### Bugs encontrados y corregidos
+
+**1. `useCardsData.js`: selects sin filtro de usuario**
+Las queries a `credit_cards` y `card_charges` no tenían `.eq('user_id', userId)`.
+Un usuario podía ver las tarjetas de todos. Corregido: query única con JOIN
+`credit_cards?select=*,card_charges(*)` filtrada por `user_id`.
+
+**2. `usePlannerData.js`: selects sin filtro + habits sin user_id**
+- `loadTable()` no pasaba `.eq('user_id', userId)` a ninguna tabla (tasks, habits, goals, notes).
+- El fallback insert de `safeRow` no incluía `user_id` (si Supabase no tiene columna `status`).
+- Insert de `habits` no incluía `user_id`.
+
+**3. `MobileNav.jsx`: import con dobles llaves `{{}}`**
+`import {{ C, ... }}` — syntax inválida. Causado por el script sed en v2.8.x.
+Corregido a `import { C, ... }`.
+
+**4. 27 módulos con imports de shared.js desactualizados**
+El auto-fixer de imports se volvió a correr sobre todos los módulos de las 4 apps
+para asegurar que cada archivo importa exactamente los símbolos que usa.
+
+### Archivos
+- `src/hooks/useCardsData.js`
+- `src/hooks/usePlannerData.js`
+- `src/apps/finanz/MobileNav.jsx`
+- 27 módulos en `finanz/`, `planner/`, `flota/`, `apartamento/`
+
+---
+
 ## [2.9.2] — 2026-06-04 — Bugfix: RLS violation por user_id null en inserts
 
 ### Error
