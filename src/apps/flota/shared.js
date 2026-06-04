@@ -128,8 +128,8 @@ export function seedData() {
 
 export const fmtCOP = n =>
   new Intl.NumberFormat("es-CO", { style:"currency", currency:"COP", maximumFractionDigits:0 }).format(n||0);
-export const fmtShort = n => {
-  const n = Math.abs(n||0); const s = (n||0) < 0 ? "-" : "";
+export const fmtShort = num => {
+  const n = Math.abs(num||0); const s = num < 0 ? "-" : "";
   if (n >= 1000000) return s + "$" + (n/1000000).toFixed(1).replace(".0","") + "M";
   if (n >= 1000)    return s + "$" + (n/1000).toFixed(0) + "k";
   return s + "$" + n;

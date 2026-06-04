@@ -7,6 +7,45 @@
 
 ---
 
+## [2.9.7] — 2026-06-04 — Fix TDZ completo: `v` en shared.js + `today` shadowing
+
+### Causa raíz definitiva del error `Cannot access 'v' before initialization`
+
+**Problema 1: `= v =>` en shared.js (incompleto en v2.9.6)**
+El fix anterior solo renombró `v` en `finanz/shared.js`. Pero `flota/shared.js`
+y `apartamento/shared.js` también tenían `fmtCOP = v =>` y `fmtShort = v =>`.
+Esbuild minifica los `export const` del módulo a letras simples (a, b, c... v).
+Si un export se renombra a `v` y otro usa `v` como parámetro, hay colisión TDZ.
+Fix: renombrar parámetro `v` → `n` en TODOS los shared.js.
+
+**Problema 2: `const today = today()` — variable shadowing (causa raíz en 4 archivos)**
+```js
+import { today } from './shared.js';  // función
+// dentro de una función:
+const today = today();  // ❌ TDZ: `today` const shadowing la importación
+```
+Cuando JS evalúa `today()` para inicializar la const, `today` ya está en TDZ
+por la declaración `const today`. Esbuild minifica `today` → `v` → `Cannot
+access 'v' before initialization`.
+
+Archivos afectados:
+- `ApartamentoApp.jsx` → `getRoomStatus()`
+- `Planner.jsx` → función interna
+- `apartamento/DashboardView.jsx`, `CalendarView.jsx`, `RoomsView.jsx`
+
+Fix: renombrar variable local `const today = today()` → `const todayStr = today()`
+
+### Archivos
+- `src/apps/flota/shared.js` — `v` → `n` en fmtCOP/fmtShort
+- `src/apps/apartamento/shared.js` — `v` → `n` en fmtCOP/fmtShort
+- `src/apps/ApartamentoApp.jsx` — today shadowing fix
+- `src/apps/Planner.jsx` — today shadowing fix
+- `src/apps/apartamento/DashboardView.jsx` — today shadowing fix
+- `src/apps/apartamento/CalendarView.jsx` — today shadowing fix
+- `src/apps/apartamento/RoomsView.jsx` — today shadowing fix
+
+---
+
 ## [2.9.6] — 2026-06-04 — Fix: 3 crashes en Planner, FlotaTracker y FinanzApp
 
 ### Error 1: `Can't find variable: DEFAULT_TASK_CATS` (Planner)
