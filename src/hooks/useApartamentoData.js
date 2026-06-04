@@ -81,8 +81,8 @@ export function useApartamentoData() {
     if (!res.checkOut)        return { error: 'La fecha de salida es obligatoria' }
     if (res.checkOut <= res.checkIn) return { error: 'La salida debe ser después de la entrada' }
     const nights = Math.max(1, Math.round((new Date(res.checkOut)-new Date(res.checkIn))/86400000))
-    // userId del ref (seteado en loadAll). El trigger de BD lo garantiza también.
     const userId = userIdRef.current || (await supabase.auth.getSession()).data?.session?.user?.id;
+    if (!userId) return { error: "No autenticado" };
     const localId = 'local-RES-' + Date.now()
     const newRes = { ...res, id:localId, nights, total:0, paid:0, status:'reserved' }
     setReservations(prev => [newRes, ...prev])

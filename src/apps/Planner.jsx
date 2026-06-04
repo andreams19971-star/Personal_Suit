@@ -4,7 +4,7 @@ import { AuthContext } from '../hooks/useAuth.js';
 import { loadSetting, saveSetting } from '../hooks/useSettings.js';
 import { supabase } from '../supabase.js';
 import { showLocalNotification, requestPermission } from '../hooks/useNotifications.js';
-import { C, today } from './planner/shared.js';
+import { C, today, DEFAULT_TASK_CATS } from './planner/shared.js';
 import { TodayView } from './planner/TodayView.jsx';
 import { TaskRow } from './planner/TaskRow.jsx';
 import { EditTaskModal } from './planner/EditTaskModal.jsx';
@@ -40,16 +40,16 @@ export default function Planner({ onBack }) {
     if (!tasks.length) return;
     requestPermission().then(perm => {
       if (perm !== "granted") return;
-      const today    = today();
+      const todayStr = today();
       const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate()+1);
       const tmrStr   = tomorrow.toISOString().slice(0,10);
-      const todayTasks = tasks.filter(t=>t.date===today&&(t.status==="pending"||t.status==="in_progress"));
+      const todayTasks = tasks.filter(t=>t.date===todayStr&&(t.status==="pending"||t.status==="in_progress"));
       const tmrTasks   = tasks.filter(t=>t.date===tmrStr&&t.status==="pending");
       if (todayTasks.length > 0) {
         showLocalNotification(
           "📋 Tienes "+todayTasks.length+" tarea"+(todayTasks.length>1?"s":"")+" para hoy",
           todayTasks.slice(0,3).map(t=>t.title).join(", "),
-          { tag:"planner-today" }
+          { tag:"planner-todayStr" }
         );
       }
       if (tmrTasks.length > 0) {
@@ -95,10 +95,10 @@ export default function Planner({ onBack }) {
   const addNote           = (note) => { dbAddNote(note); showToast("Nota guardada ✓"); setShowNoteModal(false); };
   const deleteNote        = (id)   => dbDeleteNote(id);
 
-  const [view, setView] = useState("today");
+  const [view, setView] = useState("todayStr");
   const todayTasks = tasks.filter(t => t.date === selDate);
   const nav = [
-    { id:"today",    icon:"☀️",  label:"Hoy"       },
+    { id:"todayStr",    icon:"☀️",  label:"Hoy"       },
     { id:"tasks",    icon:"📋",  label:"Tareas"     },
     { id:"calendar", icon:"📅",  label:"Calendario" },
     { id:"goals",    icon:"🎯",  label:"Metas"      },
@@ -106,7 +106,7 @@ export default function Planner({ onBack }) {
   ];
 
   const viewTitle = {
-    today:    "☀️ " + new Date(selDate+"T12:00").toLocaleDateString("es-CO",{weekday:"long",day:"numeric",month:"short"}),
+    todayStr:    "☀️ " + new Date(selDate+"T12:00").toLocaleDateString("es-CO",{weekday:"long",day:"numeric",month:"short"}),
     tasks:    "📋 Todas las tareas",
     calendar: "📅 Calendario",
     goals:    "🎯 Metas",
@@ -127,16 +127,16 @@ export default function Planner({ onBack }) {
       <div style={{background:C.surface,borderBottom:"1px solid "+(C.border),paddingTop:"max(14px,calc(env(safe-area-inset-top) + 8px))",paddingBottom:"14px",paddingLeft:"16px",paddingRight:"16px",display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
         <button onClick={onBack} style={{background:"transparent",border:"none",color:C.textMuted,cursor:"pointer",fontSize:13,fontWeight:500,flexShrink:0,padding:0}}>← Suite</button>
         <div style={{fontSize:15,fontWeight:800,flex:1,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{viewTitle[view]||""}</div>
-        {(view==="today"||view==="calendar"||view==="tasks") && (
+        {(view==="todayStr"||view==="calendar"||view==="tasks") && (
           <button onClick={()=>setShowCatManager(true)} style={{background:C.card,border:"1px solid "+(C.border),borderRadius:8,padding:"6px 8px",color:C.textMuted,cursor:"pointer",fontSize:12,flexShrink:0}}>⚙</button>
         )}
-        <button onClick={()=>{ if(view==="today"||view==="calendar"||view==="tasks") setShowTaskModal(true); else if(view==="goals") setShowGoalModal(true); else setShowNoteModal(true); }}
+        <button onClick={()=>{ if(view==="todayStr"||view==="calendar"||view==="tasks") setShowTaskModal(true); else if(view==="goals") setShowGoalModal(true); else setShowNoteModal(true); }}
           style={{background:C.accent,color:"#000",border:"none",borderRadius:8,padding:"7px 12px",fontWeight:700,fontSize:12,cursor:"pointer",flexShrink:0}}>+ Agregar</button>
       </div>
 
       {/* CONTENT */}
       <div style={{flex:1,overflowY:"auto",paddingBottom:60,minHeight:0,overflowX:"hidden"}}>
-        {view==="today"    && <TodayView tasks={todayTasks} allTasks={tasks} selDate={selDate} toggleTask={toggleTask} setTaskStatus={setTaskStatus} deleteTask={deleteTask} taskCats={taskCats} setEditTask={setEditTask}/>}
+        {view==="todayStr"    && <TodayView tasks={todayTasks} allTasks={tasks} selDate={selDate} toggleTask={toggleTask} setTaskStatus={setTaskStatus} deleteTask={deleteTask} taskCats={taskCats} setEditTask={setEditTask}/>}
         {view==="tasks"    && <AllTasksView tasks={tasks} setTaskStatus={setTaskStatus} deleteTask={deleteTask} taskCats={taskCats} setEditTask={setEditTask}/>}
         {view==="calendar" && <CalendarView tasks={tasks} aptReservations={aptReservations} calDate={calDate} setCalDate={setCalDate} selDate={selDate} setSelDate={setSelDate} toggleTask={toggleTask} setTaskStatus={setTaskStatus} deleteTask={deleteTask} setShowTaskModal={setShowTaskModal} taskCats={taskCats} setEditTask={setEditTask}/>}
         {view==="goals"    && <GoalsView goals={goals} updateGoalProgress={updateGoalProgress} deleteGoal={deleteGoal} setEditGoal={setEditGoal} />}

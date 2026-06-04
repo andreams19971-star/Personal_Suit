@@ -3,9 +3,9 @@ import { useState, useEffect } from "react";
 import { C, STATUS_CONFIG, fmt, fmtCOP, today } from "./shared.js";
 
 export function DashboardView({rooms,reservations,expenses,totalExpenses,occupancyRate,getRoomStatus,setModal,updateReservationStatus,showToast}) {
-  const today = today();
-  const activeRes   = reservations.filter(r=>r.checkIn<=today&&r.checkOut>today);
-  const upcomingRes = reservations.filter(r=>r.checkIn>today&&r.status==="reserved").sort((a,b)=>a.checkIn.localeCompare(b.checkIn)).slice(0,3);
+  const todayStr = today();
+  const activeRes   = reservations.filter(r=>r.checkIn<=todayStr&&r.checkOut>todayStr);
+  const upcomingRes = reservations.filter(r=>r.checkIn>todayStr&&r.status==="reserved").sort((a,b)=>a.checkIn.localeCompare(b.checkIn)).slice(0,3);
   const availableCount = rooms.filter(r=>getRoomStatus(r.id)==="available").length;
   const occupiedCount  = rooms.filter(r=>["occupied","reserved"].includes(getRoomStatus(r.id))).length;
 
@@ -45,8 +45,8 @@ export function DashboardView({rooms,reservations,expenses,totalExpenses,occupan
       {rooms.map(room=>{
         const status = getRoomStatus(room.id);
         const sc = STATUS_CONFIG[status];
-        const active = reservations.find(r=>r.roomId===room.id&&r.checkIn<=today&&r.checkOut>today);
-        const next   = reservations.filter(r=>r.roomId===room.id&&r.checkIn>today&&r.status==="reserved").sort((a,b)=>a.checkIn.localeCompare(b.checkIn))[0];
+        const active = reservations.find(r=>r.roomId===room.id&&r.checkIn<=todayStr&&r.checkOut>todayStr);
+        const next   = reservations.filter(r=>r.roomId===room.id&&r.checkIn>todayStr&&r.status==="reserved").sort((a,b)=>a.checkIn.localeCompare(b.checkIn))[0];
         return (
           <div key={room.id} style={{background:C.card,border:"1px solid "+(room.color+"22"),borderRadius:16,overflow:"hidden"}}>
             {/* Header */}

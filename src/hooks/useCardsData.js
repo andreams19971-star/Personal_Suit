@@ -55,8 +55,8 @@ export function useCardsData() {
   }
 
   async function addCharge(cardId, charge) {
-    // userId del ref (seteado en loadAll). El trigger de BD lo garantiza también.
     const userId = userIdRef.current || (await supabase.auth.getSession()).data?.session?.user?.id;
+    if (!userId) return { error: "No autenticado" };
     const localId = 'local-ch-' + Date.now()
     const row = { ...charge, id:localId, card_id:cardId }
     setCards(prev => prev.map(c => {

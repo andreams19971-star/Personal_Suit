@@ -96,8 +96,8 @@ export function usePlannerData() {
 
   async function addTask(t) {
     if (!t.title?.trim()) return { error: 'El título es obligatorio' }
-    // userId del ref (seteado en loadAll). El trigger de BD lo garantiza también.
     const userId = userIdRef.current || (await supabase.auth.getSession()).data?.session?.user?.id;
+    if (!userId) return { error: "No autenticado" };
     const localId = 'local-T-' + Date.now()
     const row = { id:localId, title:t.title, date:t.date||null, category:t.category||'other',
       priority:t.priority||'medium', note:t.note||null, done:false,

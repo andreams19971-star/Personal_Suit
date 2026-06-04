@@ -7,7 +7,7 @@ export function CalendarView({reservations,rooms,calMonth,setCalMonth,setModal})
   const firstDay=new Date(year,month,1).getDay();
   const daysInMonth=new Date(year,month+1,0).getDate();
   const cells=Array.from({length:firstDay},()=>null).concat(Array.from({length:daysInMonth},(_,i)=>i+1));
-  const today=today();
+  const todayStr = today();
 
   const getDayRes=(day)=>{
     const dateStr=(year)+"-"+(String(month+1).padStart(2,"0"))+"-"+(String(day).padStart(2,"0"));
@@ -42,7 +42,7 @@ export function CalendarView({reservations,rooms,calMonth,setCalMonth,setModal})
             if(!day)return<div key={i}/>;
             const dateStr=(year)+"-"+(String(month+1).padStart(2,"0"))+"-"+(String(day).padStart(2,"0"));
             const dayRes=getDayRes(day);
-            const isToday=dateStr===today;
+            const isToday=dateStr===todayStr;
             const roomColors=dayRes.map(r=>rooms.find(rm=>rm.id===r.roomId)?.color||C.accent).slice(0,3);
             return(
               <div key={i} onClick={()=>dayRes.length>0&&setModal({type:"viewReservation",data:dayRes[0]})}

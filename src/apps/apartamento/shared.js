@@ -17,7 +17,7 @@ export const C = {
 
 export const MONTHS = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
 export const DAYS_ES = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
-export const fmt = v => new Intl.NumberFormat("es-CO",{style:"currency",currency:"COP",maximumFractionDigits:0}).format(v||0);
+export const fmt = n => new Intl.NumberFormat("es-CO",{style:"currency",currency:"COP",maximumFractionDigits:0}).format(n||0);
 export const today  = () => new Date().toISOString().slice(0,10);
 
 export const STATUS_CONFIG = {
@@ -57,10 +57,10 @@ export function seedData() {
 }
 
 
-export const fmtCOP = v =>
-  new Intl.NumberFormat("es-CO", { style:"currency", currency:"COP", maximumFractionDigits:0 }).format(v||0);
-export const fmtShort = v => {
-  const n = Math.abs(v||0); const s = (v||0) < 0 ? "-" : "";
+export const fmtCOP = n =>
+  new Intl.NumberFormat("es-CO", { style:"currency", currency:"COP", maximumFractionDigits:0 }).format(n||0);
+export const fmtShort = n => {
+  const n = Math.abs(n||0); const s = (n||0) < 0 ? "-" : "";
   if (n >= 1000000) return s + "$" + (n/1000000).toFixed(1).replace(".0","") + "M";
   if (n >= 1000)    return s + "$" + (n/1000).toFixed(0) + "k";
   return s + "$" + n;

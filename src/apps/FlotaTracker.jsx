@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useFlotaData } from '../hooks/useFlotaData.js';
-import { C, CAR1, CAR2, today, fmtCOP, fmtShort, ACCOUNTS, MONTHS } from './flota/shared.js';
+import { C, CAR1, CAR2, today, fmtCOP, fmtShort, ACCOUNTS, MONTHS, getWorkDaysInMonth, getWorkDaysPassed } from './flota/shared.js';
 import { Dashboard } from './flota/Dashboard.jsx';
 import { CarroView } from './flota/CarroView.jsx';
 import { GastosView } from './flota/GastosView.jsx';

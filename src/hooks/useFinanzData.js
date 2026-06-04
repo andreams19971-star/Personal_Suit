@@ -110,17 +110,19 @@ export function useFinanzData() {
 
   // Carga transacciones de un mes específico bajo demanda
   async function loadMonth(yearMonth) {
+    const userId = userIdRef.current
+    if (!userId) return
     try {
       const from = yearMonth + '-01'
       const d    = new Date(yearMonth + '-01')
       d.setMonth(d.getMonth()+1)
       const to   = d.toISOString().slice(0,10)
-      const { data, error } = await supabase.from('transactions').select('*').eq('user_id', userId)
+      const { data, error } = await supabase.from('transactions').select('*')
+        .eq('user_id', userId)
         .gte('date', from).lt('date', to)
         .order('date', { ascending: false })
       if (error) { console.warn('[FinanzData] loadMonth:', error.message); return }
       const newTxs = (data || []).map(rowToTx)
-      // Merge: reemplazar las del mismo mes sin duplicar
       setTransactions(prev => {
         const others = prev.filter(t => !t.date.startsWith(yearMonth))
         return [...others, ...newTxs].sort((a,b) => b.date.localeCompare(a.date))
@@ -152,34 +154,27 @@ export function useFinanzData() {
   }
 
   async function addTransaction(tx) {
-    // userId del ref (seteado en loadAll). El trigger de BD lo garantiza también.
-    const userId = userIdRef.current || (await supabase.auth.getSession()).data?.session?.user?.id;
+    const userId = userIdRef.current || (await supabase.auth.getSession()).data?.session?.user?.id
     const localId = 'local-' + Date.now()
     const newTx = { ...tx, id: localId }
-    setTransactions(prev => [newTx, ...prev])  // Optimistic update
+    setTransactions(prev => [newTx, ...prev])
 
     if (!onlineRef.current) {
-      console.warn('[addTransaction] ⚠️ offline — no guardado')
-      setTransactions(prev => prev.filter(t => t.id !== localId)) // revertir
+      setTransactions(prev => prev.filter(t => t.id !== localId))
       return { error: 'Sin conexión — verifica tu internet e intenta de nuevo' }
     }
 
-    // Omitir id para que Supabase genere un UUID automáticamente
     const { id: _skip, ...rowData } = txToRow(newTx)
-    console.log('[addTransaction] Enviando...', rowData)
-
     const { data, error } = await supabase
-      .from('transactions').insert([rowData]).select().single()
+      .from('transactions').insert([{ ...rowData, user_id: userId }]).select().single()
 
     if (error) {
-      console.error('[addTransaction] ❌', error.message, error.code)
-      setTransactions(prev => prev.filter(t => t.id !== localId)) // revertir
+      console.error('[addTransaction] ❌', error.message)
+      setTransactions(prev => prev.filter(t => t.id !== localId))
       return { error: error.message }
     }
-
-    // Reemplazar ID local con el UUID real de Supabase
     setTransactions(prev => prev.map(t => t.id === localId ? rowToTx(data) : t))
-    console.log('[addTransaction] ✅ Guardado:', data.id)
+    console.log('[addTransaction] ✅', data.id)
     return { data }
   }
 
@@ -205,39 +200,51 @@ export function useFinanzData() {
     else console.log('[updateTransaction] ✅', id)
   }
 
-  async function addLoan(data) {
-    const loanId = 'L'+Date.now()
-    const newLoan = { id:loanId, debtor:data.debtor, amount:data.amount, balance:data.amount, date:data.date, account:data.account, note:data.note||'', status:'active', payments:[] }
-    const expTx   = { id:'tx-'+Date.now(), date:data.date, type:'expense', category:'loans_out', subcategory:data.subcategory||'Préstamo personal', account:data.account, amount:data.amount, note:'Préstamo a '+data.debtor, loanId }
+  async function addLoan(loanData) {
+    const userId = userIdRef.current || (await supabase.auth.getSession()).data?.session?.user?.id
+    const localLoanId = 'local-L-'+Date.now()
+    const localTxId   = 'local-tx-'+Date.now()
+    const newLoan = { id:localLoanId, debtor:loanData.debtor, amount:loanData.amount, balance:loanData.amount, date:loanData.date, account:loanData.account, note:loanData.note||'', status:'active', payments:[] }
+    const expTx   = { id:localTxId, date:loanData.date, type:'expense', category:'loans_out', subcategory:loanData.subcategory||'Préstamo personal', account:loanData.account, amount:loanData.amount, note:'Préstamo a '+loanData.debtor, loanId:null }
     setLoans(prev        => [newLoan, ...prev])
     setTransactions(prev => [expTx,   ...prev])
     if (!onlineRef.current) console.warn('[offline] intentando igualmente...')
-    const [lr, tr] = await Promise.all([
-      supabase.from('loans').insert([{ user_id: userId, id:newLoan.id, debtor:newLoan.debtor, amount:newLoan.amount, balance:newLoan.balance, date:newLoan.date, account:newLoan.account, note:newLoan.note, status:newLoan.status, payments:[] }]),
-      supabase.from('transactions').insert([txToRow(expTx)]),
-    ])
-    if (lr.error) console.error('[addLoan]', lr.error.message)
-    if (tr.error) console.error('[addLoan tx]', tr.error.message)
-    else console.log('[addLoan] ✓ guardado')
+    const { data:lRow, error:le } = await supabase.from('loans')
+      .insert([{ user_id:userId, debtor:newLoan.debtor, amount:newLoan.amount, balance:newLoan.balance, date:newLoan.date, account:newLoan.account, note:newLoan.note, status:newLoan.status, payments:[] }])
+      .select().single()
+    const { data:tRow, error:te } = await supabase.from('transactions')
+      .insert([{ user_id:userId, date:expTx.date, type:expTx.type, category:expTx.category, subcategory:expTx.subcategory, account:expTx.account, amount:expTx.amount, note:expTx.note, loan_id:lRow?.id||null }])
+      .select().single()
+    if (le) console.error('[addLoan]', le.message)
+    if (te) console.error('[addLoan tx]', te.message)
+    if (!le && lRow) {
+      setLoans(prev => prev.map(l => l.id===localLoanId ? {...newLoan, id:lRow.id} : l))
+    }
+    if (!te && tRow) {
+      setTransactions(prev => prev.map(t => t.id===localTxId ? rowToTx(tRow) : t))
+    }
+    console.log('[addLoan] ✓', lRow?.id)
   }
 
   async function addPayment(loan, payData) {
-    const amt = Math.min(parseFloat(payData.amount), loan.balance)
+    const userId  = userIdRef.current || (await supabase.auth.getSession()).data?.session?.user?.id
+    const amt     = Math.min(parseFloat(payData.amount), loan.balance)
     if (!amt || amt <= 0) return
     const newBalance = Math.max(0, loan.balance - amt)
-    const newPay     = { id:'P'+Date.now(), date:payData.date, amount:amt, note:payData.note||'' }
-    const updLoan    = { ...loan, balance:newBalance, status:newBalance===0?'paid':'active', payments:[...(loan.payments||[]), newPay] }
-    const incomeTx   = { id:'tx-'+Date.now(), date:payData.date, type:'income', category:'loan_pay', subcategory:payData.note||'Abono', account:payData.account, amount:amt, note:'Cobro a '+loan.debtor, loanId:loan.id }
+    const updLoan    = { ...loan, balance:newBalance, status:newBalance===0?'paid':'active', payments:[...(loan.payments||[]), { date:payData.date, amount:amt, note:payData.note||'' }] }
+    const localTxId  = 'local-tx-'+Date.now()
+    const incomeTx   = { id:localTxId, date:payData.date, type:'income', category:'loan_pay', subcategory:payData.note||'Abono', account:payData.account, amount:amt, note:'Cobro a '+loan.debtor, loanId:loan.id }
     setLoans(prev        => prev.map(l => l.id !== loan.id ? l : updLoan))
     setTransactions(prev => [incomeTx, ...prev])
     if (!onlineRef.current) console.warn('[offline] intentando igualmente...')
     const [lr, tr] = await Promise.all([
       supabase.from('loans').update({ balance:newBalance, status:updLoan.status, payments:updLoan.payments }).eq('id', loan.id),
-      supabase.from('transactions').insert([txToRow(incomeTx)]),
+      supabase.from('transactions').insert([{ user_id:userId, date:incomeTx.date, type:incomeTx.type, category:incomeTx.category, subcategory:incomeTx.subcategory, account:incomeTx.account, amount:incomeTx.amount, note:incomeTx.note, loan_id:loan.id }]).select().single(),
     ])
     if (lr.error) console.error('[addPayment loan]', lr.error.message)
     if (tr.error) console.error('[addPayment tx]',   tr.error.message)
-    else console.log('[addPayment] ✓ guardado')
+    if (!tr.error && tr.data) setTransactions(prev => prev.map(t => t.id===localTxId ? rowToTx(tr.data) : t))
+    else console.log('[addPayment] ✓')
   }
 
   return {

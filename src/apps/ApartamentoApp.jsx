@@ -84,10 +84,10 @@ export default function ApartamentoApp({ onBack }) {
   const occupancyRate  = Math.round((reservations.filter(r=>r.status==="occupied"||r.status==="reserved").length / Math.max(rooms.length,1)) * 100);
 
   const getRoomStatus = (roomId) => {
-    const today = today();
-    const active = reservations.find(r => r.roomId===roomId && r.checkIn<=today && r.checkOut>today);
+    const todayStr = today();
+    const active = reservations.find(r => r.roomId===roomId && r.checkIn<=todayStr && r.checkOut>todayStr);
     if (active) return active.status === "occupied" ? "occupied" : "reserved";
-    const upcoming = reservations.find(r => r.roomId===roomId && r.checkIn>today && r.status==="reserved");
+    const upcoming = reservations.find(r => r.roomId===roomId && r.checkIn>todayStr && r.status==="reserved");
     if (upcoming) return "reserved";
     return "available";
   };

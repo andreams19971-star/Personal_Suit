@@ -7,6 +7,110 @@
 
 ---
 
+## [2.9.6] — 2026-06-04 — Fix: 3 crashes en Planner, FlotaTracker y FinanzApp
+
+### Error 1: `Can't find variable: DEFAULT_TASK_CATS` (Planner)
+`Planner.jsx` usaba `DEFAULT_TASK_CATS` en el useState inicial y en loadSetting,
+pero no lo importaba de `planner/shared.js`. Corregido.
+
+### Error 2: `Can't find variable: getWorkDaysInMonth` (FlotaTracker)
+`FlotaTracker.jsx` usaba `getWorkDaysInMonth` y `getWorkDaysPassed` del hook
+de flota pero no los importaba de `flota/shared.js`. Corregido.
+
+### Error 3: `Cannot access 'v' before initialization` (TDZ)
+En `finanz/shared.js`, `fmtCOP = v => ...` y `fmtShort = v => ...` usaban `v`
+como nombre de parámetro. Esbuild minifica los `export const` del módulo a letras
+simples (a, b, c, ..., v). Si otro `export const` se renombra a `v` y hay cualquier
+forward reference en la inicialización del módulo, se genera TDZ.
+Fix: renombrar parámetro `v` → `n` en fmtCOP/fmtShort en los 3 shared.js.
+
+### Adicionalmente
+27 módulos re-sincronizados con sus shared.js (auto-fix de imports ejecutado).
+
+### Archivos
+- `src/apps/Planner.jsx`
+- `src/apps/FlotaTracker.jsx`
+- `src/apps/finanz/shared.js`, `flota/shared.js`, `apartamento/shared.js`
+- 27 módulos
+
+---
+
+## [2.9.5] — 2026-06-04 — Fix crítico: userId fuera de scope en useFinanzData
+
+### Bugs encontrados
+
+**1. `loadMonth()` usaba `userId` fuera de scope**
+`userId` es variable LOCAL de `loadAll()`. Cuando `loadMonth` lo referencia,
+es `undefined` → `.eq('user_id', undefined)` → query sin filtro → todos los datos.
+Fix: `const userId = userIdRef.current`
+
+**2. `addLoan()` usaba `userId` fuera de scope**
+Mismo problema. El insert de loans enviaba `user_id: undefined`.
+Fix: declarar `const userId = userIdRef.current || getSession()...` al inicio.
+
+**3. `addLoan()` enviaba IDs hardcodeados**
+`id: 'L'+Date.now()` y `id: 'tx-'+Date.now()` — invalidos si columna es uuid.
+Fix: omitir id en inserts, Supabase genera UUID. Actualizar estado local con UUID real.
+
+**4. `addPayment()` usaba `userId` fuera de scope + sin user_id en tx insert**
+`txToRow(incomeTx)` no incluye `user_id`. El insert de la transacción de cobro
+fallaba RLS.
+Fix: declarar userId, incluir `user_id: userId` explícito en el insert.
+
+**5. `addTransaction()` insert sin user_id explícito**
+`rowData` de `txToRow()` no incluye `user_id`. Solo el trigger lo seteaba.
+Fix: `insert([{ ...rowData, user_id: userId }])`
+
+**6. Todos los hooks: `if (!userId) return { error: ... }`**
+Los 4 hooks restantes ahora validan que userId existe antes de insertar.
+
+### Archivos
+- `src/hooks/useFinanzData.js` — reescrito addLoan, addPayment, addTransaction, loadMonth
+- `src/hooks/useCardsData.js`, usePlannerData.js, useFlotaData.js, useApartamentoData.js — guard added
+
+---
+
+## [2.9.4] — 2026-06-04 — Fix definitivo: trigger auto_set_user_id en Supabase
+
+### Problema persistente
+`new row violates row-level security policy for table "transactions"`
+sigue ocurriendo a pesar del fix de v2.9.2.
+
+### Causa raíz definitiva
+La política RLS `WITH CHECK (auth.uid() = user_id)` falla si `user_id` llega NULL
+al insert, independientemente del código. Cualquier condición de timing (token
+refresh, loadAll lento, etc.) puede causar que `userId` sea null en el insert.
+
+### Solución definitiva: trigger en Supabase
+En lugar de confiar solo en el código, un trigger a nivel BD garantiza que
+`user_id` nunca sea NULL en un INSERT:
+
+```sql
+CREATE OR REPLACE FUNCTION auto_set_user_id()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.user_id IS NULL THEN
+    NEW.user_id := auth.uid();
+  END IF;
+  IF NEW.user_id IS NULL THEN
+    RAISE EXCEPTION 'user_id requerido';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+```
+
+También se agrega `DEFAULT auth.uid()` en la columna para doble protección.
+
+### SQL requerido
+Ejecutar `fix-user-id-trigger.sql` en Supabase SQL Editor.
+
+### Código
+Simplificado el fallback en los 5 hooks a una sola línea:
+`const userId = userIdRef.current || (await getSession()).user?.id`
+
+---
+
 ## [2.9.3] — 2026-06-04 — Auditoría completa: bugs de aislamiento y módulos
 
 ### Bugs encontrados y corregidos

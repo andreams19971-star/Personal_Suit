@@ -6,7 +6,7 @@ export function RoomsView({rooms,reservations,getRoomStatus,setModal,updateReser
   const [selRoom, setSelRoom] = useState(rooms[0]?.id);
   const room = rooms.find(r=>r.id===selRoom)||rooms[0];
   const roomRes = reservations.filter(r=>r.roomId===selRoom).sort((a,b)=>b.checkIn.localeCompare(a.checkIn));
-  const today = today();
+  const todayStr = today();
 
   return(
     <div style={{padding:"14px",display:"grid",gap:14,boxSizing:"border-box"}} className="ap-fu">
@@ -53,7 +53,7 @@ export function RoomsView({rooms,reservations,getRoomStatus,setModal,updateReser
         <div style={{display:"grid",gap:8}}>
           {roomRes.map(res=>{
             const sc=STATUS_CONFIG[res.status]||STATUS_CONFIG.available;
-            const isPast=res.checkOut<today;
+            const isPast=res.checkOut<todayStr;
             return(
               <button key={res.id} onClick={()=>setModal({type:"viewReservation",data:res})} className="hr"
                 style={{background:C.card,border:"1px solid "+((sc.color)+"33"),borderRadius:14,padding:14,cursor:"pointer",textAlign:"left",width:"100%",color:C.text,opacity:isPast?.7:1}}>

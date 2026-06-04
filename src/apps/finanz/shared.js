@@ -50,11 +50,11 @@ export const ACCOUNTS_DEF = [
   {id:"savings_acc", label:"Ahorros",     icon:"🏦",color:"#34D399"},
 ];
 
-export const fmtCOP   = v => new Intl.NumberFormat("es-CO",{style:"currency",currency:"COP",maximumFractionDigits:0}).format(v||0);
+export const fmtCOP   = n => new Intl.NumberFormat("es-CO",{style:"currency",currency:"COP",maximumFractionDigits:0}).format(n||0);
 // Formato compacto para espacios pequeños: $2.7M, $484k, $22.6M
-export const fmtShort = v => {
-  const n = Math.abs(v||0);
-  const s = v < 0 ? "-" : "";
+export const fmtShort = n => {
+  const n = Math.abs(n||0);
+  const s = n < 0 ? "-" : "";
   if (n >= 1000000) return s+"$"+(n/1000000).toFixed(1).replace(".0","")+"M";
   if (n >= 1000)    return s+"$"+(n/1000).toFixed(0)+"k";
   return s+"$"+n;
