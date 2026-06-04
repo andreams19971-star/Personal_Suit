@@ -141,7 +141,14 @@ export function useFlotaData() {
   async function addWorkDay(carId, fecha, account='cash', montoCustom=null) {
     const car   = cars.find(c => c.id === carId)
     const monto = montoCustom || car?.valor_diario || 70000
-    const userId = userIdRef.current;
+    // Fallback: si loadAll no completó aún, obtener userId directo de Supabase
+    let userId = userIdRef.current;
+    if (!userId) {
+      const { data: { session } } = await supabase.auth.getSession();
+      userId = session?.user?.id;
+      if (userId) userIdRef.current = userId;
+    }
+    if (!userId) return { error: "No autenticado — inicia sesión nuevamente" };
     const localId = 'local-P-' + Date.now()
     const localRow = { id:localId, car_id:carId, fecha, monto, pagado:false, nota:'', account }
     setPayments(prev => ({...prev, [carId]: [localRow, ...(prev[carId]||[])]}))

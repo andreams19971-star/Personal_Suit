@@ -7,6 +7,48 @@
 
 ---
 
+## [2.9.1] — 2026-06-03 — Bugfix: useAuth not defined en hooks
+
+### Error
+`ReferenceError: useAuth is not defined` en producción.
+
+### Causa
+Los 5 hooks de datos importaban `useAuth` del contexto de React para obtener el
+userId. Aunque `useAuth.js` exporta la función, en el bundle de producción el
+módulo bundleado tenía problemas de resolución de contexto — `useAuth` no estaba
+disponible como variable en tiempo de ejecución.
+
+Usar un React hook de contexto dentro de otro custom hook crea una dependencia
+frágil: si el árbol de contexto no está completamente inicializado cuando el hook
+corre, el valor es undefined.
+
+### Solución
+Eliminar el import de `useAuth` de los 5 hooks de datos. En su lugar, obtener
+el userId directamente de Supabase al inicio de `loadAll()`:
+
+```js
+const { data: { session } } = await supabase.auth.getSession();
+const userId = session?.user?.id;
+if (!userId) return; // no autenticado
+```
+
+Almacenar el userId en `userIdRef.current` para que las funciones de insert
+lo puedan usar sin depender del contexto de React.
+
+### Ventajas del nuevo enfoque
+- No depende del árbol de React — funciona aunque el contexto no esté listo
+- `supabase.auth.getSession()` siempre tiene el token más fresco
+- Más consistente: la misma fuente de verdad para auth (el JWT de Supabase)
+
+### Archivos
+- `src/hooks/useFinanzData.js`
+- `src/hooks/useCardsData.js`
+- `src/hooks/usePlannerData.js`
+- `src/hooks/useFlotaData.js`
+- `src/hooks/useApartamentoData.js`
+
+---
+
 ## [2.9.0] — 2026-06-03 — CRÍTICO: Aislamiento de datos por usuario
 
 ### Problema

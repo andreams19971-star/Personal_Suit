@@ -56,7 +56,14 @@ export function useCardsData() {
   }
 
   async function addCharge(cardId, charge) {
-    const userId = userIdRef.current;
+    // Fallback: si loadAll no completó aún, obtener userId directo de Supabase
+    let userId = userIdRef.current;
+    if (!userId) {
+      const { data: { session } } = await supabase.auth.getSession();
+      userId = session?.user?.id;
+      if (userId) userIdRef.current = userId;
+    }
+    if (!userId) return { error: "No autenticado — inicia sesión nuevamente" };
     const localId = 'local-ch-' + Date.now()
     const row = { ...charge, id:localId, card_id:cardId }
     setCards(prev => prev.map(c => {

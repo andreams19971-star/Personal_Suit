@@ -97,7 +97,14 @@ export function usePlannerData() {
 
   async function addTask(t) {
     if (!t.title?.trim()) return { error: 'El título es obligatorio' }
-    const userId = userIdRef.current;
+    // Fallback: si loadAll no completó aún, obtener userId directo de Supabase
+    let userId = userIdRef.current;
+    if (!userId) {
+      const { data: { session } } = await supabase.auth.getSession();
+      userId = session?.user?.id;
+      if (userId) userIdRef.current = userId;
+    }
+    if (!userId) return { error: "No autenticado — inicia sesión nuevamente" };
     const localId = 'local-T-' + Date.now()
     const row = { id:localId, title:t.title, date:t.date||null, category:t.category||'other',
       priority:t.priority||'medium', note:t.note||null, done:false,
