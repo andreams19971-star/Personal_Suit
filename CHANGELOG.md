@@ -7,6 +7,34 @@
 
 ---
 
+## [2.8.3] — 2026-06-03 — Auditoría completa: 32 bugs corregidos
+
+### Metodología
+Revisión sistemática de los 56 archivos del proyecto con 5 tipos de checks:
+syntax (braces, backticks), duplicate imports, td() residual, exports faltantes,
+import/export mismatch entre shells y módulos.
+
+### Problemas encontrados y corregidos
+
+**29 módulos con imports de shared.js incompletos**
+El script de split copió solo `{ C, today }` de cada shared.js, pero los módulos
+usan MONTHS, DAYS, fmt, STATUS_CONFIG, PLATFORMS, PRIORITIES, etc. Script automático
+de corrección actualiza las líneas de import al mínimo necesario (ni más ni menos).
+
+**`EditTaskModal` importado del archivo incorrecto**
+`Planner.jsx` importaba `EditTaskModal` desde `TaskRow.jsx` pero está en `EditTaskModal.jsx`.
+
+**`finanz/shared.js` usaba `export {}` al final**
+El checker (y potencialmente Rollup en algunos casos) espera `export const X`.
+Convertido a inline `export const` en cada declaración.
+
+### Archivos corregidos
+- `src/apps/Planner.jsx` — import EditTaskModal desde EditTaskModal.jsx
+- `src/apps/finanz/shared.js` — inline export const
+- 28 módulos en finanz/, planner/, flota/, apartamento/ — imports shared.js precisos
+
+---
+
 ## [2.8.2] — 2026-06-03 — Bugfix: exports faltantes en shared.js + td() residual
 
 ### Error

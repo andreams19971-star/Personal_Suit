@@ -12,14 +12,17 @@ function b64ToUint8(base64) {
 
 // Pedir permiso de notificaciones
 export async function requestPermission() {
-  if (!("Notification" in window)) return "unsupported";
+  if (typeof Notification === "undefined" || !("Notification" in window)) return "unsupported";
   if (Notification.permission === "granted") return "granted";
-  const result = await Notification.requestPermission();
-  return result;
+  try {
+    const result = await Notification.requestPermission();
+    return result;
+  } catch { return "denied"; }
 }
 
 // Mostrar notificación local (sin servidor, instantánea)
 export function showLocalNotification(title, body, options={}) {
+  if (typeof Notification === "undefined") return;
   if (Notification.permission !== "granted") return;
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.ready.then(reg => {
@@ -30,9 +33,9 @@ export function showLocalNotification(title, body, options={}) {
         vibrate: [200, 100, 200],
         ...options
       });
-    });
+    }).catch(()=>{});
   } else {
-    new Notification(title, { body, icon:"/favicon.svg", ...options });
+    try { new Notification(title, { body, icon:"/favicon.svg", ...options }); } catch {}
   }
 }
 

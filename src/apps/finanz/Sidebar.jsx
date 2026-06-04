@@ -6,7 +6,7 @@ import { CategoriesManager } from "./CategoriesManager.jsx";
 
 export function Sidebar({open,onClose,accounts,updateAccountBalance,settings,setSettings,showToast,categories=DEFAULT_CATEGORIES,saveCategories}){
   const [tab,setTab]=useState("accounts");
-  const [notifPerm, setNotifPerm]=useState(typeof Notification!=="undefined"?Notification.permission:"default");
+  const [notifPerm, setNotifPerm]=useState(typeof Notification!=="undefined" && Notification.permission ? Notification.permission : "unsupported");
 
   const handleRequestNotif = async () => {
     const result = await requestPermission();
