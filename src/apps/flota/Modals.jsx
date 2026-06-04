@@ -2,6 +2,9 @@
 import { useState, useEffect } from "react";
 import { ACCOUNTS, C, CAR1, CAR1_DIM, CAR2, CAR2_DIM, CARRO1_DIARIO, MONTHS, fmt, fmtCOP, fmtShort, today } from "./shared.js";
 
+// Shared button style
+const btn = { width:"100%", marginTop:6, padding:13, borderRadius:12, border:"none", fontWeight:800, fontSize:15, cursor:"pointer" };
+
 export function EditPagoModal({carId, pago, accounts, onClose, onSave}) {
   const [form, setForm] = useState({
     fecha:   pago?.fecha   || today(),
