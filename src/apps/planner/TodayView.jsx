@@ -1,6 +1,7 @@
 // planner/TodayView.jsx
 import { useState, useEffect } from "react";
 import { C, today } from "./shared.js";
+import { TaskRow } from "./TaskRow.jsx";
 
 export function TodayView({ tasks, allTasks, selDate, toggleTask, setTaskStatus, deleteTask, taskCats, setEditTask }) {
   const todayTasks = tasks;

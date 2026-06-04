@@ -1,6 +1,7 @@
 // planner/AllTasksView.jsx
 import { useState, useEffect } from "react";
 import { C, today } from "./shared.js";
+import { TaskRow } from "./TaskRow.jsx";
 
 export function AllTasksView({ tasks, setTaskStatus, deleteTask, taskCats, setEditTask }) {
   const [filter, setFilter]   = useState("all");

@@ -7,6 +7,27 @@
 
 ---
 
+## [2.9.8] — 2026-06-04 — Bugfix: `n` duplicado en fmtShort
+
+### Error
+`Identifier "n" has already been declared` en apartamento/shared.js:63
+
+### Causa
+Al renombrar el parámetro `v` → `n` en `fmtShort`, el cuerpo de la función
+también tenía `const n = Math.abs(n||0)` — dos declaraciones de `n` en el
+mismo scope → error de Rollup/esbuild.
+
+### Fix
+Renombrar el parámetro a `num` en los 3 shared.js:
+`fmtShort = num => { const n = Math.abs(num||0); const s = num < 0 ? ... }`
+
+### Archivos
+- `src/apps/finanz/shared.js`
+- `src/apps/flota/shared.js`
+- `src/apps/apartamento/shared.js`
+
+---
+
 ## [2.9.7] — 2026-06-04 — Fix TDZ completo: `v` en shared.js + `today` shadowing
 
 ### Causa raíz definitiva del error `Cannot access 'v' before initialization`
