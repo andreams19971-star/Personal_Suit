@@ -7,6 +7,80 @@
 
 ---
 
+## [2.8.0] — 2026-06-02 — Aplicar todas las sugerencias del análisis
+
+### ✅ 1. Eliminar alias `td`
+`shared.js` exportaba `export const td = today` (alias redundante). Eliminado.
+22 archivos actualizados de `td` → `today`.
+
+### ✅ 2. SW cache auto-versionado
+`vite.config.js` inyecta `__BUILD_STAMP__` (fecha del build) en `sw.js`.
+El CACHE ahora es `'suite-' + BUILD_STAMP` en lugar de `'suite-v4'` hardcodeado.
+Cada deploy genera un CACHE diferente → limpia el caché obsoleto automáticamente.
+
+### ✅ 3. Tema por horario: timer de re-evaluación
+`App.jsx` ahora tiene `setInterval(60s)` cuando el tema es "schedule".
+El tema cambia automáticamente a la hora configurada sin necesidad de recargar la app.
+
+### ✅ 4. Script pre-build `scripts/check-imports.js`
+Detecta antes del deploy: backticks, llaves desequilibradas, helpers usados sin importar.
+Configurado como `prebuild` en `package.json` → se ejecuta automáticamente con `npm run build`.
+
+### ✅ 5. SQL: estandarizar columnas car_expenses a inglés
+Generado `fix-car-expenses-columns.sql`. Una vez ejecutado, `car_expenses` usará
+`amount/category/note` igual que `apt_expenses`. `useFlotaData.js` actualizado.
+
+### ✅ 6. Dividir Sidebar.jsx (370L → 3 archivos)
+- `finanz/AccountsManager.jsx` (136L) — gestión de cuentas
+- `finanz/CategoriesManager.jsx` (118L) — gestión de categorías + CatForm
+- `finanz/Sidebar.jsx` (110L) — panel lateral
+
+### ✅ 7. Split Planner.jsx (1,074L → shell + 9 módulos en `planner/`)
+`Planner.jsx` shell: 162L. Módulos: TodayView, TaskRow, EditTaskModal,
+AllTasksView, CalendarView, HabitsView, GoalsView, NotesView, Modals.
+
+### ✅ 8. Split FlotaTracker.jsx (928L → shell + 4 módulos en `flota/`)
+`FlotaTracker.jsx` shell: 195L. Módulos: Dashboard, CarroView, GastosView, Modals.
+
+### ✅ 9. Split ApartamentoApp.jsx (770L → shell + 5 módulos en `apartamento/`)
+`ApartamentoApp.jsx` shell: 152L. Módulos: DashboardView, RoomsView,
+CalendarView, FinancesView, Modals.
+
+### Estructura final de archivos
+```
+src/apps/
+  FinanzApp.jsx (219L)     finanz/    (12 archivos, ~180L promedio)
+  Planner.jsx   (162L)     planner/   (9 archivos)
+  FlotaTracker.jsx (195L)  flota/     (4 archivos)
+  ApartamentoApp.jsx (152L) apartamento/ (5 archivos)
+```
+Total: 4 shells + 30 módulos = 34 archivos vs 4 monolitos de 2,000+ líneas.
+
+---
+
+## [2.7.2] — 2026-06-02 — Bugfix: MF not defined + SW clone error
+
+### Error 1: `ReferenceError: MF is not defined`
+`MF` está definido y exportado en `Helpers.jsx` pero tres archivos lo usaban sin importarlo:
+- `Modals.jsx` — usa MF en todos los modales de formulario
+- `CardsView.jsx` — usa MF en ChargeModal y EditChargeModal
+- `AccountsView.jsx` — usa TxRow y EmptyState
+
+Además `AccountsView.jsx` tenía llaves dobles `{{` en los imports (artefacto del script sed).
+
+### Error 2: `Failed to execute 'clone' on 'Response': Response body is already used`
+En sw.js, `res.clone()` se llamaba dentro de un `.then()` asíncrono DESPUÉS de que
+`return res` ya consumió el body. La corrección: `const clone = res.clone()` ANTES
+del `return res`, y usar `clone` en el `caches.open().then()`.
+
+### Archivos
+- `src/apps/finanz/Modals.jsx` — import MF, SectionHeader, EmptyState
+- `src/apps/finanz/CardsView.jsx` — import MF, SectionHeader, EmptyState, TxRow
+- `src/apps/finanz/AccountsView.jsx` — fix llaves dobles + import TxRow, EmptyState
+- `public/sw.js` — clone antes del return en 3 handlers
+
+---
+
 ## [2.7.1] — 2026-06-02 — Bugfix: shared.js tenía imports incorrectos
 
 ### Error de build
@@ -675,6 +749,57 @@ ALTER TABLE tasks ADD COLUMN IF NOT EXISTS subcategory text;
 
 ---
 
+
+## 📋 Análisis y Sugerencias — 2026-06-02 (post v2.7.2)
+
+### 🔴 Urgente
+
+**1. Verificar el split de FinanzApp en producción**
+Tomó 3 versiones estabilizarse (2.7.0→2.7.1→2.7.2). Confirmar que todas las vistas
+cargan sin errores antes de continuar: Dashboard, Movimientos, Cuentas, Préstamos,
+Tarjetas, Stats. Si hay más imports faltantes, aparecerán ahora.
+
+**2. SETUP.sql todavía pendiente de ejecución**
+El bloque "SQL pendiente" al final del CHANGELOG sigue sin ejecutarse. Si no se corrió,
+los bugs de columnas faltantes pueden reaparecer con datos nuevos.
+
+### 🟡 Arquitectura
+
+**3. Script de verificación pre-build (build:check)**
+El bug "módulo usa X pero no lo importa" ocurrió 3 veces. Un script que corra antes
+del build y detecte imports faltantes evitaría deploys rotos. Agregar a package.json:
+`"prebuild": "node scripts/check-imports.js"`
+
+**4. Estandarizar nombres de columnas en Supabase**
+`car_expenses` usa español (monto/categoria/nota), `apt_expenses` usa inglés
+(amount/category/note). Inconsistencia documentada en v2.6.2. SQL de renombramiento
+para alinear todo a inglés.
+
+**5. Dividir Sidebar.jsx (370 líneas, mezcla responsabilidades)**
+Contiene Sidebar UI + AccountsManager + CategoriesManager + CatForm.
+Mismo argumento que motivó el split de FinanzApp.
+
+### 🟢 Features de alto valor
+
+**6. Aplicar el split a las 3 apps restantes**
+Planner (~1,074L), FlotaTracker (~930L), ApartamentoApp (~770L) siguen siendo monolitos.
+Patrón ya probado. Beneficios: errores aislados, edición más segura, debugging más rápido.
+
+**7. Tema por horario — completar implementación**
+Se agregó opción "Horario" en Settings (v2.4.0) pero `getScheduledTheme` no tiene timer
+que re-evalúe cuando cambia la hora. El tema solo cambia al recargar la app.
+Fix: `setInterval(() => forceUpdate(), 60000)` en el componente principal.
+
+### 🔧 Deuda técnica
+
+**8. `today` y `td` son la misma función exportada dos veces**
+`shared.js` exporta `export const td = today` (alias redundante). Unificar a `today`.
+
+**9. CACHE del SW no se versiona automáticamente**
+`const CACHE = 'suite-v4'` está hardcodeado. Propuesta: usar el BUILD timestamp
+como versión del cache via plugin de Vite → `'suite-' + BUILD_HASH`.
+
+---
 
 ## 📋 Análisis y Sugerencias — 2026-05-30
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, lazy, Suspense } from "react";
+import { useState, useEffect, useReducer, lazy, Suspense } from "react";
 import { supabase, isConfigured } from "./supabase.js";
 import { useAuthProvider, AuthContext } from "./hooks/useAuth.js";
 import AuthScreen    from "./AuthScreen.jsx";
@@ -46,6 +46,7 @@ function getScheduledTheme(prefs) {
 
 function AppContent() {
   const auth = useAuthProvider();
+  const [, forceUpdate] = useReducer(n=>n+1, 0);
 
   const [activeApp,  setActiveApp]  = useState(null);
   const [settings,   setSettings]   = useState(false);
@@ -59,6 +60,13 @@ function AppContent() {
   const themeKey = prefs.theme==="system"   ? getSystemTheme()
                  : prefs.theme==="schedule" ? (getScheduledTheme(prefs)||"dark")
                  : (prefs.theme||"dark");
+
+  // Timer para re-evaluar el tema por horario cada 60s
+  useEffect(()=>{
+    if (prefs.theme !== "schedule") return;
+    const timer = setInterval(()=>{ forceUpdate(n=>n+1); }, 60000);
+    return ()=>clearInterval(timer);
+  }, [prefs.theme, prefs.darkFrom, prefs.darkUntil]);
   const C          = THEMES[themeKey]||THEMES.dark;
   const fontScale  = FONT_SIZES.find(f=>f.id===(prefs.fontSize||"medium"))?.scale||1;
 

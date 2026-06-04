@@ -4,7 +4,7 @@ import { useFinanzData } from "../hooks/useFinanzData.js";
 import { useCardsData }  from "../hooks/useCardsData.js";
 import { checkFinanzAlerts, requestPermission, showLocalNotification } from "../hooks/useNotifications.js";
 import { loadSetting, saveSetting } from "../hooks/useSettings.js";
-import { C, fmtCOP, fmtShort, today, td, MONTHS, ACCOUNTS_DEF, DEFAULT_CATEGORIES } from "./finanz/shared.js";
+import { C, fmtCOP, fmtShort, today, today, MONTHS, ACCOUNTS_DEF, DEFAULT_CATEGORIES } from "./finanz/shared.js";
 import { TxRow, SectionHeader, EmptyState, Pill, StatCard, MF } from "./finanz/Helpers.jsx";
 import { TopBar, MobileNav } from "./finanz/TopBar.jsx";
 import { Dashboard }     from "./finanz/Dashboard.jsx";
@@ -13,6 +13,8 @@ import { LoansView, LoanDetail }   from "./finanz/LoansView.jsx";
 import { CardsView, ChargeModal, EditChargeModal, CardEditModal } from "./finanz/CardsView.jsx";
 import { Stats }         from "./finanz/Stats.jsx";
 import { Sidebar }       from "./finanz/Sidebar.jsx";
+import { AccountsManager } from "./finanz/AccountsManager.jsx";
+import { CategoriesManager } from "./finanz/CategoriesManager.jsx";
 import { AddModal, LoanModal, PayModal, EditTxModal, TransferModal } from "./finanz/Modals.jsx";
 
 function seedTx(){

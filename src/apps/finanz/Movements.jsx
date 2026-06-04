@@ -1,7 +1,7 @@
 // finanz/Movements.jsx
 import { useState, useEffect, useRef } from "react";
 import * as XLSX from "xlsx";
-import { C, fmtCOP, fmtShort, today, td, MONTHS, ACCOUNTS_DEF, DEFAULT_CATEGORIES } from "./shared.js";
+import { C, fmtCOP, fmtShort, today, today, MONTHS, ACCOUNTS_DEF, DEFAULT_CATEGORIES } from "./shared.js";
 import { TxRow, SectionHeader, EmptyState, Pill, StatCard, MF } from "./Helpers.jsx";
 
 export function Movements({transactions,filterMonth,deleteTransaction,openAddModal,loans,categories=DEFAULT_CATEGORIES,setEditTx}){
@@ -36,9 +36,9 @@ export function Movements({transactions,filterMonth,deleteTransaction,openAddMod
     win.document.write('<html><head><title>Movimientos '+filterMonth+'</title><style>body{font-family:Arial;font-size:11px;margin:20px}h2{color:#111}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd;padding:5px 8px}th{background:#18181b;color:#fff}.i{color:green;font-weight:700}.e{color:red;font-weight:700}tfoot td{font-weight:700;background:#f5f5f5}</style></head><body>');
     win.document.write('<h2>Movimientos · '+filterMonth+'</h2>');
     win.document.write('<table><thead><tr><th>Fecha</th><th>Tipo</th><th>Categoría</th><th>Cuenta</th><th>Monto</th><th>Descripción</th></tr></thead><tbody>');
-    filtered.forEach(t=>{const c=t.type==="income"?"i":"e";win.document.write('<tr><td>'+t.date+'</td><td class="'+c+'">'+(t.type==="income"?"↑ Ingreso":"↓ Gasto")+'</td><td>'+(t.category||"")+'</td><td>'+(t.account||"")+'</td><td class="'+c+'">$'+t.amount.toLocaleString("es-CO")+'</td><td>'+(t.note||"")+'</td></tr>');});
+    filtered.forEach(t=>{const c=t.type==="income"?"i":"e";win.document.write('<tr><td>'+t.date+'</td><today class="'+c+'">'+(t.type==="income"?"↑ Ingreso":"↓ Gasto")+'</td><td>'+(t.category||"")+'</td><td>'+(t.account||"")+'</td><today class="'+c+'">$'+t.amount.toLocaleString("es-CO")+'</td><td>'+(t.note||"")+'</td></tr>');});
     const tot=filtered.reduce((s,t)=>s+(t.type==="income"?t.amount:-t.amount),0);
-    win.document.write('<tr><td colspan="4"><strong>BALANCE</strong></td><td colspan="2" class="'+(tot>=0?"i":"e")+'">'+(tot>=0?"+":"")+tot.toLocaleString("es-CO")+'</td></tr>');
+    win.document.write('<tr><today colspan="4"><strong>BALANCE</strong></td><today colspan="2" class="'+(tot>=0?"i":"e")+'">'+(tot>=0?"+":"")+tot.toLocaleString("es-CO")+'</td></tr>');
     win.document.write('</tbody></table></body></html>');
     win.document.close(); win.print();
   }

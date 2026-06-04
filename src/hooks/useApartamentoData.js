@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../supabase.js'
 
-const td = () => new Date().toISOString().slice(0,10)
+const today = () => new Date().toISOString().slice(0,10)
 
 const DEFAULT_ROOMS = [
   { id:'R1', name:'Habitación 1', description:'Cama doble, baño privado',       base_price:0, icon:'🛏️', color:'#818CF8', amenities:['WiFi','AC','TV','Baño privado'] },

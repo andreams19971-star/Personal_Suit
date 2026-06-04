@@ -3,7 +3,8 @@
 // Assets con hash: Cache First → inmutables por diseño de Vite
 // Si hay nueva versión: reload suave al volver a foreground
 
-const CACHE = 'suite-v4';
+// CACHE se versiona automáticamente en cada build via Vite
+const CACHE = typeof __BUILD_STAMP__ !== 'undefined' ? 'suite-' + __BUILD_STAMP__ : 'suite-v4';
 const ASSET_TIMEOUT_MS = 5000; // si la red no responde en 5s, servir del caché
 
 self.addEventListener('install', () => self.skipWaiting());

@@ -64,4 +64,3 @@ const MONTHS  = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","No
 
 
 export { C, DEFAULT_CATEGORIES, ACCOUNTS_DEF, fmtCOP, fmtShort, today, MONTHS };
-export const td = today;

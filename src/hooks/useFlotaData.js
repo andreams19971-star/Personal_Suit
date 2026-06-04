@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../supabase.js'
 
 const ago = d => { const x = new Date(); x.setDate(x.getDate()-d); return x.toISOString().slice(0,10) }
-const td  = () => new Date().toISOString().slice(0,10)
+const today  = () => new Date().toISOString().slice(0,10)
 
 const DEFAULT_CARS = [
   { id:'C1', nombre:'Carro 1', placa:'ABC-123', modelo:'Chevrolet Aveo 2019', conductor:'Sin asignar', tipo:'diario',   valor_diario:70000,  valor_mensual:null,   color:'#3B82F6', color_dim:'#0A1628', icon:'🚗', activo:true },
@@ -170,9 +170,9 @@ export function useFlotaData() {
     const { data, error } = await supabase.from('car_expenses').insert([{
       car_id:   carId,
       fecha:    gasto.fecha,
-      categoria: gasto.categoria,
-      monto:    gasto.monto,
-      nota:     gasto.nota || '',
+      category: gasto.categoria,
+      amount:   gasto.monto,
+      note:     gasto.nota || '',
       ...(gasto.account ? { account: gasto.account } : {})
     }]).select().single()
     if (error) {

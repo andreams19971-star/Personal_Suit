@@ -1,13 +1,17 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
+const BUILD_STAMP = '20260603';
+
 export default defineConfig({
   plugins: [react()],
+  define: {
+    '__BUILD_STAMP__': JSON.stringify(BUILD_STAMP),
+  },
   build: {
     chunkSizeWarningLimit: 1000,
     rollupOptions: {
       output: {
-        // Separar Supabase del código de la app
         manualChunks: {
           'vendor-react':    ['react', 'react-dom'],
           'vendor-supabase': ['@supabase/supabase-js'],

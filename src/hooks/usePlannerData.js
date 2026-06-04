@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../supabase.js'
 
 const ago = d => { const x = new Date(); x.setDate(x.getDate()+d); return x.toISOString().slice(0,10) }
-const td  = () => new Date().toISOString().slice(0,10)
+const today  = () => new Date().toISOString().slice(0,10)
 const C   = { accent:'#60A5FA', green:'#34D399', purple:'#A78BFA', yellow:'#FBBF24' }
 
 function seed() {
