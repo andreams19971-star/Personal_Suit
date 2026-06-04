@@ -7,6 +7,35 @@
 
 ---
 
+## [2.9.2] — 2026-06-04 — Bugfix: RLS violation por user_id null en inserts
+
+### Error
+`new row violates row-level security policy for table "transactions"`
+
+### Causa
+Condición de carrera: el usuario abre FinanzApp y agrega un movimiento ANTES
+de que `loadAll()` complete. `userIdRef.current` aún es `null` en ese momento,
+por lo que el insert envía `user_id: null`. La política RLS
+`USING (auth.uid() = user_id)` falla porque `null != auth.uid()`.
+
+### Fix
+En cada función de insert, si `userIdRef.current` es null:
+1. Llamar `supabase.auth.getSession()` directamente
+2. Guardar el userId en `userIdRef.current` para los siguientes inserts
+3. Si aún no hay userId → retornar error "No autenticado"
+
+Aplica a los 5 hooks de datos: `addTransaction`, `addCard`, `addCharge`,
+`addTask`, `addWorkDay`, `addExpense`, `addReservation`.
+
+### Archivos
+- `src/hooks/useFinanzData.js`
+- `src/hooks/useCardsData.js`
+- `src/hooks/usePlannerData.js`
+- `src/hooks/useFlotaData.js`
+- `src/hooks/useApartamentoData.js`
+
+---
+
 ## [2.9.1] — 2026-06-03 — Bugfix: useAuth not defined en hooks
 
 ### Error

@@ -59,11 +59,10 @@ export function usePlannerData() {
     try {
       const loadTable = async (table) => {
         try {
-          // Primero intentar con created_at, si falla intentar sin orden
-          let res = await supabase.from(table).select('*').order('created_at', { ascending: false })
+          let res = await supabase.from(table).select('*').eq('user_id', userId).order('created_at', { ascending: false })
           if (res.error) {
             console.warn('[PlannerData]', table, 'created_at fallback:', res.error.message)
-            res = await supabase.from(table).select('*')
+            res = await supabase.from(table).select('*').eq('user_id', userId)
           }
           if (res.error) { console.warn('[PlannerData]', table, 'error:', res.error.message); return [] }
           return res.data || []
@@ -117,7 +116,7 @@ export function usePlannerData() {
     let { data, error } = await supabase.from('tasks').insert([{...rowData, user_id:userId}]).select().single()
     if (error && (error.message.includes('status') || error.message.includes('subcategory'))) {
       const { status:_s, subcategory:_sc, ...safeRow } = rowData
-      const res = await supabase.from('tasks').insert([safeRow]).select().single()
+      const res = await supabase.from('tasks').insert([{...safeRow, user_id:userId}]).select().single()
       data = res.data; error = res.error
     }
     if (error) {
@@ -169,7 +168,7 @@ export function usePlannerData() {
     setHabits(p => [...p, local])
     if (!onlineRef.current) console.warn('[offline] intentando igualmente...')
     const { id:_skip, ...rowData } = local
-    const { data, error } = await supabase.from('habits').insert([{...rowData, completions:{}}]).select().single()
+    const { data, error } = await supabase.from('habits').insert([{...rowData, user_id:userId, completions:{}}]).select().single()
     if (error) { console.error('[addHabit] ❌', error.message); setHabits(p=>p.filter(h=>h.id!==localId)); return }
     setHabits(p => p.map(h => h.id===localId ? data : h))
   }

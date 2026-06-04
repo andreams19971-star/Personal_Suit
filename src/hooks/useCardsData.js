@@ -24,8 +24,7 @@ export function useCardsData() {
     setLoading(true)
     try {
       const [cr, chr] = await Promise.all([
-        supabase.from('credit_cards').select('*').order('created_at'),
-        supabase.from('card_charges').select('*').order('date', { ascending: false }),
+        supabase.from('credit_cards').select('*, card_charges(*)').eq('user_id', userId),
       ])
       if (cr.error || chr.error) throw new Error((cr.error || chr.error).message)
 
