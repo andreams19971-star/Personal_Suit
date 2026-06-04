@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { C, today, fmtCOP } from "./shared.js";
 
 export function DashboardView({rooms,reservations,expenses,totalExpenses,occupancyRate,getRoomStatus,setModal,updateReservationStatus,showToast}) {
-  const today = td();
+  const today = today();
   const activeRes   = reservations.filter(r=>r.checkIn<=today&&r.checkOut>today);
   const upcomingRes = reservations.filter(r=>r.checkIn>today&&r.status==="reserved").sort((a,b)=>a.checkIn.localeCompare(b.checkIn)).slice(0,3);
   const availableCount = rooms.filter(r=>getRoomStatus(r.id)==="available").length;

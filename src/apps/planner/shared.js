@@ -1,7 +1,7 @@
 // planner/shared.js
 
 
-const C = {
+export const C = {
   bg:"#09090B",surface:"#111113",card:"#18181B",card2:"#1C1C1F",
   border:"#27272A",borderSub:"#1C1C1F",
   text:"#FAFAFA",textSub:"#A1A1AA",textMuted:"#52525B",
@@ -14,17 +14,17 @@ const C = {
   purple:"#A855F7",purpleDim:"#180A28",
 };
 
-const DAYS = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
-const MONTHS = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
-const today = () => new Date().toISOString().slice(0, 10);
+export const DAYS = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
+export const MONTHS = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+export const today = () => new Date().toISOString().slice(0, 10);
 
-const HABIT_ICONS = ["💧","🏃","📚","🧘","🥗","😴","💪","🚭","🙏","✍️","🎯","🌿"];
-const PRIORITIES = [
+export const HABIT_ICONS = ["💧","🏃","📚","🧘","🥗","😴","💪","🚭","🙏","✍️","🎯","🌿"];
+export const PRIORITIES = [
   { id: "high",   label: "Alta",   color: "#F87171" },
   { id: "medium", label: "Media",  color: "#FBBF24" },
   { id: "low",    label: "Baja",   color: "#34D399" },
 ];
-const TASK_CATS = [
+export const TASK_CATS = [
   { id: "work",     label: "Trabajo",   icon: "💼" },
   { id: "personal", label: "Personal",  icon: "🧍" },
   { id: "health",   label: "Salud",     icon: "🏥" },
@@ -33,13 +33,13 @@ const TASK_CATS = [
   { id: "other",    label: "Otro",      icon: "📦" },
 ];
 
-function seedData() {
+export function seedData() {
   const now = new Date();
   const d = (days) => { const x = new Date(now); x.setDate(x.getDate() + days); return x.toISOString().slice(0,10); };
   return {
     tasks: [
-      { id: "T1", title: "Revisar extracto bancario", category: "finance", priority: "high", date: td(), done: false, note: "" },
-      { id: "T2", title: "Ir al médico control", category: "health", priority: "medium", date: td(), done: false, note: "Cita 3pm" },
+      { id: "T1", title: "Revisar extracto bancario", category: "finance", priority: "high", date: today(), done: false, note: "" },
+      { id: "T2", title: "Ir al médico control", category: "health", priority: "medium", date: today(), done: false, note: "Cita 3pm" },
       { id: "T3", title: "Llamar al seguro del carro", category: "errands", priority: "medium", date: d(1), done: false, note: "" },
       { id: "T4", title: "Completar informe semanal", category: "work", priority: "high", date: d(1), done: false, note: "" },
       { id: "T5", title: "Comprar mercado", category: "personal", priority: "low", date: d(2), done: false, note: "" },
@@ -57,13 +57,13 @@ function seedData() {
       { id: "G3", title: "Bajar 8 kg", icon: "⚖️", target: 8, current: 2, deadline: d(90), color: C.green, category: "health" },
     ],
     notes: [
-      { id: "N1", title: "Ideas de negocio", content: "App de delivery para mascotas, consultoría de finanzas...", color: C.yellow, date: td() },
-      { id: "N2", title: "Lista mercado", content: "Arroz, fríjoles, aceite, pollo, verduras, frutas", color: C.green, date: td() },
+      { id: "N1", title: "Ideas de negocio", content: "App de delivery para mascotas, consultoría de finanzas...", color: C.yellow, date: today() },
+      { id: "N2", title: "Lista mercado", content: "Arroz, fríjoles, aceite, pollo, verduras, frutas", color: C.green, date: today() },
     ],
   };
 }
 
-const DEFAULT_TASK_CATS = [
+export const DEFAULT_TASK_CATS = [
   { id:"work",     label:"Trabajo",    icon:"💼", subs:["Reunión","Entrega","Revisión","Llamada"] },
   { id:"personal", label:"Personal",   icon:"🧍", subs:["Familia","Amigos","Hogar","Trámite"] },
   { id:"health",   label:"Salud",      icon:"🏥", subs:["Médico","Ejercicio","Farmacia","Control"] },

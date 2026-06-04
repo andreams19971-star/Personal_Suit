@@ -7,7 +7,7 @@ export function CalendarView({reservations,rooms,calMonth,setCalMonth,setModal})
   const firstDay=new Date(year,month,1).getDay();
   const daysInMonth=new Date(year,month+1,0).getDate();
   const cells=Array.from({length:firstDay},()=>null).concat(Array.from({length:daysInMonth},(_,i)=>i+1));
-  const today=td();
+  const today=today();
 
   const getDayRes=(day)=>{
     const dateStr=(year)+"-"+(String(month+1).padStart(2,"0"))+"-"+(String(day).padStart(2,"0"));

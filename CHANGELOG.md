@@ -7,6 +7,27 @@
 
 ---
 
+## [2.8.1] — 2026-06-03 — Bugfix: `today` duplicado en imports
+
+### Error
+`The symbol "today" has already been declared` en `FinanzApp.jsx:7`
+
+El import tenía: `import { ..., today, today, ... }` — dos veces.
+
+### Causa
+El script de reemplazo `td → today` (v2.8.0) procesó el texto de los imports
+y convirtió el `td` que ya existía en el import. Como `today` ya estaba en el
+import (también se exporta con ese nombre), quedaron dos instancias.
+
+### Fix
+Regex `re.sub(r'\btoday, today\b', 'today', c)` sobre los 11 archivos afectados.
+
+### Archivos corregidos
+FinanzApp.jsx, AccountsView.jsx, LoansView.jsx, Modals.jsx, TopBar.jsx,
+CardsView.jsx, MobileNav.jsx, Dashboard.jsx, Helpers.jsx, Stats.jsx, Movements.jsx
+
+---
+
 ## [2.8.0] — 2026-06-02 — Aplicar todas las sugerencias del análisis
 
 ### ✅ 1. Eliminar alias `td`

@@ -8,8 +8,8 @@ const C   = { accent:'#60A5FA', green:'#34D399', purple:'#A78BFA', yellow:'#FBBF
 function seed() {
   return {
     tasks: [
-      { id:'t1', title:'Revisar extracto bancario', category:'finance',  priority:'high',   date:td(),    done:false, note:'' },
-      { id:'t2', title:'Médico control',            category:'health',   priority:'medium', date:td(),    done:false, note:'3pm' },
+      { id:'t1', title:'Revisar extracto bancario', category:'finance',  priority:'high',   date:today(),    done:false, note:'' },
+      { id:'t2', title:'Médico control',            category:'health',   priority:'medium', date:today(),    done:false, note:'3pm' },
       { id:'t3', title:'Pagar servicios',           category:'finance',  priority:'high',   date:ago(3),  done:false, note:'' },
       { id:'t4', title:'Comprar mercado',           category:'personal', priority:'low',    date:ago(2),  done:false, note:'' },
     ],
@@ -25,8 +25,8 @@ function seed() {
       { id:'g3', title:'Bajar 8 kg',         icon:'⚖️', target:8,       current:2,       deadline:ago(90),  color:C.green,   category:'health'   },
     ],
     notes: [
-      { id:'n1', title:'Ideas de negocio', content:'App delivery mascotas, consultoría financiera...', color:C.yellow, date:td() },
-      { id:'n2', title:'Lista mercado',    content:'Arroz, fríjoles, aceite, pollo, verduras',         color:C.green,  date:td() },
+      { id:'n1', title:'Ideas de negocio', content:'App delivery mascotas, consultoría financiera...', color:C.yellow, date:today() },
+      { id:'n2', title:'Lista mercado',    content:'Arroz, fríjoles, aceite, pollo, verduras',         color:C.green,  date:today() },
     ]
   }
 }
@@ -195,7 +195,7 @@ export function usePlannerData() {
 
   async function addNote(n) {
     const localId = 'local-N-' + Date.now()
-    const local = { ...n, id:localId, date:td() }
+    const local = { ...n, id:localId, date:today() }
     setNotes(p => [local,...p])
     if (!onlineRef.current) console.warn('[offline] intentando igualmente...')
     const { id:_skip, ...rowData } = local

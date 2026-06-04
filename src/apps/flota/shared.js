@@ -1,7 +1,7 @@
 // flota/shared.js
 
 
-const ACCOUNTS = [
+export const ACCOUNTS = [
   {id:"cash",        label:"Efectivo",    icon:"💵"},
   {id:"nequi",       label:"Nequi",       icon:"💜"},
   {id:"bbva",        label:"BBVA",        icon:"🔵"},
@@ -11,11 +11,11 @@ const ACCOUNTS = [
 
 // ─── COLORES ──────────────────────────────────────────────────────────────────
 
-const CAR1 = "#3B82F6";   // azul - diario
-const CAR1_DIM = "#071228";
-const CAR2 = "#A855F7";   // morado - mensual
-const CAR2_DIM = "#180A28";
-const C = {
+export const CAR1 = "#3B82F6";   // azul - diario
+export const CAR1_DIM = "#071228";
+export const CAR2 = "#A855F7";   // morado - mensual
+export const CAR2_DIM = "#180A28";
+export const C = {
   bg:"#09090B",surface:"#111113",card:"#18181B",card2:"#1C1C1F",
   border:"#27272A",borderSub:"#1C1C1F",
   text:"#FAFAFA",textSub:"#A1A1AA",textMuted:"#52525B",
@@ -28,17 +28,17 @@ const C = {
   purple:"#A855F7",purpleDim:"#180A28",
 };
 
-const fmt = v => new Intl.NumberFormat("es-CO",{style:"currency",currency:"COP",maximumFractionDigits:0}).format(v||0);
-const today  = () => new Date().toISOString().slice(0,10);
-const DAYS_ES = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
-const MONTHS  = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+export const fmt = v => new Intl.NumberFormat("es-CO",{style:"currency",currency:"COP",maximumFractionDigits:0}).format(v||0);
+export const today  = () => new Date().toISOString().slice(0,10);
+export const DAYS_ES = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
+export const MONTHS  = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
 
 // Carro 1: $70.000 × días laborales (Lun-Sáb)
 // Carro 2: $500.000 mensual fijo
-const CARRO1_DIARIO  = 70000;
-const CARRO2_MENSUAL = 500000;
+export const CARRO1_DIARIO  = 70000;
+export const CARRO2_MENSUAL = 500000;
 
-function getWorkDaysInMonth(year, month) {
+export function getWorkDaysInMonth(year, month) {
   // month: 0-based
   let count = 0;
   const days = new Date(year, month + 1, 0).getDate();
@@ -49,7 +49,7 @@ function getWorkDaysInMonth(year, month) {
   return count;
 }
 
-function getWorkDaysPassed(year, month) {
+export function getWorkDaysPassed(year, month) {
   const today = new Date();
   const isCurrentMonth = today.getFullYear() === year && today.getMonth() === month;
   const lastDay = isCurrentMonth ? today.getDate() : new Date(year, month + 1, 0).getDate();
@@ -61,7 +61,7 @@ function getWorkDaysPassed(year, month) {
   return count;
 }
 
-function seedData() {
+export function seedData() {
   const now = new Date();
   const ago = d => { const x = new Date(now); x.setDate(x.getDate()-d); return x.toISOString().slice(0,10); };
 
@@ -125,3 +125,12 @@ function seedData() {
 }
 
 // ─── APP PRINCIPAL ────────────────────────────────────────────────────────────
+
+export const fmtCOP = v =>
+  new Intl.NumberFormat("es-CO", { style:"currency", currency:"COP", maximumFractionDigits:0 }).format(v||0);
+export const fmtShort = v => {
+  const n = Math.abs(v||0); const s = (v||0) < 0 ? "-" : "";
+  if (n >= 1000000) return s + "$" + (n/1000000).toFixed(1).replace(".0","") + "M";
+  if (n >= 1000)    return s + "$" + (n/1000).toFixed(0) + "k";
+  return s + "$" + n;
+};

@@ -29,7 +29,7 @@ export function CalendarView({ tasks, aptReservations=[], calDate, setCalDate, s
             const dateStr = (year)+"-"+(String(month + 1).padStart(2, "0"))+"-"+(String(day).padStart(2, "0"));
             const count = tasks.filter(t => t.date === dateStr).length;
             const hasApt = aptReservations.some(r => r.checkIn <= dateStr && r.checkOut > dateStr);
-            const isToday = dateStr === td();
+            const isToday = dateStr === today();
             const isSel = dateStr === selDate;
             return (
               <button key={i} onClick={() => setSelDate(dateStr)} style={{ aspectRatio:"1", borderRadius: 8, border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 1, background: isSel ? C.accent : isToday ? C.accentDim : "transparent", color: isSel ? "#000" : isToday ? C.accent : C.text, fontWeight: isSel||isToday ? 700 : 400, fontSize: 13 }}>

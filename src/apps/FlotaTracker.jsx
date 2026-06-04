@@ -13,7 +13,7 @@ export default function FlotaTracker({ onBack }) {
   } = useFlotaData();
 
   const [view,        setView]        = useState("dashboard");
-  const [filterMonth, setFilterMonth] = useState(td().slice(0,7));
+  const [filterMonth, setFilterMonth] = useState(today().slice(0,7));
   const [modal,       setModal]       = useState(null);
   const [editPago,    setEditPago]    = useState(null);
   const [showAddCar,  setShowAddCar]  = useState(false);

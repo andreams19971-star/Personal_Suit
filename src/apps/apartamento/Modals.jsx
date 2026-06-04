@@ -5,7 +5,7 @@ import { C, today, fmtCOP } from "./shared.js";
 export function ReservationModal({rooms, reservations=[], onClose, onAdd, editData}) {
   const [form,setForm]=useState({
     roomId:   editData?.roomId||rooms[0]?.id||"",
-    guest:    "", phone:"", checkIn:td(), checkOut:"",
+    guest:    "", phone:"", checkIn:today(), checkOut:"",
     platform: "Directo", notes:"", gender:"",
   });
   const set=(k,v)=>setForm(f=>({...f,[k]:v}));
@@ -167,7 +167,7 @@ export function ReservationDetailModal({res,rooms,onClose,onStatusChange,onDelet
 }
 
 export function ExpenseModal({onClose,onAdd,rooms}) {
-  const [form,setForm]=useState({date:td(),category:"Servicios",amount:"",room:"",note:""});
+  const [form,setForm]=useState({date:today(),category:"Servicios",amount:"",room:"",note:""});
   const set=(k,v)=>setForm(f=>({...f,[k]:v}));
   const cats=["Servicios","Limpieza","Mantenimiento","Insumos","Publicidad","Impuestos","Otro"];
   return(

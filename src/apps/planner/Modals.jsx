@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { C, today } from "./shared.js";
 
 export function TaskModal({ onClose, onAdd, defaultDate, taskCats=DEFAULT_TASK_CATS }) {
-  const [form, setForm] = useState({ title:"", category: taskCats[0]?.id||"other", subcategory:"", priority:"medium", date: defaultDate||td(), note:"", hasDate:!!defaultDate });
+  const [form, setForm] = useState({ title:"", category: taskCats[0]?.id||"other", subcategory:"", priority:"medium", date: defaultDate||today(), note:"", hasDate:!!defaultDate });
   const set = (k,v) => setForm(f=>({...f,[k]:v,...(k==="category"?{subcategory:""}:{})}));
   const cat = taskCats.find(c=>c.id===form.category)||taskCats[0];
   const submitForm = () => {

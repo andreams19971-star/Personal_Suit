@@ -37,7 +37,7 @@ export default function Planner({ onBack }) {
     if (!tasks.length) return;
     requestPermission().then(perm => {
       if (perm !== "granted") return;
-      const today    = td();
+      const today    = today();
       const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate()+1);
       const tmrStr   = tomorrow.toISOString().slice(0,10);
       const todayTasks = tasks.filter(t=>t.date===today&&(t.status==="pending"||t.status==="in_progress"));
@@ -70,7 +70,7 @@ export default function Planner({ onBack }) {
     });
   }, []);
   const [calDate, setCalDate]     = useState(new Date());
-  const [selDate, setSelDate]     = useState(td());
+  const [selDate, setSelDate]     = useState(today());
   const [showTaskModal, setShowTaskModal]   = useState(false);
   const [showGoalModal, setShowGoalModal]   = useState(false);
   const [showNoteModal, setShowNoteModal]   = useState(false);

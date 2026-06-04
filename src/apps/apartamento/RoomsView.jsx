@@ -6,7 +6,7 @@ export function RoomsView({rooms,reservations,getRoomStatus,setModal,updateReser
   const [selRoom, setSelRoom] = useState(rooms[0]?.id);
   const room = rooms.find(r=>r.id===selRoom)||rooms[0];
   const roomRes = reservations.filter(r=>r.roomId===selRoom).sort((a,b)=>b.checkIn.localeCompare(a.checkIn));
-  const today = td();
+  const today = today();
 
   return(
     <div style={{padding:"14px",display:"grid",gap:14,boxSizing:"border-box"}} className="ap-fu">

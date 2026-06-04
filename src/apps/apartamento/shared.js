@@ -2,7 +2,7 @@
 
 
 // ─── COLORES ──────────────────────────────────────────────────────────────────
-const C = {
+export const C = {
   bg:"#09090B",surface:"#111113",card:"#18181B",card2:"#1C1C1F",
   border:"#27272A",borderSub:"#1C1C1F",
   text:"#FAFAFA",textSub:"#A1A1AA",textMuted:"#52525B",
@@ -15,12 +15,12 @@ const C = {
   purple:"#A855F7",purpleDim:"#180A28",
 };
 
-const MONTHS = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
-const DAYS_ES = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
-const fmt = v => new Intl.NumberFormat("es-CO",{style:"currency",currency:"COP",maximumFractionDigits:0}).format(v||0);
-const today  = () => new Date().toISOString().slice(0,10);
+export const MONTHS = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+export const DAYS_ES = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
+export const fmt = v => new Intl.NumberFormat("es-CO",{style:"currency",currency:"COP",maximumFractionDigits:0}).format(v||0);
+export const today  = () => new Date().toISOString().slice(0,10);
 
-const STATUS_CONFIG = {
+export const STATUS_CONFIG = {
   available: { label:"Disponible",  color:C.green,  bg:C.greenDim,  icon:"✅" },
   reserved:  { label:"Reservado",   color:C.accent, bg:C.accentDim, icon:"📅" },
   occupied:  { label:"Ocupado",     color:C.orange, bg:C.orangeDim, icon:"🏠" },
@@ -28,9 +28,9 @@ const STATUS_CONFIG = {
   blocked:   { label:"Bloqueado",   color:C.red,    bg:C.redDim,    icon:"🚫" },
 };
 
-const PLATFORMS = ["Airbnb","Booking","Directo","WhatsApp","Referido","Otro"];
+export const PLATFORMS = ["Airbnb","Booking","Directo","WhatsApp","Referido","Otro"];
 
-function seedData() {
+export function seedData() {
   const now = new Date();
   const d = (days) => { const x = new Date(now); x.setDate(x.getDate()+days); return x.toISOString().slice(0,10); };
   const ago = (days) => { const x = new Date(now); x.setDate(x.getDate()-days); return x.toISOString().slice(0,10); };
@@ -56,3 +56,12 @@ function seedData() {
   };
 }
 
+
+export const fmtCOP = v =>
+  new Intl.NumberFormat("es-CO", { style:"currency", currency:"COP", maximumFractionDigits:0 }).format(v||0);
+export const fmtShort = v => {
+  const n = Math.abs(v||0); const s = (v||0) < 0 ? "-" : "";
+  if (n >= 1000000) return s + "$" + (n/1000000).toFixed(1).replace(".0","") + "M";
+  if (n >= 1000)    return s + "$" + (n/1000).toFixed(0) + "k";
+  return s + "$" + n;
+};

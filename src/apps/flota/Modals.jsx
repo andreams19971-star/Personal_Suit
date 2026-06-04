@@ -4,7 +4,7 @@ import { C, CAR1, CAR2, today, fmtCOP, fmtShort, ACCOUNTS, MONTHS } from "./shar
 
 export function EditPagoModal({carId, pago, accounts, onClose, onSave}) {
   const [form, setForm] = useState({
-    fecha:   pago?.fecha   || td(),
+    fecha:   pago?.fecha   || today(),
     monto:   pago?.monto   || 0,
     nota:    pago?.nota    || "",
     account: pago?.account || "cash",
@@ -49,7 +49,7 @@ export function EditPagoModal({carId, pago, accounts, onClose, onSave}) {
 
 export function GastoModal({carroId,carros,onClose,onAdd,accounts}) {
   const carro = carros.find(c=>c.id===carroId);
-  const [form,setForm] = useState({fecha:td(),categoria:"Gasolina",monto:"",nota:"",account:"cash"});
+  const [form,setForm] = useState({fecha:today(),categoria:"Gasolina",monto:"",nota:"",account:"cash"});
   const set = (k,v) => setForm(f=>({...f,[k]:v}));
   const cats = ["Gasolina","Aceite","Llantas","SOAT","Revisión técnica","Lavado","Mantenimiento","Repuestos","Seguro","Parqueadero","Otro"];
   return (
@@ -89,7 +89,7 @@ export function GastoModal({carroId,carros,onClose,onAdd,accounts}) {
 
 export function DiaModal({carroId, onClose, onAdd, cars, accounts}) {
   const carro = cars?.find(c=>c.id===carroId);
-  const [fecha,   setFecha]   = useState(td());
+  const [fecha,   setFecha]   = useState(today());
   const [account, setAccount] = useState("cash");
   const [monto,   setMonto]   = useState(String(carro?.valor_diario || CARRO1_DIARIO));
   const color = carro?.tipo === "mensual" ? CAR2 : CAR1;
