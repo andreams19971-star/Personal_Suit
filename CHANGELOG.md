@@ -7,6 +7,34 @@
 
 ---
 
+## [2.9.9] — 2026-06-04 — Bugfix: TaskRow no importado en módulos de Planner
+
+### Error
+`ReferenceError: TaskRow is not defined` en Planner.
+
+### Causa
+`TodayView.jsx`, `AllTasksView.jsx` y `CalendarView.jsx` usan `<TaskRow>` para
+renderizar cada tarea, pero solo importan de `./shared.js`. No importaban
+`TaskRow` desde `./TaskRow.jsx`.
+
+El auto-fixer de imports previo solo corregía importaciones de `shared.js`,
+no las importaciones de otros módulos hermanos (cross-module imports).
+
+### Fix
+Agregado `import { TaskRow } from "./TaskRow.jsx"` en los 3 archivos.
+
+### Auditoría cross-module
+Verificados todos los directorios de módulos (planner, flota, apartamento, finanz)
+para detectar componentes usados como JSX sin importar desde archivos hermanos.
+Solo había 3 casos reales, todos en planner.
+
+### Archivos
+- `src/apps/planner/TodayView.jsx`
+- `src/apps/planner/AllTasksView.jsx`
+- `src/apps/planner/CalendarView.jsx`
+
+---
+
 ## [2.9.8] — 2026-06-04 — Bugfix: `n` duplicado en fmtShort
 
 ### Error
