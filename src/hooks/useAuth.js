@@ -82,6 +82,15 @@ export function useAuthProvider() {
           clearTimeout(timeout); return;
         }
 
+        // Al iniciar sesión, limpiar caché del usuario anterior
+        if (event === "SIGNED_IN") {
+          const cachedProfile = loadProfileCache();
+          if (cachedProfile && cachedProfile.id !== session?.user?.id) {
+            clearProfileCache();
+            setProfile(null);
+          }
+        }
+
         if (session?.user) {
           setUser(session.user);
           await loadProfile(session.user.id);

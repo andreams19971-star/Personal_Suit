@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import * as XLSX from "xlsx";
 import { useFinanzData } from "../hooks/useFinanzData.js";
 import { useCardsData }  from "../hooks/useCardsData.js";
 import { checkFinanzAlerts, requestPermission, showLocalNotification } from "../hooks/useNotifications.js";
+import { AuthContext } from '../hooks/useAuth.js';
 import { loadSetting, saveSetting } from "../hooks/useSettings.js";
 import { C, fmtCOP, fmtShort, today, MONTHS, ACCOUNTS_DEF, DEFAULT_CATEGORIES } from "./finanz/shared.js";
 import { TxRow, SectionHeader, EmptyState, Pill, StatCard, MF } from "./finanz/Helpers.jsx";
@@ -57,6 +58,7 @@ function seedLoans(){
 }
 
 // ─── APP ──────────────────────────────────────────────────────────────────────
+function _getUser() { try { const a=useContext(AuthContext); return a?.user?.id; } catch{} return null; }
 export default function FinanzApp({ onBack }){
   // ── Supabase hook ──────────────────────────────────────────────────────────
   const {

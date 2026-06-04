@@ -7,6 +7,33 @@
 
 ---
 
+## [2.8.4] — 2026-06-03 — Bugfix: `Notification` no definida en iOS Safari PWA
+
+### Error
+`Can't find variable: Notification` — crash global capturado por ErrorBoundary.
+
+### Causa
+iOS Safari PWA no tiene la API `Notification` disponible como variable global.
+El código la usaba directamente sin verificar su existencia:
+- `showLocalNotification()`: `Notification.permission` sin guard → crash
+- `Sidebar.jsx` línea 9: `Notification.permission` en useState sin guard
+
+La línea 15 sí tenía el check correcto (`!("Notification" in window)`) pero la
+línea 23 lo saltaba porque asumía que si llegaba ahí, `Notification` existía.
+
+### Fix
+- `typeof Notification === "undefined"` guard al inicio de `showLocalNotification()`
+- `requestPermission()` envuelto en try/catch
+- `showNotification` del SW envuelto en `.catch(()=>{})`
+- `new Notification()` fallback envuelto en try/catch
+- `Sidebar.jsx`: estado inicial con guard triple → `"unsupported"` si no existe
+
+### Archivos
+- `src/hooks/useNotifications.js`
+- `src/apps/finanz/Sidebar.jsx`
+
+---
+
 ## [2.8.3] — 2026-06-03 — Auditoría completa: 32 bugs corregidos
 
 ### Metodología

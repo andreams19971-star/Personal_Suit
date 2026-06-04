@@ -36,6 +36,8 @@ function txToRow(tx) {
 }
 
 export function useFinanzData() {
+  const { user } = useAuth();
+  const userId = user?.id;
   const [transactions, setTransactions] = useState([])
   const [loans,        setLoans]        = useState([])
   const [accountBalances, setAccountBalances] = useState({
@@ -79,11 +81,11 @@ export function useFinanzData() {
       const now     = new Date()
       const twoAgo  = new Date(now.getFullYear(), now.getMonth()-1, 1).toISOString().slice(0,10)
       const [txRes, loanRes, balRes] = await Promise.all([
-        supabase.from('transactions').select('*')
+        supabase.from('transactions').select('*').eq('user_id', userId)
           .gte('date', twoAgo)
           .order('date', { ascending: false }),
-        supabase.from('loans').select('*').order('created_at', { ascending: false }),
-        supabase.from('account_balances').select('*'),
+        supabase.from('loans').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
+        supabase.from('account_balances').select('*').eq('user_id', userId),
       ])
       if (txRes.error)   throw new Error('transactions: ' + txRes.error.message)
       if (loanRes.error) throw new Error('loans: '        + loanRes.error.message)
@@ -110,7 +112,7 @@ export function useFinanzData() {
       const d    = new Date(yearMonth + '-01')
       d.setMonth(d.getMonth()+1)
       const to   = d.toISOString().slice(0,10)
-      const { data, error } = await supabase.from('transactions').select('*')
+      const { data, error } = await supabase.from('transactions').select('*').eq('user_id', userId)
         .gte('date', from).lt('date', to)
         .order('date', { ascending: false })
       if (error) { console.warn('[FinanzData] loadMonth:', error.message); return }
@@ -206,7 +208,7 @@ export function useFinanzData() {
     setTransactions(prev => [expTx,   ...prev])
     if (!onlineRef.current) console.warn('[offline] intentando igualmente...')
     const [lr, tr] = await Promise.all([
-      supabase.from('loans').insert([{ id:newLoan.id, debtor:newLoan.debtor, amount:newLoan.amount, balance:newLoan.balance, date:newLoan.date, account:newLoan.account, note:newLoan.note, status:newLoan.status, payments:[] }]),
+      supabase.from('loans').insert([{ user_id: userId, id:newLoan.id, debtor:newLoan.debtor, amount:newLoan.amount, balance:newLoan.balance, date:newLoan.date, account:newLoan.account, note:newLoan.note, status:newLoan.status, payments:[] }]),
       supabase.from('transactions').insert([txToRow(expTx)]),
     ])
     if (lr.error) console.error('[addLoan]', lr.error.message)

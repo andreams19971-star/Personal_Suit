@@ -7,6 +7,8 @@ const DEFAULT_CARDS = [
 ]
 
 export function useCardsData() {
+  const { user } = useAuth();
+  const userId = user?.id;
   const [cards,   setCards]   = useState([])
   const [loading, setLoading] = useState(true)
   const [online,  setOnline]  = useState(false)
@@ -59,7 +61,7 @@ export function useCardsData() {
     }))
     if (!onlineRef.current) console.warn('[addCharge] offline — intentando igualmente...')
     const { data, error } = await supabase.from('card_charges').insert([{
-      card_id:cardId, date:charge.date, amount:charge.amount,
+      user_id:userId, card_id:cardId, date:charge.date, amount:charge.amount,
       category:charge.category, note:charge.note||'', installments:charge.installments||1
     }]).select().single()
     if (error) {
@@ -117,7 +119,7 @@ export function useCardsData() {
     setCards(prev => [...prev, newCard])
     if (!onlineRef.current) console.warn('[addCard] offline — intentando igualmente...')
     const { data:saved, error } = await supabase.from('credit_cards').insert([{
-      name:data.name, bank:data.bank, last4:data.last4, color:data.color,
+      user_id:userId, name:data.name, bank:data.bank, last4:data.last4, color:data.color,
       card_limit:data.limit, cut_day:data.cutDay, pay_day:data.payDay, balance:0
     }]).select().single()
     if (error) {

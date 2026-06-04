@@ -10,6 +10,8 @@ const DEFAULT_ROOMS = [
 ]
 
 export function useApartamentoData() {
+  const { user } = useAuth();
+  const userId = user?.id;
   const [rooms,        setRooms]        = useState(DEFAULT_ROOMS)
   const [reservations, setReservations] = useState([])
   const [expenses,     setExpenses]     = useState([])
@@ -24,9 +26,9 @@ export function useApartamentoData() {
     setLoading(true)
     try {
       const [rr, resr, er] = await Promise.all([
-        supabase.from('apt_rooms').select('*').order('id'),
-        supabase.from('apt_reservations').select('*').order('check_in', { ascending:false }),
-        supabase.from('apt_expenses').select('*').order('fecha', { ascending:false }),
+        supabase.from('apt_rooms').select('*').eq('user_id', userId).order('id'),
+        supabase.from('apt_reservations').select('*').eq('user_id', userId).order('check_in', { ascending:false }),
+        supabase.from('apt_expenses').select('*').eq('user_id', userId).order('fecha', { ascending:false }),
       ])
       if (rr.error||resr.error||er.error) throw new Error((rr.error||resr.error||er.error).message)
 
@@ -80,7 +82,7 @@ export function useApartamentoData() {
     const newRes = { ...res, id:localId, nights, total:0, paid:0, status:'reserved' }
     setReservations(prev => [newRes, ...prev])
     if (!onlineRef.current) return { error:'Sin conexión' }
-    const { data, error } = await supabase.from('apt_reservations').insert([{
+    const { data, error } = await supabase.from('apt_reservations').insert([{ user_id:userId,
       room_id:newRes.roomId, guest:newRes.guest,
       phone:newRes.phone||'', check_in:newRes.checkIn, check_out:newRes.checkOut,
       nights:newRes.nights, platform:newRes.platform||'Directo',
@@ -120,7 +122,7 @@ export function useApartamentoData() {
     const newExp = { ...exp, id:localId }
     setExpenses(prev => [newExp, ...prev])
     if (!onlineRef.current) console.warn('[offline] intentando igualmente...')
-    const { data, error } = await supabase.from('apt_expenses').insert([{
+    const { data, error } = await supabase.from('apt_expenses').insert([{ user_id:userId,
       room_id:exp.room||null, fecha:exp.date,
       category:exp.category, amount:exp.amount, note:exp.note||''
     }]).select().single()

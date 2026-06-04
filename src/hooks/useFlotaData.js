@@ -10,6 +10,8 @@ const DEFAULT_CARS = [
 ]
 
 export function useFlotaData() {
+  const { user } = useAuth();
+  const userId = user?.id;
   const [cars,     setCars]     = useState([])
   const [payments, setPayments] = useState({})
   const [expenses, setExpenses] = useState({})
@@ -24,9 +26,9 @@ export function useFlotaData() {
     setLoading(true)
     try {
       const [cr, pr, er] = await Promise.all([
-        supabase.from('cars').select('*').eq('activo', true).order('created_at'),
-        supabase.from('car_payments').select('*').order('fecha', { ascending:false }),
-        supabase.from('car_expenses').select('*').order('fecha', { ascending:false }),
+        supabase.from('cars').select('*').eq('user_id', userId).eq('activo', true).order('created_at'),
+        supabase.from('car_payments').select('*').eq('user_id', userId).order('fecha', { ascending:false }),
+        supabase.from('car_expenses').select('*').eq('user_id', userId).order('fecha', { ascending:false }),
       ])
       if (cr.error||pr.error||er.error) throw new Error((cr.error||pr.error||er.error).message)
 
@@ -144,7 +146,7 @@ export function useFlotaData() {
     }
     // Omitir id para que Supabase genere UUID
     const { data, error } = await supabase.from('car_payments')
-      .insert([{ car_id:carId, fecha, monto, pagado:false, nota:'',
+      .insert([{ user_id:userId, car_id:carId, fecha, monto, pagado:false, nota:'',
         ...(account ? { account } : {})
       }])
       .select().single()

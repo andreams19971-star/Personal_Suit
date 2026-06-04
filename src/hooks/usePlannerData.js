@@ -38,6 +38,8 @@ function parseComp(v) {
 }
 
 export function usePlannerData() {
+  const { user } = useAuth();
+  const userId = user?.id;
   const [tasks,   setTasks]   = useState([])
   const [habits,  setHabits]  = useState([])
   const [goals,   setGoals]   = useState([])
@@ -101,7 +103,7 @@ export function usePlannerData() {
     console.warn('[offline] intentando igualmente...')
     const { id:_skip, ...rowData } = row
     // Si 'status' o 'subcategory' no existen en BD, Supabase retorna error — intentar sin ellos
-    let { data, error } = await supabase.from('tasks').insert([rowData]).select().single()
+    let { data, error } = await supabase.from('tasks').insert([{...rowData, user_id:userId}]).select().single()
     if (error && (error.message.includes('status') || error.message.includes('subcategory'))) {
       const { status:_s, subcategory:_sc, ...safeRow } = rowData
       const res = await supabase.from('tasks').insert([safeRow]).select().single()
@@ -178,7 +180,7 @@ export function usePlannerData() {
     setGoals(p => [...p, local])
     if (!onlineRef.current) console.warn('[offline] intentando igualmente...')
     const { id:_skip, ...rowData } = local
-    const { data, error } = await supabase.from('goals').insert([rowData]).select().single()
+    const { data, error } = await supabase.from('goals').insert([{...rowData, user_id:userId}]).select().single()
     if (error) { console.error('[addGoal] ❌', error.message); setGoals(p=>p.filter(g=>g.id!==localId)); return }
     setGoals(p => p.map(g => g.id===localId ? data : g))
   }
@@ -199,7 +201,7 @@ export function usePlannerData() {
     setNotes(p => [local,...p])
     if (!onlineRef.current) console.warn('[offline] intentando igualmente...')
     const { id:_skip, ...rowData } = local
-    const { data, error } = await supabase.from('notes').insert([rowData]).select().single()
+    const { data, error } = await supabase.from('notes').insert([{...rowData, user_id:userId}]).select().single()
     if (error) { console.error('[addNote] ❌', error.message); setNotes(p=>p.filter(n=>n.id!==localId)); return }
     setNotes(p => p.map(n => n.id===localId ? data : n))
   }
