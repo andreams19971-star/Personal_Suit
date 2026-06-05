@@ -68,6 +68,9 @@ export default function FinanzApp({ onBack }){
     updateTransaction: dbUpdateTx,
     addLoan:           dbAddLoan,
     addPayment:        dbAddPayment,
+    editLoan:          dbEditLoan,
+    deleteLoan:        dbDeleteLoan,
+    addTransfer:       dbAddTransfer,
     updateAccountBalance, loadMonth,
   } = useFinanzData();
 
@@ -125,17 +128,17 @@ export default function FinanzApp({ onBack }){
 
   const computedAccounts=accounts.map(acc=>{
     const txs=transactions.filter(t=>t.account===acc.id);
-    const totalIn=txs.filter(t=>t.type==="income").reduce((s,t)=>s+t.amount,0);
-    const totalOut=txs.filter(t=>t.type==="expense").reduce((s,t)=>s+t.amount,0);
+    const totalIn  = txs.filter(t=>t.type==="income"  || t.subcategory==="transfer_in" ).reduce((s,t)=>s+t.amount,0);
+    const totalOut = txs.filter(t=>t.type==="expense" || t.subcategory==="transfer_out").reduce((s,t)=>s+t.amount,0);
     return {...acc,balance:acc.initialBalance+totalIn-totalOut};
   });
 
   const monthTxs     = transactions.filter(t=>t.date.startsWith(filterMonth));
-  // Card charges del mes sumados a los gastos
   const monthChargesAll = cards.flatMap(c=>(c.charges||[]).filter(ch=>ch.date?.startsWith(filterMonth)));
   const cardExpenseMonth = monthChargesAll.reduce((s,ch)=>s+ch.amount,0);
-  const totalIncome  = monthTxs.filter(t=>t.type==="income").reduce((s,t)=>s+t.amount,0);
-  const totalExpense = monthTxs.filter(t=>t.type==="expense").reduce((s,t)=>s+t.amount,0) + cardExpenseMonth;
+  // Transferencias NO cuentan como ingreso ni gasto
+  const totalIncome  = monthTxs.filter(t=>t.type==="income"  && t.category!=="transfer").reduce((s,t)=>s+t.amount,0);
+  const totalExpense = monthTxs.filter(t=>t.type==="expense" && t.category!=="transfer").reduce((s,t)=>s+t.amount,0) + cardExpenseMonth;
   const netBalance   = totalIncome - totalExpense;
 
   const addTransaction=async tx=>{
@@ -179,14 +182,20 @@ export default function FinanzApp({ onBack }){
   const [editTx, setEditTx]=useState(null);
 
   const addTransfer = async (from, to, amount, date, note) => {
-    const r1 = await dbAddTx({ date, type:"expense", category:"transfer", subcategory:"Transferencia", account:from, amount, note:"Transferencia → "+(ACCOUNTS_DEF.find(a=>a.id===to)?.label||to)+(note?" · "+note:""), loan_id:null });
-    const r2 = await dbAddTx({ date, type:"income",  category:"transfer", subcategory:"Transferencia", account:to,   amount, note:"Transferencia ← "+(ACCOUNTS_DEF.find(a=>a.id===from)?.label||from)+(note?" · "+note:""), loan_id:null });
-    if (r1?.error || r2?.error) {
-      showToast("Error en transferencia","error");
-    } else {
-      showToast("Transferencia realizada ✓");
-      setShowTransferModal(false);
-    }
+    const result = await dbAddTransfer(from, to, amount, date, note);
+    if (result?.error) { showToast("Error en transferencia: "+result.error,"error"); }
+    else { showToast("Transferencia realizada ✓"); setShowTransferModal(false); }
+  };
+
+  const editLoan = async (loanId, updates) => {
+    const result = await dbEditLoan(loanId, updates);
+    if (result?.error) showToast("Error al editar préstamo","error");
+    else showToast("Préstamo actualizado ✓");
+  };
+
+  const deleteLoan = async (loanId) => {
+    await dbDeleteLoan(loanId);
+    showToast("Préstamo eliminado","error");
   };
   const [showTransferModal, setShowTransferModal] = useState(false);
 
@@ -228,7 +237,7 @@ export default function FinanzApp({ onBack }){
         {view==="movements" && <Movements transactions={transactions} filterMonth={filterMonth} deleteTransaction={deleteTransaction} openAddModal={openAddModal} loans={loans} categories={categories} setEditTx={setEditTx}/>}
         {view==="accounts"  && <AccountsView accounts={computedAccounts} transactions={transactions} selAccount={selAccount} setSelAccount={setSelAccount} filterMonth={filterMonth} showToast={showToast} categories={categories} deleteTransaction={deleteTransaction} setEditTx={setEditTx}/>}
         {view==="cards"     && <CardsView cards={cards} addCharge={addCharge} deleteCharge={deleteCharge} updateCharge={updateCharge} markPaid={markPaid} saveCard={saveCard} addCard={addCard} filterMonth={filterMonth} showToast={showToast}/>}
-        {view==="loans"     && <LoansView loans={loans} transactions={transactions} setShowLoanModal={setShowLoanModal} setShowPayModal={setShowPayModal} accounts={computedAccounts} showToast={showToast} categories={categories}/>}
+        {view==="loans"     && <LoansView loans={loans} transactions={transactions} setShowLoanModal={setShowLoanModal} setShowPayModal={setShowPayModal} accounts={computedAccounts} showToast={showToast} categories={categories} editLoan={editLoan} deleteLoan={deleteLoan}/>}
         {view==="stats"     && <Stats monthTxs={monthTxs} totalIncome={totalIncome} totalExpense={totalExpense} transactions={transactions} filterMonth={filterMonth} categories={categories}/>}
       </div>
       <Sidebar open={sidebarOpen} onClose={()=>setSidebarOpen(false)} accounts={computedAccounts} updateAccountBalance={updateAccountBalance} settings={settings} setSettings={setSettings} showToast={showToast} categories={categories} saveCategories={saveCategories}/>

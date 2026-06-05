@@ -1,6 +1,5 @@
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect } from 'react';
 import { usePlannerData } from '../hooks/usePlannerData.js';
-import { AuthContext } from '../hooks/useAuth.js';
 import { loadSetting, saveSetting } from '../hooks/useSettings.js';
 import { supabase } from '../supabase.js';
 import { showLocalNotification, requestPermission } from '../hooks/useNotifications.js';
@@ -15,7 +14,6 @@ import { GoalsView } from './planner/GoalsView.jsx';
 import { NotesView } from './planner/NotesView.jsx';
 import { TaskModal, TaskCatManager, HabitModal, GoalModal, NoteModal, Modal, MF } from './planner/Modals.jsx';
 
-function _getUser() { try { const a=useContext(AuthContext); return a?.user?.id; } catch{} return null; }
 export default function Planner({ onBack }) {
   const {
     tasks, goals, notes, loading,

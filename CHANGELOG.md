@@ -7,6 +7,39 @@
 
 ---
 
+## [3.0.4] — 2026-06-04 — Fix: FlotaTracker → FinanzApp sync restablecida
+
+### Problema
+Los registros de FlotaTracker (ingresos de días trabajados, gastos de vehículo)
+no aparecían en FinanzApp. La sincronización había desaparecido durante el split
+de apps — las funciones del hook solo escribían en `car_payments`/`car_expenses`
+pero nunca insertaban en `transactions`.
+
+### Fix: 3 puntos de sincronización
+
+**1. `togglePayment` → marca pago como pagado**
+Al marcar un día como pagado (`pagado: true`), inserta en `transactions`:
+- type: 'income', category: 'flota_inc'
+- account: cuenta elegida en FlotaTracker
+- amount: monto del día
+- note: 'Ingreso flota — {nombre del vehículo}'
+
+También corregido: el `upsert` con `id` hardcodeado → ahora usa `update` simple.
+
+**2. `addExpense` → registra gasto del vehículo**
+Al registrar un gasto, inserta en `transactions`:
+- type: 'expense', category: 'transport'
+- account: cuenta elegida
+- amount: monto
+- note: descripción + nombre del vehículo
+
+Adicionalmente: `addExpense` no tenía `user_id` en el insert → RLS violation.
+
+### Archivos
+- `src/hooks/useFlotaData.js`
+
+---
+
 ## [3.0.3] — 2026-06-04 — Fix: selector cuentas/tarjetas no respondía en iOS
 
 ### Problema

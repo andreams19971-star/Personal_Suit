@@ -58,6 +58,7 @@ export const fmtShort = num => {
   if (n >= 1000)    return s + "$" + (n/1000).toFixed(0) + "k";
   return s + "$" + n;
 };
-export const today  = () => new Date().toISOString().slice(0,10);
+export const CAT_ICONS = ["📦","🛍️","🍔","🚗","🏠","💊","📚","✈️","🎬","💪","🐾","🎮","👔","💡","📱","🏦","💰","🎁","🔧","⛽","🍺","☕","🎵","🏥","📝","💼","🌿","🎯","💎","🛒"];
+export const ACCOUNT_ICONS = ["💵","🏦","💳","💜","🔵","🔴","🟡","🟢","🟠","⚫","🏧","💰","📱","💻","🏠","🌍","⭐","🎯"];
 export const MONTHS  = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
 

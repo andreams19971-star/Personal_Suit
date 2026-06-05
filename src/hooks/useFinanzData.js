@@ -206,6 +206,49 @@ export function useFinanzData() {
     else console.log('[updateTransaction] ✅', id)
   }
 
+  // ── Transferencia entre cuentas (NO ingreso ni gasto) ──
+  async function addTransfer(from, to, amount, date, note) {
+    const userId = userIdRef.current || (await supabase.auth.getSession()).data?.session?.user?.id
+    if (!userId) return { error: 'No autenticado' }
+    if (from === to) return { error: 'La cuenta origen y destino deben ser diferentes' }
+    // Dos transacciones tipo 'transfer' — no cuentan como ingreso ni gasto
+    const base = { user_id:userId, date, amount, category:'transfer', note: note||'Transferencia', type:'transfer' }
+    const [r1, r2] = await Promise.all([
+      supabase.from('transactions').insert([{ ...base, account:from, subcategory:'transfer_out' }]).select().single(),
+      supabase.from('transactions').insert([{ ...base, account:to,   subcategory:'transfer_in'  }]).select().single(),
+    ])
+    if (r1.error) { console.error('[addTransfer out]', r1.error.message); return { error: r1.error.message } }
+    if (r2.error) { console.error('[addTransfer in]',  r2.error.message); return { error: r2.error.message } }
+    setTransactions(prev => [rowToTx(r1.data), rowToTx(r2.data), ...prev])
+    console.log('[addTransfer] ✅')
+    return { data: true }
+  }
+
+  // ── Editar préstamo ──
+  async function editLoan(loanId, updates) {
+    setLoans(prev => prev.map(l => l.id !== loanId ? l : { ...l, ...updates }))
+    const { error } = await supabase.from('loans').update({
+      debtor:  updates.debtor,
+      amount:  updates.amount,
+      balance: updates.balance,
+      account: updates.account,
+      note:    updates.note || '',
+      status:  updates.status || 'active',
+    }).eq('id', loanId)
+    if (error) { console.error('[editLoan]', error.message); return { error: error.message } }
+    console.log('[editLoan] ✅', loanId)
+    return { data: true }
+  }
+
+  // ── Eliminar préstamo ──
+  async function deleteLoan(loanId) {
+    setLoans(prev => prev.filter(l => l.id !== loanId))
+    const { error } = await supabase.from('loans').delete().eq('id', loanId)
+    if (error) { console.error('[deleteLoan]', error.message); return { error: error.message } }
+    console.log('[deleteLoan] ✅', loanId)
+    return { data: true }
+  }
+
   async function addLoan(loanData) {
     const userId = userIdRef.current || (await supabase.auth.getSession()).data?.session?.user?.id
     const localLoanId = 'local-L-'+Date.now()
@@ -256,6 +299,6 @@ export function useFinanzData() {
   return {
     transactions, loans, accountBalances, loading, online,
     addTransaction, deleteTransaction, updateTransaction, addLoan, addPayment,
-    updateAccountBalance, loadMonth, reload:loadAll
+    updateAccountBalance, loadMonth, addTransfer, editLoan, deleteLoan, reload:loadAll
   }
 }

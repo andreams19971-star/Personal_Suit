@@ -1,6 +1,6 @@
 // finanz/CategoriesManager.jsx
 import { useState } from "react";
-import { ACCOUNTS_DEF, C, DEFAULT_CATEGORIES, fmtCOP } from "./shared.js";
+import { ACCOUNTS_DEF, C, CAT_ICONS, DEFAULT_CATEGORIES, fmtCOP } from "./shared.js";
 
 export function CategoriesManager({ categories, saveCategories, showToast }) {
   const [type, setType]   = useState("income");

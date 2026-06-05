@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { ACCOUNTS_DEF, C, DEFAULT_CATEGORIES, MONTHS, fmtCOP, fmtShort, today } from "./shared.js";
 import { TxRow, SectionHeader, EmptyState, Pill, StatCard, MF } from "./Helpers.jsx";
 
-export function LoansView({loans,transactions,setShowLoanModal,setShowPayModal,accounts,showToast,categories=DEFAULT_CATEGORIES}){
+export function LoansView({loans,transactions,setShowLoanModal,setShowPayModal,accounts,showToast,categories=DEFAULT_CATEGORIES,editLoan,deleteLoan}){
   const [filter,setFilter]=useState("active");
   const [selLoan,setSelLoan]=useState(null);
   const filtered=loans.filter(l=>filter==="all"||l.status===filter);
@@ -72,6 +72,11 @@ export function LoansView({loans,transactions,setShowLoanModal,setShowPayModal,a
                   </div>
                   {loan.status==="active"&&(
                     <button onClick={e=>{e.stopPropagation();setShowPayModal(loan);}} className="fa-btn" style={{marginTop:10,padding:"6px 14px",borderRadius:100,border:"1px solid "+(C.orange),background:C.orangeDim,color:C.orange,fontSize:12,fontWeight:700,cursor:"pointer"}}>
+                      + Registrar Abono
+                    </button>
+                    {deleteLoan&&<button onClick={e=>{e.stopPropagation();if(window.confirm&&!window.confirm("¿Eliminar este préstamo?"))return;deleteLoan(loan.id);}} className="fa-btn" style={{marginTop:10,marginLeft:6,padding:"6px 14px",borderRadius:100,border:"1px solid "+(C.red),background:C.redDim,color:C.red,fontSize:12,fontWeight:700,cursor:"pointer"}}>
+                      🗑 Eliminar
+                    </button>}
                       + Registrar Abono
                     </button>
                   )}
