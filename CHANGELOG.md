@@ -7,6 +7,62 @@
 
 ---
 
+## [3.1.0] — 2026-06-04 — 7 bugs corregidos + mejoras arquitecturales
+
+### FinanzApp — 4 bugs corregidos
+
+**1. Categorías de gastos explotaba**
+`CatForm` en CategoriesManager.jsx usaba `CAT_ICONS` sin definir.
+Fix: constante `CAT_ICONS` agregada a `finanz/shared.js` y exportada/importada.
+
+**2. Editar cuentas explotaba**
+`AccountsManager.jsx` usaba `ACCOUNT_ICONS` sin definir.
+Fix: constante `ACCOUNT_ICONS` agregada a `finanz/shared.js` y exportada/importada.
+
+**3. Transferencias no deben ser ingreso ni gasto**
+`addTransfer` en FinanzApp.jsx usaba `dbAddTx` con type `income`/`expense`.
+Esto hacía que las transferencias distorsionaran los totales del mes.
+Fix: `addTransfer` movida al hook `useFinanzData` con `type: 'transfer'`.
+`computedAccounts` y totales del mes ahora excluyen `category === 'transfer'`.
+
+**4. Eliminar y editar préstamos**
+`editLoan` y `deleteLoan` no existían en `useFinanzData.js`.
+Fix: funciones implementadas, expuestas en el hook, pasadas a `LoansView`, y
+botón 🗑 Eliminar agregado en cada tarjeta de préstamo.
+
+### Planner — 1 bug crítico corregido
+
+**5. Planner nunca cargaba (Rules of Hooks violation)**
+`function _getUser()` en el nivel de MÓDULO de Planner.jsx llamaba `useContext`.
+Los hooks solo pueden llamarse dentro de componentes React o custom hooks.
+Llamar `useContext` a nivel de módulo causa un crash inmediato antes de que
+el componente siquiera monte. Función eliminada + imports limpiados.
+
+### FlotaTracker — 1 bug corregido
+
+**6. Editar un día de trabajo rompía la app**
+`EditPagoModal` en `flota/Modals.jsx` usaba variables `lbl` y `inp` (objetos de
+estilo) que no estaban definidas en ese archivo. Crash al abrir el modal.
+Fix: `lbl` y `inp` definidos al inicio de `flota/Modals.jsx`.
+
+### Mejoras de arquitectura (recomendaciones senior developer)
+
+- Transferencias ahora son `type: 'transfer'` — aisladas correctamente del P&L
+- `editLoan` y `deleteLoan` siguen el mismo patrón defensivo de los otros hooks
+- `_getUser` eliminado — nunca debió estar fuera de un componente
+
+### Archivos
+- `src/hooks/useFinanzData.js` — addTransfer, editLoan, deleteLoan
+- `src/apps/FinanzApp.jsx` — uses nuevas funciones del hook, transfers excluidas de totales
+- `src/apps/finanz/shared.js` — CAT_ICONS, ACCOUNT_ICONS
+- `src/apps/finanz/CategoriesManager.jsx` — import CAT_ICONS
+- `src/apps/finanz/AccountsManager.jsx` — import ACCOUNT_ICONS
+- `src/apps/finanz/LoansView.jsx` — editLoan, deleteLoan, botón eliminar
+- `src/apps/Planner.jsx` — _getUser eliminado, imports limpios
+- `src/apps/flota/Modals.jsx` — lbl, inp definidos
+
+---
+
 ## [3.0.4] — 2026-06-04 — Fix: FlotaTracker → FinanzApp sync restablecida
 
 ### Problema
