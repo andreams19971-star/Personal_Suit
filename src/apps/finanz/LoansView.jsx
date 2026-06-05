@@ -71,14 +71,16 @@ export function LoansView({loans,transactions,setShowLoanModal,setShowPayModal,a
                     </div>
                   </div>
                   {loan.status==="active"&&(
-                    <button onClick={e=>{e.stopPropagation();setShowPayModal(loan);}} className="fa-btn" style={{marginTop:10,padding:"6px 14px",borderRadius:100,border:"1px solid "+(C.orange),background:C.orangeDim,color:C.orange,fontSize:12,fontWeight:700,cursor:"pointer"}}>
-                      + Registrar Abono
-                    </button>
-                    {deleteLoan&&<button onClick={e=>{e.stopPropagation();if(window.confirm&&!window.confirm("¿Eliminar este préstamo?"))return;deleteLoan(loan.id);}} className="fa-btn" style={{marginTop:10,marginLeft:6,padding:"6px 14px",borderRadius:100,border:"1px solid "+(C.red),background:C.redDim,color:C.red,fontSize:12,fontWeight:700,cursor:"pointer"}}>
-                      🗑 Eliminar
-                    </button>}
-                      + Registrar Abono
-                    </button>
+                    <div style={{display:"flex",gap:6,marginTop:10}}>
+                      <button onClick={e=>{e.stopPropagation();setShowPayModal(loan);}} className="fa-btn" style={{padding:"6px 14px",borderRadius:100,border:"1px solid "+(C.orange),background:C.orangeDim,color:C.orange,fontSize:12,fontWeight:700,cursor:"pointer"}}>
+                        + Registrar Abono
+                      </button>
+                      {deleteLoan&&(
+                        <button onClick={e=>{e.stopPropagation();deleteLoan(loan.id);}} className="fa-btn" style={{padding:"6px 14px",borderRadius:100,border:"1px solid "+(C.red),background:C.redDim,color:C.red,fontSize:12,fontWeight:700,cursor:"pointer"}}>
+                          🗑 Eliminar
+                        </button>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>

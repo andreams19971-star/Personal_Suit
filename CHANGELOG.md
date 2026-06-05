@@ -7,6 +7,28 @@
 
 ---
 
+## [3.1.1] — 2026-06-05 — Bugfix: `lbl`/`inp` duplicados en flota/Modals.jsx
+
+### Error
+`The symbol "lbl" has already been declared` — build fallido.
+
+### Causa
+En v3.1.0 se agregaron `const lbl` y `const inp` al inicio del archivo
+para corregir el crash de EditPagoModal. Pero ya existían definiciones de las
+mismas constantes al final del archivo (línea 299-300), con valores correctos
+usando `C.textMuted`, `C.card`, etc.
+
+Resultado: dos declaraciones `const lbl` en el mismo módulo → esbuild rechaza.
+
+### Fix
+Eliminadas las definiciones duplicadas del inicio (líneas 7-8 del fix anterior).
+Se conservan las definiciones originales al final del archivo que usan `C.*`.
+
+### Archivos
+- `src/apps/flota/Modals.jsx`
+
+---
+
 ## [3.1.0] — 2026-06-04 — 7 bugs corregidos + mejoras arquitecturales
 
 ### FinanzApp — 4 bugs corregidos
