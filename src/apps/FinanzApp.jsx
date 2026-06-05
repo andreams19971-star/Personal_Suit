@@ -135,6 +135,23 @@ export default function FinanzApp({ onBack }){
   const addTransaction=async tx=>{
     if (!tx.amount || tx.amount <= 0) { showToast("El monto debe ser mayor a 0","error"); return; }
     if (!tx.account)                  { showToast("Selecciona una cuenta","error"); return; }
+
+    // Si se seleccionó una tarjeta, registrar como cargo de tarjeta
+    if (tx.account.startsWith("card-")) {
+      const cardId = tx.account.replace("card-","");
+      const result = await addCharge(cardId, {
+        date:     tx.date,
+        amount:   tx.amount,
+        category: tx.category,
+        note:     tx.note||"",
+        installments: 1,
+      });
+      if (result?.error) { showToast("Error al guardar: "+result.error,"error"); return; }
+      showToast("Cargo a tarjeta registrado ✓");
+      setShowAddModal(false); setAddModalOpts({});
+      return;
+    }
+
     const result = await dbAddTx(tx);  // sin id — lo genera Supabase
     if (result?.error) {
       showToast("Error al guardar: "+result.error,"error");
@@ -213,7 +230,7 @@ export default function FinanzApp({ onBack }){
       <button onClick={()=>openAddModal()} style={{position:"fixed",bottom:82,right:20,width:54,height:54,borderRadius:"50%",background:C.accent,border:"none",cursor:"pointer",fontSize:24,boxShadow:"0 8px 24px "+(C.accent)+"66",zIndex:100,display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
       <button onClick={()=>setShowTransferModal(true)} style={{position:"fixed",bottom:82,right:82,width:44,height:44,borderRadius:"50%",background:C.card,border:"1px solid "+C.border,cursor:"pointer",fontSize:18,zIndex:100,display:"flex",alignItems:"center",justifyContent:"center"}} title="Transferir">↔️</button>
       {editTx            && <EditTxModal tx={editTx} onClose={()=>setEditTx(null)} onSave={updateTransaction} accounts={accounts} categories={categories}/>}
-      {showAddModal      && <AddModal  onClose={()=>{ setShowAddModal(false); setAddModalOpts({}); }} onAdd={addTransaction} accounts={accounts} opts={addModalOpts} categories={categories}/>}
+      {showAddModal      && <AddModal  onClose={()=>{ setShowAddModal(false); setAddModalOpts({}); }} onAdd={addTransaction} accounts={accounts} cards={cards} opts={addModalOpts} categories={categories}/>}
       {showLoanModal     && <LoanModal onClose={()=>setShowLoanModal(false)} onAdd={addLoan} accounts={accounts} cards={cards}/>}
       {showPayModal      && <PayModal  onClose={()=>setShowPayModal(null)} loan={showPayModal} onPay={addPayment} accounts={accounts}/>}
       {showTransferModal && <TransferModal onClose={()=>setShowTransferModal(false)} onTransfer={addTransfer} accounts={accounts}/>}

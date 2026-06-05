@@ -7,6 +7,38 @@
 
 ---
 
+## [3.0.1] — 2026-06-04 — Fix: tarjetas no cargaban
+
+### Bugs en useCardsData.js
+
+**1. `Promise.all` con un solo elemento + `chr.data` undefined**
+```js
+// Antes (incorrecto)
+const [cr, chr] = await Promise.all([query1]) // chr = undefined!
+if (cr.error || chr.error) // ← chr.error explota
+;(chr.data || []).forEach(ch => ...) // ← crash silencioso
+```
+El array tiene UN elemento, pero se destructuraba como DOS.
+`chr` era `undefined`, causando que los charges nunca se cargaran.
+
+**2. `addCard` usaba `userId` fuera de scope**
+`userId` era local de `loadAll()`. Mismo patrón del bug v2.9.5.
+Fix: `const userId = userIdRef.current || getSession()...`
+
+**3. `saveCard` tenía `c.name` en lugar de `updates.name`**
+Typo en el objeto de update.
+
+### Solución
+`useCardsData.js` reescrito limpio:
+- Query única con JOIN: `select('*, card_charges(*)')`
+- Los charges vienen embedidos en cada tarjeta → no necesita segundo array
+- `addCard` y `addCharge` declaran userId correctamente
+
+### Archivos
+- `src/hooks/useCardsData.js`
+
+---
+
 ## [3.0.0] — 2026-06-04 — Auditoría exhaustiva completa
 
 ### Metodología

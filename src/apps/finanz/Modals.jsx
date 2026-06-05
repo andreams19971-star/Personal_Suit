@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { ACCOUNTS_DEF, C, DEFAULT_CATEGORIES, MONTHS, fmtCOP, fmtShort, today } from "./shared.js";
 import { MF, SectionHeader, EmptyState } from "./Helpers.jsx";
 
-export function AddModal({onClose,onAdd,accounts,opts,categories=DEFAULT_CATEGORIES}){
+export function AddModal({onClose,onAdd,accounts,cards=[],opts,categories=DEFAULT_CATEGORIES}){
   const [type,setType]=useState(opts.type||"expense");
   const [form,setForm]=useState({date:today(),category:opts.category||"",subcategory:"",account:accounts[0]?.id||"",amount:"",note:opts.note||""});
   const cats=categories[type];
@@ -48,9 +48,16 @@ export function AddModal({onClose,onAdd,accounts,opts,categories=DEFAULT_CATEGOR
               {selCat.subs.map(s=><option key={s} value={s}>{s}</option>)}
             </select>
           </MF>}
-          <MF label="Cuenta">
+          <MF label="Cuenta / Tarjeta">
             <select value={form.account} onChange={e=>set("account",e.target.value)} style={{width:"100%",background:C.card,border:"1px solid "+(C.border),borderRadius:10,padding:"10px 12px",color:C.text,fontSize:14}}>
-              {accounts.map(a=><option key={a.id} value={a.id}>{a.icon} {a.label}</option>)}
+              <optgroup label="── Cuentas ──">
+                {accounts.map(a=><option key={a.id} value={a.id}>{a.icon} {a.label}</option>)}
+              </optgroup>
+              {type==="expense" && cards.length>0 && (
+                <optgroup label="── Tarjetas ──">
+                  {cards.map(card=><option key={"card-"+card.id} value={"card-"+card.id}>💳 {card.name} ···{card.last4}</option>)}
+                </optgroup>
+              )}
             </select>
           </MF>
           <MF label="Descripción (opcional)"><input type="text" value={form.note} onChange={e=>set("note",e.target.value)} placeholder="Ej: Pago mensual Netflix" style={{width:"100%",background:C.card,border:"1px solid "+(C.border),borderRadius:10,padding:"10px 12px",color:C.text,fontSize:14}}/></MF>

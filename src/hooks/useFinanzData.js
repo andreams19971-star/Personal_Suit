@@ -138,8 +138,10 @@ export function useFinanzData() {
       [accountId+"_meta"]: meta
     }))
     if (!onlineRef.current) console.warn('[offline] intentando igualmente...')
+    const userId = userIdRef.current || (await supabase.auth.getSession()).data?.session?.user?.id
     const row = {
       id: accountId,
+      user_id: userId,
       initial_balance: newBalance,
       updated_at: new Date().toISOString(),
       ...(meta.label ? { label: meta.label } : {}),
@@ -148,9 +150,13 @@ export function useFinanzData() {
     }
     const { error } = await supabase
       .from('account_balances')
-      .upsert(row)
-    if (error) console.error('[updateAccountBalance]', error.message)
-    else console.log('[updateAccountBalance] ✅', accountId)
+      .upsert(row, { onConflict: 'id' })
+    if (error) {
+      console.error('[updateAccountBalance]', error.message)
+      return { error: error.message }
+    }
+    console.log('[updateAccountBalance] ✅', accountId)
+    return { data: true }
   }
 
   async function addTransaction(tx) {
