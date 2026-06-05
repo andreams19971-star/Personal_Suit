@@ -60,5 +60,6 @@ export const fmtShort = num => {
 };
 export const CAT_ICONS = ["📦","🛍️","🍔","🚗","🏠","💊","📚","✈️","🎬","💪","🐾","🎮","👔","💡","📱","🏦","💰","🎁","🔧","⛽","🍺","☕","🎵","🏥","📝","💼","🌿","🎯","💎","🛒"];
 export const ACCOUNT_ICONS = ["💵","🏦","💳","💜","🔵","🔴","🟡","🟢","🟠","⚫","🏧","💰","📱","💻","🏠","🌍","⭐","🎯"];
+export const today  = () => new Date().toISOString().slice(0,10);
 export const MONTHS  = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
 

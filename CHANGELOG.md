@@ -7,6 +7,28 @@
 
 ---
 
+## [3.1.2] — 2026-06-05 — Bugfix: LoansView.jsx JSX inválido
+
+### Error
+`Expected ")" but found "{"` en LoansView.jsx:77
+
+### Causa
+El str_replace de v3.1.0 insertó el botón Eliminar DENTRO del bloque
+`{loan.status==="active"&&(button)}` en lugar de después. El resultado:
+1. Dos elementos JSX hermanos sin fragment → parser falla
+2. Texto "+ Registrar Abono" duplicado
+3. `window.confirm` con string especial (`¿`) también problemático
+
+### Fix
+Envueltos ambos botones en un `<div>` contenedor dentro del `{&&()}`:
+- Botón "Registrar Abono"
+- Botón "Eliminar" (sin window.confirm, solo deleteLoan)
+
+### Archivos
+- `src/apps/finanz/LoansView.jsx`
+
+---
+
 ## [3.1.1] — 2026-06-05 — Bugfix: `lbl`/`inp` duplicados en flota/Modals.jsx
 
 ### Error
