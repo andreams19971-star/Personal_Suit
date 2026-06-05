@@ -7,6 +7,35 @@
 
 ---
 
+## [3.0.0] — 2026-06-04 — Auditoría exhaustiva completa
+
+### Metodología
+Auditoría en 5 capas sobre los 56 archivos del proyecto:
+1. Syntax: llaves balanceadas, backticks, bad imports
+2. TDZ shadows: `const X = X()` donde X es importado
+3. Parámetros `v =>` en shared.js (colisión de nombres con minificador)
+4. Undefined style variables: spread `{...btn}`, `{...inp}`, etc. sin definir
+5. Cross-module imports: componentes JSX usados sin importar desde archivo hermano
+
+### Errores encontrados y corregidos
+
+**1. `Can't find variable: btn` en FlotaTracker**
+`flota/Modals.jsx` usaba `{...btn, background:CAR1}` en 3 botones pero `btn`
+no estaba definido en ese archivo. Venía del split automático — el objeto de
+estilo `btn` existía en `planner/Modals.jsx` pero no se copió a `flota/Modals.jsx`.
+Fix: `const btn = { width:"100%", padding:13, borderRadius:12, ... }` agregado.
+
+**2. Falsos positivos resueltos**
+Variables `col` en `.map(col=>...)`, `card` en `C.card`, `lbl` en
+`([val,lbl])=>` son parámetros de arrow functions, NO variables indefinidas.
+El auto-checker previo las marcaba erróneamente.
+
+### Estado final
+56 archivos — 0 errores de sintaxis, 0 TDZ, 0 v-params, 0 undefined spreads,
+0 cross-module imports faltantes.
+
+---
+
 ## [2.9.9] — 2026-06-04 — Bugfix: TaskRow no importado en módulos de Planner
 
 ### Error

@@ -1,11 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../supabase.js'
 
-const DEFAULT_CARDS = [
-  { id:'C1', name:'Visa Bancolombia', bank:'Bancolombia', last4:'4521', color:'#FFD166', limit:5000000, cutDay:25, payDay:10, balance:0, charges:[] },
-  { id:'C2', name:'Mastercard BBVA',  bank:'BBVA',        last4:'8834', color:'#60A5FA', limit:8000000, cutDay:15, payDay:5,  balance:0, charges:[] },
-]
-
 export function useCardsData() {
   const [cards,   setCards]   = useState([])
   const [loading, setLoading] = useState(true)
@@ -17,72 +12,73 @@ export function useCardsData() {
   useEffect(() => { loadAll() }, [])
 
   async function loadAll() {
-    const { data: { session } } = await supabase.auth.getSession();
-    const userId = session?.user?.id;
-    if (!userId) { console.warn("[Data] No userId — skipping load"); return; }
-    userIdRef.current = userId;
+    const { data: { session } } = await supabase.auth.getSession()
+    const userId = session?.user?.id
+    if (!userId) { console.warn('[CardsData] No userId'); return }
+    userIdRef.current = userId
     setLoading(true)
     try {
-      const [cr, chr] = await Promise.all([
-        supabase.from('credit_cards').select('*, card_charges(*)').eq('user_id', userId),
-      ])
-      if (cr.error || chr.error) throw new Error((cr.error || chr.error).message)
+      // JOIN: una sola query trae tarjetas + cargos
+      const { data, error } = await supabase
+        .from('credit_cards')
+        .select('*, card_charges(*)')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: true })
 
-      let loadedCards = cr.data || []
-      // NO sembrar tarjetas automáticamente — dejar vacío para que el usuario cree las suyas.
-      // (El seed con IDs hardcodeados 'C1'/'C2' rompía loadAll si la columna id es uuid)
+      if (error) throw new Error(error.message)
 
-      const chargesByCard = {}
-      ;(chr.data || []).forEach(ch => {
-        if (!chargesByCard[ch.card_id]) chargesByCard[ch.card_id] = []
-        chargesByCard[ch.card_id].push({ id:ch.id, date:ch.date, amount:Number(ch.amount), category:ch.category, note:ch.note||'', installments:ch.installments||1 })
-      })
-
-      setCards(loadedCards.map(c => ({
-        id: c.id, name: c.name, bank: c.bank, last4: c.last4,
-        color: c.color, limit: Number(c.card_limit),
-        cutDay: c.cut_day, payDay: c.pay_day,
+      setCards((data || []).map(c => ({
+        id:      c.id,
+        name:    c.name,
+        bank:    c.bank,
+        last4:   c.last4,
+        color:   c.color,
+        limit:   Number(c.card_limit),
+        cutDay:  c.cut_day,
+        payDay:  c.pay_day,
         balance: Number(c.balance),
-        charges: chargesByCard[c.id] || [],
+        charges: (c.card_charges || []).map(ch => ({
+          id:           ch.id,
+          date:         ch.date,
+          amount:       Number(ch.amount),
+          category:     ch.category,
+          note:         ch.note || '',
+          installments: ch.installments || 1,
+        })).sort((a,b) => b.date.localeCompare(a.date)),
       })))
       setOnlineState(true)
-      console.log('[CardsData] ✅ Online')
+      console.log('[CardsData] ✅ Online', (data||[]).length, 'tarjetas')
     } catch(err) {
-      console.warn('[CardsData] Offline →', err.message)
+      console.warn('[CardsData] Error:', err.message)
       setCards([])
       setOnlineState(false)
     } finally { setLoading(false) }
   }
 
   async function addCharge(cardId, charge) {
-    const userId = userIdRef.current || (await supabase.auth.getSession()).data?.session?.user?.id;
-    if (!userId) return { error: "No autenticado" };
+    const userId = userIdRef.current || (await supabase.auth.getSession()).data?.session?.user?.id
+    if (!userId) return { error: 'No autenticado' }
     const localId = 'local-ch-' + Date.now()
-    const row = { ...charge, id:localId, card_id:cardId }
-    setCards(prev => prev.map(c => {
-      if (c.id !== cardId) return c
-      return { ...c, balance:(c.balance||0)+charge.amount, charges:[row,...(c.charges||[])] }
+    setCards(prev => prev.map(c => c.id !== cardId ? c : {
+      ...c, balance:(c.balance||0)+charge.amount,
+      charges:[{...charge, id:localId, card_id:cardId}, ...(c.charges||[])]
     }))
-    if (!onlineRef.current) console.warn('[addCharge] offline — intentando igualmente...')
     const { data, error } = await supabase.from('card_charges').insert([{
       user_id:userId, card_id:cardId, date:charge.date, amount:charge.amount,
       category:charge.category, note:charge.note||'', installments:charge.installments||1
     }]).select().single()
     if (error) {
       console.error('[addCharge] ❌', error.message)
-      setCards(prev => prev.map(c => c.id!==cardId ? c : {...c,
-        balance:Math.max(0,(c.balance||0)-charge.amount),
+      setCards(prev => prev.map(c => c.id!==cardId ? c : {
+        ...c, balance:Math.max(0,(c.balance||0)-charge.amount),
         charges:(c.charges||[]).filter(x=>x.id!==localId)
       }))
       return { error: error.message }
     }
-    // Reemplazar ID local con UUID real
-    setCards(prev => prev.map(c => c.id!==cardId ? c : {...c,
-      charges:(c.charges||[]).map(ch => ch.id===localId ? {...ch,id:data.id} : ch)
+    setCards(prev => prev.map(c => c.id!==cardId ? c : {
+      ...c, charges:(c.charges||[]).map(ch => ch.id===localId ? {...ch,id:data.id} : ch)
     }))
-    // Actualizar balance en credit_cards
-    const card = cards.find(c => c.id === cardId)
-    if (card) await supabase.from('credit_cards').update({ balance:(card.balance||0)+charge.amount }).eq('id', cardId)
+    await supabase.from('credit_cards').update({ balance:(Number(charge.amount)||0) + (cards.find(c=>c.id===cardId)?.balance||0) }).eq('id', cardId)
     return { data }
   }
 
@@ -92,36 +88,34 @@ export function useCardsData() {
       if (c.id !== cardId) return c
       const ch = c.charges.find(x => x.id === chargeId)
       amount = ch?.amount || 0
-      return { ...c, balance: Math.max(0, (c.balance||0) - amount), charges: c.charges.filter(x => x.id !== chargeId) }
+      return { ...c, balance:Math.max(0,(c.balance||0)-amount), charges:c.charges.filter(x=>x.id!==chargeId) }
     }))
-    if (!onlineRef.current) console.warn('[offline] intentando igualmente...')
     await supabase.from('card_charges').delete().eq('id', chargeId)
     const card = cards.find(c => c.id === cardId)
-    if (card) await supabase.from('credit_cards').update({ balance: Math.max(0, (card.balance||0) - amount) }).eq('id', cardId)
+    if (card) await supabase.from('credit_cards').update({ balance:Math.max(0,(card.balance||0)-amount) }).eq('id', cardId)
   }
 
   async function markPaid(cardId) {
-    setCards(prev => prev.map(c => c.id !== cardId ? c : { ...c, balance: 0, charges: [] }))
-    if (!onlineRef.current) console.warn('[offline] intentando igualmente...')
+    setCards(prev => prev.map(c => c.id !== cardId ? c : { ...c, balance:0, charges:[] }))
     await supabase.from('card_charges').delete().eq('card_id', cardId)
-    await supabase.from('credit_cards').update({ balance: 0 }).eq('id', cardId)
+    await supabase.from('credit_cards').update({ balance:0 }).eq('id', cardId)
   }
 
   async function saveCard(cardId, updates) {
     setCards(prev => prev.map(c => c.id !== cardId ? c : { ...c, ...updates }))
-    if (!onlineRef.current) console.warn('[offline] intentando igualmente...')
     await supabase.from('credit_cards').update({
-      name: updates.name, bank: updates.bank, last4: updates.last4,
-      color: updates.color, card_limit: updates.limit,
-      cut_day: updates.cutDay, pay_day: updates.payDay,
+      name:c.name, bank:updates.bank, last4:updates.last4,
+      color:updates.color, card_limit:updates.limit,
+      cut_day:updates.cutDay, pay_day:updates.payDay,
     }).eq('id', cardId)
   }
 
   async function addCard(data) {
+    const userId = userIdRef.current || (await supabase.auth.getSession()).data?.session?.user?.id
+    if (!userId) return { error: 'No autenticado' }
     const localId = 'local-card-' + Date.now()
     const newCard = { ...data, id:localId, balance:0, charges:[] }
     setCards(prev => [...prev, newCard])
-    if (!onlineRef.current) console.warn('[addCard] offline — intentando igualmente...')
     const { data:saved, error } = await supabase.from('credit_cards').insert([{
       user_id:userId, name:data.name, bank:data.bank, last4:data.last4, color:data.color,
       card_limit:data.limit, cut_day:data.cutDay, pay_day:data.payDay, balance:0
@@ -139,20 +133,19 @@ export function useCardsData() {
     setCards(prev => prev.map(c => {
       if (c.id !== cardId) return c
       const old = c.charges.find(ch => ch.id === chargeId)
-      const diff = updates.amount - (old?.amount || 0)
-      return { ...c, balance: (c.balance||0)+diff,
-        charges: c.charges.map(ch => ch.id !== chargeId ? ch : {...ch,...updates}) }
+      const diff = (updates.amount||0) - (old?.amount||0)
+      return { ...c, balance:(c.balance||0)+diff,
+        charges:c.charges.map(ch => ch.id!==chargeId ? ch : {...ch,...updates}) }
     }))
-    if (!onlineRef.current) console.warn('[offline] intentando igualmente...')
     await supabase.from('card_charges').update({
-      date: updates.date, amount: updates.amount,
-      category: updates.category, note: updates.note||'', installments: updates.installments||1
+      date:updates.date, amount:updates.amount,
+      category:updates.category, note:updates.note||'', installments:updates.installments||1
     }).eq('id', chargeId)
     const card = cards.find(c => c.id === cardId)
     if (card) {
       const old = card.charges.find(ch => ch.id === chargeId)
       await supabase.from('credit_cards').update({
-        balance: (card.balance||0) + updates.amount - (old?.amount||0)
+        balance:(card.balance||0)+(updates.amount||0)-(old?.amount||0)
       }).eq('id', cardId)
     }
   }
