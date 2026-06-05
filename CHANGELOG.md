@@ -7,6 +7,64 @@
 
 ---
 
+## [3.0.3] — 2026-06-04 — Fix: selector cuentas/tarjetas no respondía en iOS
+
+### Problema
+En iOS Safari, `<optgroup>` dentro de `<select>` impide que el picker nativo
+se abra o responda correctamente al touch.
+
+### Fix 1: `<optgroup>` → `<option disabled>` como separador
+```jsx
+// Antes — roto en iOS
+<optgroup label="── Tarjetas ──">
+  {cards.map(...)}
+</optgroup>
+
+// Ahora — compatible con todos los browsers
+<option disabled value="">── Tarjetas de crédito ──</option>
+{cards.map(...)}
+```
+
+### Fix 2: labels personalizados en selector de cuentas
+`accounts` en los modales usaba solo `ACCOUNTS_DEF` (nombres default).
+Ahora mergea `accountBalances[id+"_meta"]` para mostrar el nombre/ícono
+que el usuario configuró en AccountsManager.
+
+### Fix 3: pasar `computedAccounts` a todos los modales
+Los modales (AddModal, EditTxModal, LoanModal, PayModal, TransferModal)
+ahora reciben `computedAccounts` que incluye el saldo actual de cada cuenta,
+además de los labels personalizados.
+
+### Archivos
+- `src/apps/FinanzApp.jsx`
+- `src/apps/finanz/Modals.jsx`
+
+---
+
+## [3.0.2] — 2026-06-04 — Fix: cambio de nombre de cuentas + tarjetas en gastos
+
+### Fix 1: Cambio de nombre de cuentas no guardaba
+`updateAccountBalance` hacía `upsert` sin `user_id`. Con la política RLS
+`USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id)`, el upsert
+fallaba silenciosamente (violación de política).
+Fix: agregar `user_id: userId` al row + `{ onConflict: 'id' }` explícito.
+
+### Feature: Tarjetas de crédito en selector de cuenta
+Al registrar un gasto, el selector "Cuenta / Tarjeta" ahora muestra:
+- Sección "── Cuentas ──" con las cuentas bancarias
+- Sección "── Tarjetas ──" con las tarjetas de crédito (solo para gastos)
+
+Si se selecciona una tarjeta (`card-{id}`), el gasto se registra como cargo
+de tarjeta (`addCharge`) en lugar de transacción normal. El cargo aparece en
+la vista de Tarjetas y suma al saldo de la tarjeta.
+
+### Archivos
+- `src/hooks/useFinanzData.js` — updateAccountBalance con user_id
+- `src/apps/finanz/Modals.jsx` — AddModal acepta cards prop, optgroup selector
+- `src/apps/FinanzApp.jsx` — pasa cards a AddModal, maneja card-X en addTransaction
+
+---
+
 ## [3.0.1] — 2026-06-04 — Fix: tarjetas no cargaban
 
 ### Bugs en useCardsData.js

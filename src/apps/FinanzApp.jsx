@@ -72,10 +72,16 @@ export default function FinanzApp({ onBack }){
   } = useFinanzData();
 
   // Cuentas: definición base + saldos iniciales desde Supabase
-  const accounts = ACCOUNTS_DEF.map(a => ({
-    ...a,
-    initialBalance: accountBalances[a.id] ?? 0
-  }));
+  const accounts = ACCOUNTS_DEF.map(a => {
+    const meta = accountBalances[a.id+"_meta"] || {};
+    return {
+      ...a,
+      label:          meta.label || a.label,
+      icon:           meta.icon  || a.icon,
+      color:          meta.color || a.color,
+      initialBalance: accountBalances[a.id] ?? 0,
+    };
+  });
   const [view,setView]=useState("dashboard");
   const [sidebarOpen,setSidebarOpen]=useState(false);
   const [showAddModal,setShowAddModal]=useState(false);
@@ -229,11 +235,11 @@ export default function FinanzApp({ onBack }){
       <MobileNav view={view} setView={setView} openAddModal={openAddModal} loans={loans}/>
       <button onClick={()=>openAddModal()} style={{position:"fixed",bottom:82,right:20,width:54,height:54,borderRadius:"50%",background:C.accent,border:"none",cursor:"pointer",fontSize:24,boxShadow:"0 8px 24px "+(C.accent)+"66",zIndex:100,display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
       <button onClick={()=>setShowTransferModal(true)} style={{position:"fixed",bottom:82,right:82,width:44,height:44,borderRadius:"50%",background:C.card,border:"1px solid "+C.border,cursor:"pointer",fontSize:18,zIndex:100,display:"flex",alignItems:"center",justifyContent:"center"}} title="Transferir">↔️</button>
-      {editTx            && <EditTxModal tx={editTx} onClose={()=>setEditTx(null)} onSave={updateTransaction} accounts={accounts} categories={categories}/>}
-      {showAddModal      && <AddModal  onClose={()=>{ setShowAddModal(false); setAddModalOpts({}); }} onAdd={addTransaction} accounts={accounts} cards={cards} opts={addModalOpts} categories={categories}/>}
-      {showLoanModal     && <LoanModal onClose={()=>setShowLoanModal(false)} onAdd={addLoan} accounts={accounts} cards={cards}/>}
-      {showPayModal      && <PayModal  onClose={()=>setShowPayModal(null)} loan={showPayModal} onPay={addPayment} accounts={accounts}/>}
-      {showTransferModal && <TransferModal onClose={()=>setShowTransferModal(false)} onTransfer={addTransfer} accounts={accounts}/>}
+      {editTx            && <EditTxModal tx={editTx} onClose={()=>setEditTx(null)} onSave={updateTransaction} accounts={computedAccounts} categories={categories}/>}
+      {showAddModal      && <AddModal  onClose={()=>{ setShowAddModal(false); setAddModalOpts({}); }} onAdd={addTransaction} accounts={computedAccounts} cards={cards} opts={addModalOpts} categories={categories}/>}
+      {showLoanModal     && <LoanModal onClose={()=>setShowLoanModal(false)} onAdd={addLoan} accounts={computedAccounts} cards={cards}/>}
+      {showPayModal      && <PayModal  onClose={()=>setShowPayModal(null)} loan={showPayModal} onPay={addPayment} accounts={computedAccounts}/>}
+      {showTransferModal && <TransferModal onClose={()=>setShowTransferModal(false)} onTransfer={addTransfer} accounts={computedAccounts}/>}
       {toast && <div style={{position:"fixed",bottom:96,left:"50%",transform:"translateX(-50%)",background:toast.type==="error"?C.red:C.accent,color:toast.type==="error"?"#fff":"#000",padding:"10px 20px",borderRadius:100,fontWeight:700,fontSize:14,zIndex:9999,animation:"fa-toastIn .3s ease",whiteSpace:"nowrap",boxShadow:"0 8px 24px #0006"}}>{toast.msg}</div>}
     </div>
   );

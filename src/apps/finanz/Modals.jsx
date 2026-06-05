@@ -50,14 +50,11 @@ export function AddModal({onClose,onAdd,accounts,cards=[],opts,categories=DEFAUL
           </MF>}
           <MF label="Cuenta / Tarjeta">
             <select value={form.account} onChange={e=>set("account",e.target.value)} style={{width:"100%",background:C.card,border:"1px solid "+(C.border),borderRadius:10,padding:"10px 12px",color:C.text,fontSize:14}}>
-              <optgroup label="── Cuentas ──">
-                {accounts.map(a=><option key={a.id} value={a.id}>{a.icon} {a.label}</option>)}
-              </optgroup>
-              {type==="expense" && cards.length>0 && (
-                <optgroup label="── Tarjetas ──">
-                  {cards.map(card=><option key={"card-"+card.id} value={"card-"+card.id}>💳 {card.name} ···{card.last4}</option>)}
-                </optgroup>
-              )}
+              {accounts.map(a=><option key={a.id} value={a.id}>{a.icon} {a.label}</option>)}
+              {type==="expense" && cards.length>0 && [
+                <option key="__sep__" disabled value="">── Tarjetas de crédito ──</option>,
+                ...cards.map(card=><option key={"card-"+card.id} value={"card-"+card.id}>💳 {card.name} ···{card.last4}</option>)
+              ]}
             </select>
           </MF>
           <MF label="Descripción (opcional)"><input type="text" value={form.note} onChange={e=>set("note",e.target.value)} placeholder="Ej: Pago mensual Netflix" style={{width:"100%",background:C.card,border:"1px solid "+(C.border),borderRadius:10,padding:"10px 12px",color:C.text,fontSize:14}}/></MF>

@@ -82,11 +82,10 @@ export function useFlotaData() {
 
     if (!onlineRef.current) console.warn('[offline] toggle...')
 
-    // Upsert — works even if record doesn't exist in DB yet
-    const { error } = await supabase.from('car_payments').upsert({
-      id: pago.id, car_id: carId, fecha: pago.fecha,
-      monto: pago.monto, pagado: newPagado, nota: pago.nota || ''
-    })
+    const userId = userIdRef.current || (await supabase.auth.getSession()).data?.session?.user?.id
+    const { error } = await supabase.from('car_payments').update({
+      pagado: newPagado,
+    }).eq('id', pago.id)
 
     if (error) {
       console.error('[togglePayment] ERROR:', error.message)
@@ -96,6 +95,23 @@ export function useFlotaData() {
         [carId]: (prev[carId]||[]).map(p => p.id === pagoId ? pago : p)
       }))
       return pago.pagado
+    }
+
+    // ── Sync a FinanzApp: si se marca como pagado, crear ingreso en transactions ──
+    if (newPagado) {
+      const userId = userIdRef.current || (await supabase.auth.getSession()).data?.session?.user?.id
+      const car = cars.find(c => c.id === carId)
+      await supabase.from('transactions').insert([{
+        user_id:     userId,
+        date:        pago.fecha,
+        type:        'income',
+        category:    'flota_inc',
+        subcategory: car?.nombre || 'Vehículo',
+        account:     pago.account || 'cash',
+        amount:      pago.monto,
+        note:        'Ingreso flota — ' + (car?.nombre || carId),
+      }])
+      console.log('[togglePayment] 💰 Sincronizado a FinanzApp')
     }
 
     console.log('[togglePayment] ✅', pagoId, '→ pagado:', newPagado)
@@ -174,7 +190,10 @@ export function useFlotaData() {
     if (!onlineRef.current) {
       console.warn('[addExpense] offline'); return { error:'Sin conexión' }
     }
+    const userId = userIdRef.current || (await supabase.auth.getSession()).data?.session?.user?.id
+    if (!userId) return { error: 'No autenticado' }
     const { data, error } = await supabase.from('car_expenses').insert([{
+      user_id:  userId,
       car_id:   carId,
       fecha:    gasto.fecha,
       category: gasto.categoria,
@@ -189,6 +208,24 @@ export function useFlotaData() {
     }
     setExpenses(prev => ({...prev, [carId]: (prev[carId]||[]).map(e=>e.id===localId?{...localRow,id:data.id}:e)}))
     console.log('[addExpense] ✅', data.id)
+
+    // ── Sync a FinanzApp: crear gasto en transactions ──
+    try {
+      const userId = userIdRef.current || (await supabase.auth.getSession()).data?.session?.user?.id
+      const car = cars.find(c => c.id === carId)
+      await supabase.from('transactions').insert([{
+        user_id:     userId,
+        date:        gasto.fecha,
+        type:        'expense',
+        category:    'transport',
+        subcategory: gasto.categoria || 'Gasto vehículo',
+        account:     gasto.account || 'cash',
+        amount:      gasto.monto,
+        note:        (gasto.nota || gasto.categoria || '') + (car ? ' — ' + car.nombre : ''),
+      }])
+      console.log('[addExpense] 💸 Sincronizado a FinanzApp')
+    } catch(e) { console.warn('[addExpense] sync warn:', e.message) }
+
     return { data }
   }
 
