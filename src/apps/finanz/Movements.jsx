@@ -34,7 +34,6 @@ export function Movements({transactions,cards=[],filterMonth,deleteTransaction,o
     ),
     ...cardChargesAsTx,
   ].sort((a,b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
-  const [search,setSearch]=useState("");
   const [search, setSearch] = useState("");
   const filtered = allMovements
     .filter(t=>filter==="all"||(filter==="income"&&t.type==="income")||(filter==="expense"&&(t.type==="expense"||t.isCardCharge)))
