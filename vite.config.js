@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-const BUILD_STAMP = '20260603';
+const BUILD_STAMP = '1780928780';
 
 export default defineConfig({
   plugins: [react()],

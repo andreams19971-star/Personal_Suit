@@ -7,6 +7,125 @@
 
 ---
 
+## [3.2.2] — 2026-06-05 — Fix: TASK_STATUS caché SW + force update
+
+### Por qué persiste el error
+El código de `TASK_STATUS` es correcto desde v3.2.0.
+El error persiste porque el Service Worker tiene en caché el bundle viejo:
+- `BUILD_STAMP = new Date().toISOString().slice(0,10)` → mismo valor todo el día
+- Si se despliegan múltiples builds en el mismo día, `CACHE = 'suite-20260605'`
+  no cambia entre ellos → el SW sigue sirviendo el bundle anterior
+
+### Fix 1: BUILD_STAMP = unix timestamp
+`vite.config.js` ahora usa `int(time.time())` → valor único por cada build.
+Cada deploy genera un CACHE diferente → el SW viejo limpia el caché automáticamente.
+
+### Fix 2: skipWaiting + clients.claim en SW
+```javascript
+self.addEventListener('install',  () => self.skipWaiting());
+self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
+```
+El nuevo SW toma control inmediatamente sin esperar que el usuario cierre pestañas.
+
+### Fix 3: registration.update() en main.jsx
+Al registrar el SW, se llama `.update()` para verificar si hay una nueva versión.
+Esto fuerza la detección de actualizaciones al cargar la app.
+
+### Archivos
+- `vite.config.js` — BUILD_STAMP único por build
+- `public/sw.js` — skipWaiting + clients.claim
+- `src/main.jsx` — r.update() en registro
+
+---
+
+## [3.2.1] — 2026-06-05 — Fix: transferencias entre cuentas no funcionaban
+
+### Causa raíz 1: CHECK constraint en `transactions.type`
+```sql
+CHECK ((type = ANY (ARRAY['income'::text, 'expense'::text])))
+```
+La tabla `transactions` solo aceptaba `'income'` y `'expense'`. Al insertar
+`type: 'transfer'` o `type: 'card_payment'`, Supabase rechazaba el insert
+con un constraint violation. El error era silencioso en la UI.
+
+Fix en BD: constraint actualizado a:
+```sql
+CHECK (type = ANY (ARRAY['income','expense','transfer','card_payment']))
+```
+
+### Causa raíz 2: TransferModal con cuentas hardcodeadas
+`useState({ from:"cash", to:"nequi", ... })` — hardcodeadas las IDs de dos
+cuentas específicas. Si el usuario tiene cuentas con otras IDs o solo tiene
+una cuenta, `from === to` → la validación `ok` falla → botón deshabilitado.
+
+Fix: usar `accounts[0]?.id` y `accounts[1]?.id` como valores dinámicos.
+
+### Archivos
+- Supabase: `transactions_type_check` constraint actualizado
+- `src/apps/finanz/Modals.jsx` — TransferModal init dinámico
+
+---
+
+## [3.2.0] — 2026-06-05 — 4 bugs + features de tarjetas y planner
+
+### FinanzApp — 3 cambios
+
+**1. Movimientos de tarjetas en vista Movimientos**
+Los cargos de tarjeta de crédito del mes ahora aparecen en la vista de Movimientos,
+mezclados con las transacciones regulares y ordenados por fecha.
+- Se etiquetan con la tarjeta de origen (💳 Visa ···4521)
+- Los pagos de tarjeta (markPaid) NO se muestran — evita redundancia
+- Las transferencias tampoco se muestran en Movimientos
+
+**2. Pago de tarjeta descuenta de cuenta sin marcar como gasto**
+Antes: `markPaid` solo reseteaba el saldo sin registrar nada.
+Ahora: al tocar "✓ Pagar", aparece un modal con selector de cuenta.
+El pago crea una transacción `type: 'card_payment'` que:
+- Descuenta el monto de la cuenta seleccionada (afecta el saldo)
+- NO aparece en los gastos del mes (P&L no se distorsiona)
+- Se muestra en Movimientos solo si se filtran todos
+
+**3. Editar cargos de tarjeta** — ya funcionaba, confirmado.
+
+### Planner — 1 bug crítico
+
+**4. `TASK_STATUS` no definido — app no cargaba**
+`AllTasksView.jsx` y `TaskRow.jsx` usaban `TASK_STATUS` (objeto con metadatos
+de cada estado: pending, in_progress, done, archived) pero no estaba definido
+en `planner/shared.js` ni importado en ningún archivo.
+Fix: constante `TASK_STATUS` agregada a `planner/shared.js` e importada en
+los 2 archivos que la usan.
+
+### Archivos
+- `src/apps/planner/shared.js` — TASK_STATUS
+- `src/apps/planner/AllTasksView.jsx` — import TASK_STATUS
+- `src/apps/planner/TaskRow.jsx` — import TASK_STATUS
+- `src/hooks/useCardsData.js` — markPaid(cardId, fromAccount)
+- `src/apps/finanz/CardsView.jsx` — modal pago con selector cuenta
+- `src/apps/finanz/Movements.jsx` — merge card charges
+- `src/apps/FinanzApp.jsx` — pass accounts, cards
+
+---
+
+## [3.1.3] — 2026-06-05 — Bugfix: `today` eliminado de finanz/shared.js
+
+### Error
+`"today" is not exported by "src/apps/finanz/shared.js"`
+
+### Causa
+El str_replace de v3.1.0 que agregó `CAT_ICONS` y `ACCOUNT_ICONS` reemplazó la
+línea `export const today = () => ...` en lugar de insertarse antes de ella.
+`today` quedó eliminado del archivo.
+
+### Fix
+`export const today = () => new Date().toISOString().slice(0,10)` restituida
+en `finanz/shared.js` entre los icons y `MONTHS`.
+
+### Archivos
+- `src/apps/finanz/shared.js`
+
+---
+
 ## [3.1.2] — 2026-06-05 — Bugfix: LoansView.jsx JSX inválido
 
 ### Error
