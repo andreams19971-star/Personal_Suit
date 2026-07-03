@@ -90,7 +90,16 @@ export default function FinanzApp({ onBack }){
   const [showAddModal,setShowAddModal]=useState(false);
   const [addModalOpts,setAddModalOpts]=useState({});
   const [selAccount,setSelAccount]=useState(null);
-  const [filterMonth,setFilterMonth]=useState(today().slice(0,7));
+  // Si estamos en los primeros 7 días del mes, mostrar el mes anterior
+  // (el usuario aún está revisando el mes que cerró)
+  const defaultFilterMonth = () => {
+    const d = new Date()
+    if (d.getDate() <= 7) {
+      return new Date(d.getFullYear(), d.getMonth()-1, 1).toISOString().slice(0,7)
+    }
+    return d.toISOString().slice(0,7)
+  }
+  const [filterMonth,setFilterMonth]=useState(defaultFilterMonth());
   const [settings,setSettings]=useState({currency:"COP",budgets:{}});
   const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
   const [toast,setToast]=useState(null);
@@ -128,15 +137,15 @@ export default function FinanzApp({ onBack }){
 
   const computedAccounts=accounts.map(acc=>{
     const txs=transactions.filter(t=>t.account===acc.id);
-    const totalIn  = txs.filter(t=>t.type==="income"  || t.subcategory==="transfer_in" ).reduce((s,t)=>s+t.amount,0);
-    const totalOut = txs.filter(t=>t.type==="expense" || t.subcategory==="transfer_out").reduce((s,t)=>s+t.amount,0);
+    const totalIn  = txs.filter(t=>t.type==="income"   || t.subcategory==="transfer_in" ).reduce((s,t)=>s+t.amount,0);
+    const totalOut = txs.filter(t=>t.type==="expense"  || t.subcategory==="transfer_out" || t.type==="card_payment").reduce((s,t)=>s+t.amount,0);
     return {...acc,balance:acc.initialBalance+totalIn-totalOut};
   });
 
-  const monthTxs     = transactions.filter(t=>t.date.startsWith(filterMonth));
+  const monthTxs = transactions.filter(t=>t.date.startsWith(filterMonth));
   const monthChargesAll = cards.flatMap(c=>(c.charges||[]).filter(ch=>ch.date?.startsWith(filterMonth)));
   const cardExpenseMonth = monthChargesAll.reduce((s,ch)=>s+ch.amount,0);
-  // Transferencias NO cuentan como ingreso ni gasto
+  // Transferencias y pagos de tarjeta NO cuentan como ingreso ni gasto
   const totalIncome  = monthTxs.filter(t=>t.type==="income"  && t.category!=="transfer").reduce((s,t)=>s+t.amount,0);
   const totalExpense = monthTxs.filter(t=>t.type==="expense" && t.category!=="transfer").reduce((s,t)=>s+t.amount,0) + cardExpenseMonth;
   const netBalance   = totalIncome - totalExpense;
@@ -231,12 +240,12 @@ export default function FinanzApp({ onBack }){
           <div style={{fontSize:14,color:C.textMuted}}>Cargando datos...</div>
         </div>
       )}
-      <TopBar view={view} filterMonth={filterMonth} setFilterMonth={setFilterMonth} onMonthChange={loadMonth} setSidebarOpen={setSidebarOpen} openAddModal={openAddModal} onBack={onBack}/>
+      <TopBar view={view} filterMonth={filterMonth} setFilterMonth={setFilterMonth} onMonthChange={loadMonth} setSidebarOpen={setSidebarOpen} openAddModal={openAddModal} onBack={onBack} transactions={transactions}/>
       <div className="fa-scroll" style={{paddingBottom:80}}>
         {view==="dashboard" && <Dashboard transactions={transactions} accounts={computedAccounts} loans={loans} totalIncome={totalIncome} totalExpense={totalExpense} netBalance={netBalance} filterMonth={filterMonth} setView={setView} setSelAccount={setSelAccount} monthTxs={monthTxs} categories={categories} settings={settings}/>}
-        {view==="movements" && <Movements transactions={transactions} filterMonth={filterMonth} deleteTransaction={deleteTransaction} openAddModal={openAddModal} loans={loans} categories={categories} setEditTx={setEditTx}/>}
+        {view==="movements" && <Movements transactions={transactions} cards={cards} filterMonth={filterMonth} deleteTransaction={deleteTransaction} openAddModal={openAddModal} loans={loans} categories={categories} setEditTx={setEditTx} accounts={computedAccounts}/>}
         {view==="accounts"  && <AccountsView accounts={computedAccounts} transactions={transactions} selAccount={selAccount} setSelAccount={setSelAccount} filterMonth={filterMonth} showToast={showToast} categories={categories} deleteTransaction={deleteTransaction} setEditTx={setEditTx}/>}
-        {view==="cards"     && <CardsView cards={cards} addCharge={addCharge} deleteCharge={deleteCharge} updateCharge={updateCharge} markPaid={markPaid} saveCard={saveCard} addCard={addCard} filterMonth={filterMonth} showToast={showToast}/>}
+        {view==="cards"     && <CardsView cards={cards} addCharge={addCharge} deleteCharge={deleteCharge} updateCharge={updateCharge} markPaid={markPaid} saveCard={saveCard} addCard={addCard} filterMonth={filterMonth} showToast={showToast} accounts={computedAccounts}/>}
         {view==="loans"     && <LoansView loans={loans} transactions={transactions} setShowLoanModal={setShowLoanModal} setShowPayModal={setShowPayModal} accounts={computedAccounts} showToast={showToast} categories={categories} editLoan={editLoan} deleteLoan={deleteLoan}/>}
         {view==="stats"     && <Stats monthTxs={monthTxs} totalIncome={totalIncome} totalExpense={totalExpense} transactions={transactions} filterMonth={filterMonth} categories={categories}/>}
       </div>

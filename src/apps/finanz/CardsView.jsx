@@ -3,18 +3,25 @@ import { useState, useEffect, useRef } from "react";
 import { ACCOUNTS_DEF, C, DEFAULT_CATEGORIES, MONTHS, fmtCOP, fmtShort, today } from "./shared.js";
 import { MF, SectionHeader, EmptyState, TxRow } from "./Helpers.jsx";
 
-export function CardsView({ cards, addCharge, deleteCharge, updateCharge, markPaid, saveCard, addCard, filterMonth, showToast }) {
+export function CardsView({ cards, addCharge, deleteCharge, updateCharge, markPaid, saveCard, addCard, filterMonth, showToast, accounts=[] }) {
   const [selCard, setSelCard] = useState(cards[0]?.id || null);
   const [showAddCharge, setShowAddCharge] = useState(false);
   const [showEditCard, setShowEditCard] = useState(null);
-  const [editCharge, setEditCharge] = useState(null); // {cardId, charge}
+  const [editCharge, setEditCharge] = useState(null);
+  const [payingCard, setPayingCard] = useState(null);
+  const [payAccount, setPayAccount] = useState(accounts[0]?.id || "cash");
 
   const card = cards.find(c => c.id === selCard) || cards[0];
 
   const handleAddCharge    = async (charge) => { await addCharge(selCard, charge); showToast("Gasto registrado ✓"); setShowAddCharge(false); };
   const handleDeleteCharge = async (cardId, chargeId) => { await deleteCharge(cardId, chargeId); showToast("Gasto eliminado", "error"); };
   const handleUpdateCharge = async (cardId, chargeId, updates) => { await updateCharge(cardId, chargeId, updates); showToast("Gasto actualizado ✓"); setEditCharge(null); };
-  const handleMarkPaid     = async (cardId) => { await markPaid(cardId); showToast("Tarjeta pagada ✓"); };
+  const handleMarkPaid     = async () => {
+    if (!payingCard) return;
+    await markPaid(payingCard, payAccount || accounts[0]?.id || "cash");
+    showToast("Tarjeta pagada ✓");
+    setPayingCard(null);
+  };
   const handleSaveCard     = async (cardId, updates) => { await saveCard(cardId, updates); showToast("Tarjeta actualizada ✓"); setShowEditCard(null); };
   const handleAddCard      = async (data) => { await addCard(data); showToast("Tarjeta agregada ✓"); setShowEditCard(null); };
 
@@ -108,7 +115,7 @@ export function CardsView({ cards, addCharge, deleteCharge, updateCharge, markPa
           </div>
           <div style={{display:"flex",gap:8}}>
             <button onClick={()=>setShowAddCharge(true)} style={{flex:1,background:card.color,color:"#000",border:"none",borderRadius:10,padding:"10px",fontWeight:800,fontSize:13,cursor:"pointer"}}>+ Registrar gasto</button>
-            <button onClick={()=>handleMarkPaid(card.id)} style={{background:C.greenDim,border:"1px solid "+(C.green)+"44",color:C.green,borderRadius:10,padding:"10px 14px",fontWeight:700,fontSize:12,cursor:"pointer"}}>✓ Pagar</button>
+            <button onClick={()=>setPayingCard(card.id)} style={{background:C.greenDim,border:"1px solid "+(C.green)+"44",color:C.green,borderRadius:10,padding:"10px 14px",fontWeight:700,fontSize:12,cursor:"pointer"}}>✓ Pagar</button>
           </div>
         </div>
       )}
@@ -145,6 +152,30 @@ export function CardsView({ cards, addCharge, deleteCharge, updateCharge, markPa
       {showAddCharge && (
         <ChargeModal card={card} onClose={()=>setShowAddCharge(false)} onAdd={handleAddCharge} cats={CHARGE_CATS}/>
       )}
+      {/* MODAL PAGAR TARJETA */}
+      {payingCard && (()=>{
+        const pc = cards.find(c=>c.id===payingCard);
+        return (
+          <div style={{position:"fixed",inset:0,background:"#000000BB",zIndex:600,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 20px"}}>
+            <div style={{background:C.surface,borderRadius:20,padding:24,width:"100%",maxWidth:360,border:"1px solid "+(C.border)}}>
+              <div style={{fontSize:16,fontWeight:800,marginBottom:4}}>💳 Pagar tarjeta</div>
+              <div style={{fontSize:13,color:C.textSub,marginBottom:16}}>{pc?.name} ···{pc?.last4} — Total: ${(pc?.balance||0).toLocaleString()}</div>
+              <div style={{fontSize:11,color:C.textMuted,fontWeight:700,marginBottom:6}}>DESCONTAR DE CUENTA</div>
+              <select value={payAccount} onChange={e=>setPayAccount(e.target.value)} style={{width:"100%",background:C.card,border:"1px solid "+(C.border),borderRadius:10,padding:"10px 12px",color:C.text,fontSize:14,marginBottom:16}}>
+                {accounts.map(a=><option key={a.id} value={a.id}>{a.icon} {a.label}</option>)}
+              </select>
+              <div style={{fontSize:11,color:C.accentText,background:C.accentDim,borderRadius:8,padding:"8px 12px",marginBottom:16}}>
+                ✓ Se descuenta de tu cuenta pero no se registra como gasto
+              </div>
+              <div style={{display:"flex",gap:8}}>
+                <button onClick={()=>setPayingCard(null)} style={{flex:1,padding:12,borderRadius:12,border:"1px solid "+(C.border),background:"transparent",color:C.textSub,fontWeight:700,cursor:"pointer"}}>Cancelar</button>
+                <button onClick={handleMarkPaid} style={{flex:2,padding:12,borderRadius:12,border:"none",background:C.accent,color:"#000",fontWeight:800,cursor:"pointer"}}>✓ Confirmar pago</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* MODAL EDITAR GASTO */}
       {editCharge && (
         <EditChargeModal

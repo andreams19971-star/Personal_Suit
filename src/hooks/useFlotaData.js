@@ -45,7 +45,18 @@ export function useFlotaData() {
 
       const pBycar = {}, eBycar = {}
       ;(pr.data||[]).forEach(p => { (pBycar[p.car_id]=pBycar[p.car_id]||[]).push(p) })
-      ;(er.data||[]).forEach(e => { (eBycar[e.car_id]=eBycar[e.car_id]||[]).push(e) })
+      ;(er.data||[]).forEach(e => {
+        const mapped = {
+          id:        e.id,
+          car_id:    e.car_id,
+          fecha:     e.fecha,
+          categoria: e.category,
+          monto:     Number(e.amount) || 0,
+          nota:      e.note || '',
+          account:   e.account || 'cash',
+        }
+        ;(eBycar[e.car_id]=eBycar[e.car_id]||[]).push(mapped)
+      })
       setPayments(pBycar); setExpenses(eBycar)
       setOnlineState(true)
       console.log('[FlotaData] ✅ Online')

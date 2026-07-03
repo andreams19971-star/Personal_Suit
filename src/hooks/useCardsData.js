@@ -95,10 +95,28 @@ export function useCardsData() {
     if (card) await supabase.from('credit_cards').update({ balance:Math.max(0,(card.balance||0)-amount) }).eq('id', cardId)
   }
 
-  async function markPaid(cardId) {
+  async function markPaid(cardId, fromAccount) {
+    const userId = userIdRef.current || (await supabase.auth.getSession()).data?.session?.user?.id
+    const card = cards.find(c => c.id === cardId)
+    const amount = card?.balance || 0
+    // Actualizar estado local
     setCards(prev => prev.map(c => c.id !== cardId ? c : { ...c, balance:0, charges:[] }))
+    // Borrar cargos de BD
     await supabase.from('card_charges').delete().eq('card_id', cardId)
     await supabase.from('credit_cards').update({ balance:0 }).eq('id', cardId)
+    // Crear transacción tipo 'card_payment' (no es gasto ni ingreso)
+    if (fromAccount && amount > 0 && userId) {
+      await supabase.from('transactions').insert([{
+        user_id:     userId,
+        date:        new Date().toISOString().slice(0,10),
+        type:        'card_payment',
+        category:    'card_payment',
+        subcategory: card?.name || 'Tarjeta',
+        account:     fromAccount,
+        amount:      amount,
+        note:        'Pago tarjeta ' + (card?.name||'') + ' ···' + (card?.last4||''),
+      }])
+    }
   }
 
   async function saveCard(cardId, updates) {

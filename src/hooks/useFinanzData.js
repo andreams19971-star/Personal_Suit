@@ -80,12 +80,9 @@ export function useFinanzData() {
     userIdRef.current = userId;
     setLoading(true)
     try {
-      // Carga en paralelo: los últimos 2 meses de transacciones + todos los préstamos
-      const now     = new Date()
-      const twoAgo  = new Date(now.getFullYear(), now.getMonth()-1, 1).toISOString().slice(0,10)
+      // Carga TODAS las transacciones — historial completo disponible
       const [txRes, loanRes, balRes] = await Promise.all([
         supabase.from('transactions').select('*').eq('user_id', userId)
-          .gte('date', twoAgo)
           .order('date', { ascending: false }),
         supabase.from('loans').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
         supabase.from('account_balances').select('*').eq('user_id', userId),

@@ -18,6 +18,13 @@ export const DAYS = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
 export const MONTHS = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
 export const today = () => new Date().toISOString().slice(0, 10);
 
+export const TASK_STATUS = {
+  pending:     { label:"Pendiente",    icon:"⏳", color:"#EAB308", bg:"#78350F22" },
+  in_progress: { label:"En progreso",  icon:"🔄", color:"#3B82F6", bg:"#1E3A5F22" },
+  done:        { label:"Completado",   icon:"✅", color:"#22C55E", bg:"#14532D22" },
+  archived:    { label:"Archivado",    icon:"📦", color:"#71717A", bg:"#27272A22" },
+};
+
 export const HABIT_ICONS = ["💧","🏃","📚","🧘","🥗","😴","💪","🚭","🙏","✍️","🎯","🌿"];
 export const PRIORITIES = [
   { id: "high",   label: "Alta",   color: "#F87171" },

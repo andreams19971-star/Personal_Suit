@@ -4,12 +4,40 @@ import * as XLSX from "xlsx";
 import { ACCOUNTS_DEF, C, DEFAULT_CATEGORIES, MONTHS, fmtCOP, fmtShort, today } from "./shared.js";
 import { TxRow, SectionHeader, EmptyState, Pill, StatCard, MF } from "./Helpers.jsx";
 
-export function Movements({transactions,filterMonth,deleteTransaction,openAddModal,loans,categories=DEFAULT_CATEGORIES,setEditTx}){
+export function Movements({transactions,cards=[],filterMonth,deleteTransaction,openAddModal,loans,categories=DEFAULT_CATEGORIES,setEditTx,accounts=[]}){
   const [filter,setFilter]=useState("all");
+
+  // Combinar transacciones regulares + cargos de tarjeta del mes
+  // Los abonos (card_payment) NO se muestran como gasto aquí
+  const cardChargesAsTx = cards.flatMap(card =>
+    (card.charges||[])
+      .filter(ch => ch.date?.startsWith(filterMonth))
+      .map(ch => ({
+        id:          "ch-" + ch.id,
+        date:        ch.date,
+        type:        "expense",
+        category:    ch.category || "card_charge",
+        subcategory: ch.note || "",
+        account:     "card-" + card.id,
+        accountName: "💳 " + card.name + " ···" + card.last4,
+        amount:      ch.amount,
+        note:        ch.note || "",
+        isCardCharge: true,
+      }))
+  );
+
+  const allMovements = [
+    ...transactions.filter(t =>
+      t.date.startsWith(filterMonth) &&
+      t.type !== "card_payment" &&
+      t.category !== "transfer"
+    ),
+    ...cardChargesAsTx,
+  ].sort((a,b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
   const [search,setSearch]=useState("");
-  const filtered=transactions
-    .filter(t=>t.date.startsWith(filterMonth))
-    .filter(t=>filter==="all"||t.type===filter)
+  const [search, setSearch] = useState("");
+  const filtered = allMovements
+    .filter(t=>filter==="all"||(filter==="income"&&t.type==="income")||(filter==="expense"&&(t.type==="expense"||t.isCardCharge)))
     .filter(t=>!search||[t.note,t.category,t.subcategory].join(" ").toLowerCase().includes(search.toLowerCase()));
   const grouped={};
   filtered.forEach(t=>{(grouped[t.date]=grouped[t.date]||[]).push(t);});

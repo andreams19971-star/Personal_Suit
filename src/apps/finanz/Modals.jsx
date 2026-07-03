@@ -56,6 +56,11 @@ export function AddModal({onClose,onAdd,accounts,cards=[],opts,categories=DEFAUL
                 ...cards.map(card=><option key={"card-"+card.id} value={"card-"+card.id}>💳 {card.name} ···{card.last4}</option>)
               ]}
             </select>
+            {type==="expense" && cards.length===0 && (
+              <div style={{fontSize:11,color:C.textMuted,marginTop:4}}>
+                ℹ️ Agrega tarjetas en la sección <b style={{color:C.textSub}}>Tarjetas</b> para usarlas aquí
+              </div>
+            )}
           </MF>
           <MF label="Descripción (opcional)"><input type="text" value={form.note} onChange={e=>set("note",e.target.value)} placeholder="Ej: Pago mensual Netflix" style={{width:"100%",background:C.card,border:"1px solid "+(C.border),borderRadius:10,padding:"10px 12px",color:C.text,fontSize:14}}/></MF>
         </div>
@@ -257,7 +262,11 @@ export function EditTxModal({tx,onClose,onSave,accounts,categories=DEFAULT_CATEG
 }
 
 export function TransferModal({onClose, onTransfer, accounts}) {
-  const [form, setForm] = useState({ from:"cash", to:"nequi", amount:"", date:today(), note:"" });
+  const [form, setForm] = useState({
+    from:   accounts[0]?.id || "cash",
+    to:     accounts[1]?.id || accounts[0]?.id || "nequi",
+    amount: "", date: today(), note: ""
+  });
   const set = (k,v) => setForm(f=>({...f,[k]:v}));
   const ok = form.from && form.to && form.from !== form.to && parseFloat(form.amount) > 0;
   const fromAcc = accounts.find(a=>a.id===form.from);
