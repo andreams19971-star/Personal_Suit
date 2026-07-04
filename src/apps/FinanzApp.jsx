@@ -92,14 +92,7 @@ export default function FinanzApp({ onBack }){
   const [selAccount,setSelAccount]=useState(null);
   // Si estamos en los primeros 7 días del mes, mostrar el mes anterior
   // (el usuario aún está revisando el mes que cerró)
-  const defaultFilterMonth = () => {
-    const d = new Date()
-    if (d.getDate() <= 7) {
-      return new Date(d.getFullYear(), d.getMonth()-1, 1).toISOString().slice(0,7)
-    }
-    return d.toISOString().slice(0,7)
-  }
-  const [filterMonth,setFilterMonth]=useState(defaultFilterMonth());
+  const [filterMonth,setFilterMonth]=useState(today().slice(0,7));
   const [settings,setSettings]=useState({currency:"COP",budgets:{}});
   const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
   const [toast,setToast]=useState(null);
