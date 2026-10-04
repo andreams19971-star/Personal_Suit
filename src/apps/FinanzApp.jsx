@@ -234,7 +234,7 @@ export default function FinanzApp({ onBack }){
         </div>
       )}
       <TopBar view={view} filterMonth={filterMonth} setFilterMonth={setFilterMonth} onMonthChange={loadMonth} setSidebarOpen={setSidebarOpen} openAddModal={openAddModal} onBack={onBack} transactions={transactions}/>
-      <div className="fa-scroll" style={{paddingBottom:80}}>
+      <div className="fa-scroll" style={{paddingBottom:"calc(80px + env(safe-area-inset-bottom))"}}>
         {view==="dashboard" && <Dashboard transactions={transactions} accounts={computedAccounts} loans={loans} totalIncome={totalIncome} totalExpense={totalExpense} netBalance={netBalance} filterMonth={filterMonth} setView={setView} setSelAccount={setSelAccount} monthTxs={monthTxs} categories={categories} settings={settings}/>}
         {view==="movements" && <Movements transactions={transactions} cards={cards} filterMonth={filterMonth} deleteTransaction={deleteTransaction} openAddModal={openAddModal} loans={loans} categories={categories} setEditTx={setEditTx} accounts={computedAccounts}/>}
         {view==="accounts"  && <AccountsView accounts={computedAccounts} transactions={transactions} selAccount={selAccount} setSelAccount={setSelAccount} filterMonth={filterMonth} showToast={showToast} categories={categories} deleteTransaction={deleteTransaction} setEditTx={setEditTx}/>}

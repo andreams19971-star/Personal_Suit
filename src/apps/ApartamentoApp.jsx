@@ -122,7 +122,7 @@ export default function ApartamentoApp({ onBack }) {
       </div>
 
       {/* CONTENT */}
-      <div style={{flex:1,overflowY:"auto",overflowX:"hidden",paddingBottom:58,minHeight:0}}>
+      <div style={{flex:1,overflowY:"auto",overflowX:"hidden",paddingBottom:"calc(58px + env(safe-area-inset-bottom))",minHeight:0}}>
         {view==="dashboard" && <DashboardView rooms={rooms} reservations={reservations} expenses={expenses} totalExpenses={totalExpenses} occupancyRate={occupancyRate} getRoomStatus={getRoomStatus} setModal={setModal} updateReservationStatus={updateReservationStatus} showToast={showToast}/>}
         {view==="rooms"     && <RoomsView rooms={rooms} reservations={reservations} getRoomStatus={getRoomStatus} setModal={setModal} updateReservationStatus={updateReservationStatus} deleteReservation={deleteReservation}/>}
         {view==="calendar"  && <CalendarView reservations={reservations} rooms={rooms} calMonth={calMonth} setCalMonth={setCalMonth} setModal={setModal}/>}

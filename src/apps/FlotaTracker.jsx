@@ -133,7 +133,7 @@ export default function FlotaTracker({ onBack }) {
       </div>
 
       {/* CONTENT */}
-      <div style={{flex:1,overflowY:"auto",paddingBottom:58}}>
+      <div style={{flex:1,overflowY:"auto",paddingBottom:"calc(58px + env(safe-area-inset-bottom))"}}>
         {loading && (
           <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:200,gap:14}}>
             <div style={{width:32,height:32,border:"3px solid "+(C.border),borderTop:"3px solid "+(C.accent),borderRadius:"50%",animation:"ft-spin .8s linear infinite"}}/>

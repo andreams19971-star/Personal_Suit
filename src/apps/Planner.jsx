@@ -133,7 +133,7 @@ export default function Planner({ onBack }) {
       </div>
 
       {/* CONTENT */}
-      <div style={{flex:1,overflowY:"auto",paddingBottom:60,minHeight:0,overflowX:"hidden"}}>
+      <div style={{flex:1,overflowY:"auto",paddingBottom:"calc(60px + env(safe-area-inset-bottom))",minHeight:0,overflowX:"hidden"}}>
         {view==="todayStr"    && <TodayView tasks={todayTasks} allTasks={tasks} selDate={selDate} toggleTask={toggleTask} setTaskStatus={setTaskStatus} deleteTask={deleteTask} taskCats={taskCats} setEditTask={setEditTask}/>}
         {view==="tasks"    && <AllTasksView tasks={tasks} setTaskStatus={setTaskStatus} deleteTask={deleteTask} taskCats={taskCats} setEditTask={setEditTask}/>}
         {view==="calendar" && <CalendarView tasks={tasks} aptReservations={aptReservations} calDate={calDate} setCalDate={setCalDate} selDate={selDate} setSelDate={setSelDate} toggleTask={toggleTask} setTaskStatus={setTaskStatus} deleteTask={deleteTask} setShowTaskModal={setShowTaskModal} taskCats={taskCats} setEditTask={setEditTask}/>}

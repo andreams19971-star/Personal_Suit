@@ -4,7 +4,7 @@ html { touch-action: manipulation; overflow: hidden; -webkit-text-size-adjust: 1
 body {
   position: fixed; top: 0; left: 0; right: 0; bottom: 0;
   overflow: hidden;
-  background: #09090B;
+  background: #F5F4F0;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   -webkit-user-select: none; user-select: none;
@@ -22,7 +22,7 @@ input, select, textarea, button { font-family: inherit; outline: none; -webkit-a
 @keyframes fa-toastIn  { from { transform: translateY(60px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 @keyframes fa-spin     { to { transform: rotate(360deg); } }
 .fa-fade-up   { animation: fa-fadeUp .25s ease both; }
-.fa-tx-row:active { background: #18181B !important; }
+.fa-tx-row:active { background: #EBF2EE !important; }
 .fa-btn:active { opacity: .7; }
 
 /* ── MINIMALIST PREMIUM — Planner ── */
@@ -31,13 +31,13 @@ input, select, textarea, button { font-family: inherit; outline: none; -webkit-a
 @keyframes pl-spin { to { transform: rotate(360deg); } }
 .fu  { animation: fu .25s ease both; }
 .bp:active { opacity: .7; }
-.hr:active  { background: #18181B !important; }
+.hr:active  { background: #EBF2EE !important; }
 
 /* ── MINIMALIST PREMIUM — FlotaTracker ── */
 @keyframes ft-fu  { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes ft-spin { to { transform: rotate(360deg); } }
 .ft-fu { animation: ft-fu .25s ease both; }
-.ft-row:active { background: #18181B !important; }
+.ft-row:active { background: #EBF2EE !important; }
 
 /* ── MINIMALIST PREMIUM — ApartamentoApp ── */
 @keyframes ap-fu   { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
