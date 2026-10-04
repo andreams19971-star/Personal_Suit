@@ -245,7 +245,7 @@ export default function FinanzApp({ onBack }){
         </div>
       )}
       <TopBar view={view} filterMonth={filterMonth} setFilterMonth={setFilterMonth} onMonthChange={loadMonth} setSidebarOpen={()=>openSidebar("accounts")} openAddModal={openAddModal} onBack={onBack} transactions={transactions}/>
-      <div className="fa-scroll" style={{paddingBottom:"calc(80px + env(safe-area-inset-bottom))"}}>
+      <div className="fa-scroll" style={{paddingBottom:"calc(140px + env(safe-area-inset-bottom))"}}>
         {view==="dashboard" && <Dashboard transactions={transactions} accounts={computedAccounts} loans={loans} totalIncome={totalIncome} totalExpense={totalExpense} netBalance={netBalance} filterMonth={filterMonth} setView={setView} setSelAccount={setSelAccount} monthTxs={monthTxs} categories={categories} settings={settings} onOpenBudgets={()=>openSidebar("budgets")}/>}
         {view==="movements" && <Movements transactions={transactions} cards={cards} filterMonth={filterMonth} deleteTransaction={deleteTransaction} openAddModal={openAddModal} loans={loans} categories={categories} setEditTx={setEditTx} accounts={computedAccounts}/>}
         {view==="accounts"  && <AccountsView accounts={computedAccounts} transactions={transactions} selAccount={selAccount} setSelAccount={setSelAccount} filterMonth={filterMonth} showToast={showToast} categories={categories} deleteTransaction={deleteTransaction} setEditTx={setEditTx}/>}
@@ -255,14 +255,14 @@ export default function FinanzApp({ onBack }){
       </div>
       <Sidebar open={sidebarOpen} onClose={()=>setSidebarOpen(false)} initialTab={sidebarTab} accounts={computedAccounts} updateAccountBalance={updateAccountBalance} settings={settings} setSettings={setSettings} saveBudgets={saveBudgets} showToast={showToast} categories={categories} saveCategories={saveCategories}/>
       <MobileNav view={view} setView={setView} openAddModal={openAddModal} loans={loans}/>
-      <button onClick={()=>openAddModal()} style={{position:"fixed",bottom:82,right:20,width:54,height:54,borderRadius:"50%",background:C.accent,border:"none",cursor:"pointer",fontSize:24,boxShadow:"0 8px 24px "+(C.accent)+"66",zIndex:100,display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
-      <button onClick={()=>setShowTransferModal(true)} style={{position:"fixed",bottom:82,right:82,width:44,height:44,borderRadius:"50%",background:C.card,border:"1px solid "+C.border,cursor:"pointer",fontSize:18,zIndex:100,display:"flex",alignItems:"center",justifyContent:"center"}} title="Transferir">↔️</button>
+      <button onClick={()=>openAddModal()} style={{position:"fixed",bottom:"calc(64px + env(safe-area-inset-bottom))",right:20,width:54,height:54,borderRadius:"50%",background:C.accent,border:"none",cursor:"pointer",fontSize:24,boxShadow:"0 8px 24px "+(C.accent)+"66",zIndex:100,display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
+      <button onClick={()=>setShowTransferModal(true)} style={{position:"fixed",bottom:"calc(64px + env(safe-area-inset-bottom))",right:82,width:44,height:44,borderRadius:"50%",background:C.card,border:"1px solid "+C.border,cursor:"pointer",fontSize:18,zIndex:100,display:"flex",alignItems:"center",justifyContent:"center"}} title="Transferir">↔️</button>
       {editTx            && <EditTxModal tx={editTx} onClose={()=>setEditTx(null)} onSave={updateTransaction} accounts={computedAccounts} categories={categories}/>}
       {showAddModal      && <AddModal  onClose={()=>{ setShowAddModal(false); setAddModalOpts({}); }} onAdd={addTransaction} accounts={computedAccounts} cards={cards} opts={addModalOpts} categories={categories}/>}
       {showLoanModal     && <LoanModal onClose={()=>setShowLoanModal(false)} onAdd={addLoan} accounts={computedAccounts} cards={cards}/>}
       {showPayModal      && <PayModal  onClose={()=>setShowPayModal(null)} loan={showPayModal} onPay={addPayment} accounts={computedAccounts}/>}
       {showTransferModal && <TransferModal onClose={()=>setShowTransferModal(false)} onTransfer={addTransfer} accounts={computedAccounts}/>}
-      {toast && <div style={{position:"fixed",bottom:96,left:"50%",transform:"translateX(-50%)",background:toast.type==="error"?C.red:C.accent,color:toast.type==="error"?"#fff":"#000",padding:"10px 20px",borderRadius:100,fontWeight:700,fontSize:14,zIndex:9999,animation:"fa-toastIn .3s ease",whiteSpace:"nowrap",boxShadow:"0 8px 24px #0006"}}>{toast.msg}</div>}
+      {toast && <div style={{position:"fixed",bottom:"calc(132px + env(safe-area-inset-bottom))",left:"50%",transform:"translateX(-50%)",background:toast.type==="error"?C.red:C.accent,color:toast.type==="error"?"#fff":"#000",padding:"10px 20px",borderRadius:100,fontWeight:700,fontSize:14,zIndex:9999,animation:"fa-toastIn .3s ease",whiteSpace:"nowrap",boxShadow:"0 8px 24px #0006"}}>{toast.msg}</div>}
     </div>
   );
 }

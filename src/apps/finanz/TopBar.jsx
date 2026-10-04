@@ -21,7 +21,7 @@ export function TopBar({view,filterMonth,setFilterMonth,onMonthChange,setSidebar
     <>
       <div style={{
         background:C.bg, borderBottom:"1px solid "+C.border,
-        paddingTop:"max(14px, calc(env(safe-area-inset-top) + 8px))",
+        paddingTop:"max(52px, calc(env(safe-area-inset-top) + 14px))",
         paddingBottom:"12px", paddingLeft:"20px", paddingRight:"20px",
         display:"flex", alignItems:"center", gap:10, flexShrink:0,
       }}>
