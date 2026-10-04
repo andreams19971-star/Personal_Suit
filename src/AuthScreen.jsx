@@ -14,15 +14,9 @@ const inp = {
   boxSizing:"border-box", outline:"none",
 };
 
-// ── Detecta si Supabase envió un token de recovery en la URL ──
-function detectRecoveryToken() {
-  const hash = window.location.hash;
-  return hash.includes("type=recovery") && hash.includes("access_token");
-}
-
 export default function AuthScreen({ onAuth }) {
   // mode: "login" | "register" | "forgot" | "reset"
-  const [mode,       setMode]       = useState(() => detectRecoveryToken() ? "reset" : "login");
+  const [mode,       setMode]       = useState("login");
   const [name,       setName]       = useState("");
   const [email,      setEmail]      = useState(() => localStorage.getItem("suite_email") || "");
   const [password,   setPassword]   = useState("");
@@ -32,11 +26,17 @@ export default function AuthScreen({ onAuth }) {
   const [error,      setError]      = useState("");
   const [success,    setSuccess]    = useState("");
 
-  // Cuando Supabase redirige con #type=recovery, establece la sesión automáticamente
+  // Supabase dispara PASSWORD_RECOVERY cuando el usuario llega desde el link del correo.
+  // En ese momento la sesión YA está activa y updateUser funciona sin problemas.
   useEffect(() => {
-    if (detectRecoveryToken()) {
-      setMode("reset");
-    }
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") {
+        setMode("reset");
+        setError("");
+        setSuccess("");
+      }
+    });
+    return () => subscription.unsubscribe();
   }, []);
 
   function clearMessages() { setError(""); setSuccess(""); }
