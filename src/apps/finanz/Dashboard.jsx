@@ -3,11 +3,20 @@ import { useState, useEffect, useRef } from "react";
 import { ACCOUNTS_DEF, C, DEFAULT_CATEGORIES, MONTHS, fmtCOP, fmtShort, today } from "./shared.js";
 import { TxRow, SectionHeader, EmptyState, Pill, StatCard, MF } from "./Helpers.jsx";
 
-export function Dashboard({transactions,accounts,loans,totalIncome,totalExpense,netBalance,filterMonth,setView,setSelAccount,monthTxs,categories=DEFAULT_CATEGORIES,settings={}}){
+export function Dashboard({transactions,accounts,loans,totalIncome,totalExpense,netBalance,filterMonth,setView,setSelAccount,monthTxs,categories=DEFAULT_CATEGORIES,settings={},onOpenBudgets}){
   const totalAssets=accounts.reduce((s,a)=>s+a.balance,0);
   const totalPending=loans.filter(l=>l.status==="active").reduce((s,l)=>s+l.balance,0);
   const expByCat={};
   monthTxs.filter(t=>t.type==="expense").forEach(t=>{expByCat[t.category]=(expByCat[t.category]||0)+t.amount;});
+
+  // Proyección fin de mes
+  const todayDate = new Date();
+  const isCurrentMonth = filterMonth === today().slice(0,7);
+  const daysInMonth = new Date(todayDate.getFullYear(), todayDate.getMonth()+1, 0).getDate();
+  const dayOfMonth = todayDate.getDate();
+  const projectedExpense = isCurrentMonth && dayOfMonth > 0 ? Math.round((totalExpense / dayOfMonth) * daysInMonth) : 0;
+  const totalBudget = settings.budgets ? Object.values(settings.budgets).reduce((s,v)=>s+(v||0),0) : 0;
+  const hasBudget = totalBudget > 0;
   const topCats=Object.entries(expByCat).sort((a,b)=>b[1]-a[1]).slice(0,4);
   const last7=Array.from({length:7},(_,i)=>{
     const d=new Date();d.setDate(d.getDate()-(6-i));
@@ -35,6 +44,33 @@ export function Dashboard({transactions,accounts,loans,totalIncome,totalExpense,
           ))}
         </div>
       </div>
+
+      {/* PROYECCIÓN FIN DE MES */}
+      {isCurrentMonth && totalExpense > 0 && (
+        <div className="fa-pad" style={{paddingTop:16,borderBottom:"1px solid "+C.border,paddingBottom:16}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
+            <div>
+              <div style={{fontSize:11,color:C.textMuted,fontWeight:500,letterSpacing:0.5,marginBottom:2}}>PROYECCIÓN A FIN DE MES</div>
+              <div style={{fontSize:22,fontWeight:700,color:hasBudget&&projectedExpense>totalBudget?C.red:C.text}}>{fmtCOP(projectedExpense)}</div>
+            </div>
+            <div style={{textAlign:"right"}}>
+              <div style={{fontSize:11,color:C.textMuted,marginBottom:2}}>Día {dayOfMonth} de {daysInMonth}</div>
+              {hasBudget&&(
+                <div style={{fontSize:12,fontWeight:700,color:projectedExpense>totalBudget?C.red:C.green}}>
+                  {projectedExpense>totalBudget?"▲ +"+ fmtCOP(projectedExpense-totalBudget):"▼ -"+ fmtCOP(totalBudget-projectedExpense)}
+                </div>
+              )}
+            </div>
+          </div>
+          <div style={{height:4,borderRadius:2,background:C.border}}>
+            <div style={{height:"100%",borderRadius:2,background:hasBudget&&projectedExpense>totalBudget?C.red:C.accent,width:Math.min(100,Math.round((totalExpense/(hasBudget?totalBudget:projectedExpense||1))*100))+"%",transition:"width .4s ease"}}/>
+          </div>
+          <div style={{display:"flex",justifyContent:"space-between",marginTop:5}}>
+            <span style={{fontSize:11,color:C.textMuted}}>Gastado: {fmtCOP(totalExpense)}</span>
+            {hasBudget&&<span style={{fontSize:11,color:C.textMuted}}>Límite: {fmtCOP(totalBudget)}</span>}
+          </div>
+        </div>
+      )}
 
       {/* CUENTAS */}
       <div className="fa-pad" style={{paddingTop:16,borderBottom:"1px solid "+C.border,paddingBottom:16}}>
@@ -116,7 +152,7 @@ export function Dashboard({transactions,accounts,loans,totalIncome,totalExpense,
       {/* PRESUPUESTOS */}
       {settings.budgets && Object.keys(settings.budgets).filter(k=>settings.budgets[k]>0).length>0&&(
         <div className="fa-pad" style={{paddingTop:16,borderBottom:"1px solid "+C.border,paddingBottom:16}}>
-          <SectionHeader title="Presupuestos" action="Configurar" onAction={()=>setView("stats")}/>
+          <SectionHeader title="Presupuestos" action="Configurar" onAction={onOpenBudgets}/>
           <div style={{display:"grid",gap:10,marginTop:12}}>
             {Object.entries(settings.budgets).filter(([,v])=>v>0).map(([catId,budget])=>{
               const cat = categories.expense.find(c=>c.id===catId)||{label:catId,icon:"📦"};

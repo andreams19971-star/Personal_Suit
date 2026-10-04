@@ -1,11 +1,65 @@
 // finanz/Sidebar.jsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ACCOUNTS_DEF, C, DEFAULT_CATEGORIES, fmtCOP } from "./shared.js";
 import { AccountsManager } from "./AccountsManager.jsx";
 import { CategoriesManager } from "./CategoriesManager.jsx";
 
-export function Sidebar({open,onClose,accounts,updateAccountBalance,settings,setSettings,showToast,categories=DEFAULT_CATEGORIES,saveCategories}){
-  const [tab,setTab]=useState("accounts");
+function BudgetManager({ categories, settings, setSettings, saveBudgets, showToast }) {
+  const [localBudgets, setLocalBudgets] = useState(() => ({ ...(settings.budgets || {}) }));
+  const [saving, setSaving] = useState(false);
+
+  const handleChange = (catId, val) => {
+    setLocalBudgets(b => ({ ...b, [catId]: parseFloat(val) || 0 }));
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    await saveBudgets(localBudgets);
+    setSaving(false);
+    showToast("Presupuestos guardados ✓");
+  };
+
+  const totalBudget = Object.values(localBudgets).reduce((s, v) => s + (v || 0), 0);
+
+  return (
+    <div style={{ display: "grid", gap: 12 }}>
+      <div style={{ fontSize: 12, color: C.textMuted, fontWeight: 700 }}>PRESUPUESTO MENSUAL</div>
+      <div style={{ background: C.accentDim, border: "1px solid " + C.accentText + "33", borderRadius: 12, padding: "10px 14px" }}>
+        <div style={{ fontSize: 11, color: C.accentText, fontWeight: 600 }}>Total presupuestado</div>
+        <div style={{ fontSize: 18, fontWeight: 700, color: C.accentText }}>{fmtCOP(totalBudget)}</div>
+      </div>
+      {categories.expense.map(cat => (
+        <div key={cat.id} style={{ background: C.card, border: "1px solid " + C.border, borderRadius: 14, padding: "12px 14px", display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ fontSize: 20, flexShrink: 0 }}>{cat.icon}</span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>{cat.label}</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ fontSize: 12, color: C.textMuted, flexShrink: 0 }}>$</span>
+              <input
+                type="number"
+                placeholder="Sin límite"
+                value={localBudgets[cat.id] || ""}
+                onChange={e => handleChange(cat.id, e.target.value)}
+                style={{ flex: 1, background: C.bg, border: "1px solid " + C.border, borderRadius: 8, padding: "6px 10px", color: C.text, fontSize: 13 }}
+              />
+            </div>
+          </div>
+        </div>
+      ))}
+      <button
+        onClick={handleSave}
+        disabled={saving}
+        style={{ background: saving ? C.border : C.accent, color: saving ? C.textMuted : "#000", border: "none", borderRadius: 12, padding: 13, fontWeight: 800, fontSize: 14, cursor: saving ? "default" : "pointer" }}
+      >
+        {saving ? "Guardando..." : "Guardar presupuestos"}
+      </button>
+    </div>
+  );
+}
+
+export function Sidebar({open,onClose,initialTab="accounts",accounts,updateAccountBalance,settings,setSettings,saveBudgets,showToast,categories=DEFAULT_CATEGORIES,saveCategories}){
+  const [tab,setTab]=useState(initialTab);
+  useEffect(()=>{ if(open) setTab(initialTab); },[open,initialTab]);
   const [notifPerm, setNotifPerm]=useState(typeof Notification!=="undefined" && Notification.permission ? Notification.permission : "unsupported");
 
   const handleRequestNotif = async () => {
@@ -23,7 +77,7 @@ export function Sidebar({open,onClose,accounts,updateAccountBalance,settings,set
           <button onClick={onClose} style={{background:C.card,border:"1px solid "+(C.border),borderRadius:8,padding:"6px 10px",color:C.text,cursor:"pointer"}}>✕</button>
         </div>
         <div style={{display:"flex",borderBottom:"1px solid "+(C.border),flexShrink:0,overflowX:"auto"}}>
-          {[["accounts","Cuentas"],["cats","Categorías"],["notif","Notif"],["prefs","Prefs"]].map(([id,l])=>(
+          {[["accounts","Cuentas"],["budgets","Presupuesto"],["cats","Categorías"],["notif","Notif"],["prefs","Prefs"]].map(([id,l])=>(
             <button key={id} onClick={()=>setTab(id)} style={{flex:"0 0 auto",padding:"10px 10px",border:"none",background:"transparent",borderBottom:tab===id?"2px solid "+(C.accent):"2px solid transparent",color:tab===id?C.accent:C.textSub,fontWeight:600,fontSize:11,cursor:"pointer",whiteSpace:"nowrap"}}>{l}</button>
           ))}
         </div>
@@ -82,19 +136,7 @@ export function Sidebar({open,onClose,accounts,updateAccountBalance,settings,set
             </div>
           )}
           {tab==="budgets"&&(
-            <div style={{display:"grid",gap:12}}>
-              <div style={{fontSize:12,color:C.textMuted,fontWeight:700}}>PRESUPUESTO MENSUAL</div>
-              {categories.expense.map(cat=>(
-                <div key={cat.id} style={{background:C.card,border:"1px solid "+(C.border),borderRadius:14,padding:"12px 14px",display:"flex",alignItems:"center",gap:10}}>
-                  <span style={{fontSize:20,flexShrink:0}}>{cat.icon}</span>
-                  <div style={{flex:1}}>
-                    <div style={{fontSize:13,fontWeight:600,marginBottom:4}}>{cat.label}</div>
-                    <input type="number" placeholder="0" defaultValue={settings.budgets?.[cat.id]||""} onChange={e=>setSettings(s=>({...s,budgets:{...s.budgets,[cat.id]:parseFloat(e.target.value)||0}}))} style={{width:"100%",background:C.bg,border:"1px solid "+(C.border),borderRadius:8,padding:"6px 10px",color:C.text,fontSize:13}}/>
-                  </div>
-                </div>
-              ))}
-              <button onClick={()=>showToast("Presupuestos guardados ✓")} style={{background:C.accent,color:"#000",border:"none",borderRadius:12,padding:12,fontWeight:800,fontSize:14,cursor:"pointer"}}>Guardar</button>
-            </div>
+            <BudgetManager categories={categories} settings={settings} setSettings={setSettings} saveBudgets={saveBudgets} showToast={showToast}/>
           )}
           {tab==="prefs"&&(
             <div style={{display:"grid",gap:14}}>

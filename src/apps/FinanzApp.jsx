@@ -87,6 +87,8 @@ export default function FinanzApp({ onBack }){
   });
   const [view,setView]=useState("dashboard");
   const [sidebarOpen,setSidebarOpen]=useState(false);
+  const [sidebarTab,setSidebarTab]=useState("accounts");
+  const openSidebar=(tab="accounts")=>{setSidebarTab(tab);setSidebarOpen(true);};
   const [showAddModal,setShowAddModal]=useState(false);
   const [addModalOpts,setAddModalOpts]=useState({});
   const [selAccount,setSelAccount]=useState(null);
@@ -107,14 +109,23 @@ export default function FinanzApp({ onBack }){
     await saveSetting('fa_categories', cats);
   };
 
-  // Cargar categorías desde Supabase
+  // Cargar categorías y presupuestos desde Supabase
   useEffect(() => {
     loadSetting('fa_categories', DEFAULT_CATEGORIES).then(cats => {
       if (cats) setCategories(cats);
     });
-    // Pedir permiso de notificaciones
+    loadSetting('fa_budgets', {}).then(budgets => {
+      if (budgets && typeof budgets === 'object') {
+        setSettings(s => ({ ...s, budgets }));
+      }
+    });
     requestPermission();
   }, []);
+
+  const saveBudgets = async (budgets) => {
+    setSettings(s => ({ ...s, budgets }));
+    await saveSetting('fa_budgets', budgets);
+  };
 
   // Revisar alertas cuando los datos estén listos
   useEffect(() => {
@@ -233,16 +244,16 @@ export default function FinanzApp({ onBack }){
           <div style={{fontSize:14,color:C.textMuted}}>Cargando datos...</div>
         </div>
       )}
-      <TopBar view={view} filterMonth={filterMonth} setFilterMonth={setFilterMonth} onMonthChange={loadMonth} setSidebarOpen={setSidebarOpen} openAddModal={openAddModal} onBack={onBack} transactions={transactions}/>
+      <TopBar view={view} filterMonth={filterMonth} setFilterMonth={setFilterMonth} onMonthChange={loadMonth} setSidebarOpen={()=>openSidebar("accounts")} openAddModal={openAddModal} onBack={onBack} transactions={transactions}/>
       <div className="fa-scroll" style={{paddingBottom:"calc(80px + env(safe-area-inset-bottom))"}}>
-        {view==="dashboard" && <Dashboard transactions={transactions} accounts={computedAccounts} loans={loans} totalIncome={totalIncome} totalExpense={totalExpense} netBalance={netBalance} filterMonth={filterMonth} setView={setView} setSelAccount={setSelAccount} monthTxs={monthTxs} categories={categories} settings={settings}/>}
+        {view==="dashboard" && <Dashboard transactions={transactions} accounts={computedAccounts} loans={loans} totalIncome={totalIncome} totalExpense={totalExpense} netBalance={netBalance} filterMonth={filterMonth} setView={setView} setSelAccount={setSelAccount} monthTxs={monthTxs} categories={categories} settings={settings} onOpenBudgets={()=>openSidebar("budgets")}/>}
         {view==="movements" && <Movements transactions={transactions} cards={cards} filterMonth={filterMonth} deleteTransaction={deleteTransaction} openAddModal={openAddModal} loans={loans} categories={categories} setEditTx={setEditTx} accounts={computedAccounts}/>}
         {view==="accounts"  && <AccountsView accounts={computedAccounts} transactions={transactions} selAccount={selAccount} setSelAccount={setSelAccount} filterMonth={filterMonth} showToast={showToast} categories={categories} deleteTransaction={deleteTransaction} setEditTx={setEditTx}/>}
         {view==="cards"     && <CardsView cards={cards} addCharge={addCharge} deleteCharge={deleteCharge} updateCharge={updateCharge} markPaid={markPaid} saveCard={saveCard} addCard={addCard} filterMonth={filterMonth} showToast={showToast} accounts={computedAccounts}/>}
         {view==="loans"     && <LoansView loans={loans} transactions={transactions} setShowLoanModal={setShowLoanModal} setShowPayModal={setShowPayModal} accounts={computedAccounts} showToast={showToast} categories={categories} editLoan={editLoan} deleteLoan={deleteLoan}/>}
         {view==="stats"     && <Stats monthTxs={monthTxs} totalIncome={totalIncome} totalExpense={totalExpense} transactions={transactions} filterMonth={filterMonth} categories={categories}/>}
       </div>
-      <Sidebar open={sidebarOpen} onClose={()=>setSidebarOpen(false)} accounts={computedAccounts} updateAccountBalance={updateAccountBalance} settings={settings} setSettings={setSettings} showToast={showToast} categories={categories} saveCategories={saveCategories}/>
+      <Sidebar open={sidebarOpen} onClose={()=>setSidebarOpen(false)} initialTab={sidebarTab} accounts={computedAccounts} updateAccountBalance={updateAccountBalance} settings={settings} setSettings={setSettings} saveBudgets={saveBudgets} showToast={showToast} categories={categories} saveCategories={saveCategories}/>
       <MobileNav view={view} setView={setView} openAddModal={openAddModal} loans={loans}/>
       <button onClick={()=>openAddModal()} style={{position:"fixed",bottom:82,right:20,width:54,height:54,borderRadius:"50%",background:C.accent,border:"none",cursor:"pointer",fontSize:24,boxShadow:"0 8px 24px "+(C.accent)+"66",zIndex:100,display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
       <button onClick={()=>setShowTransferModal(true)} style={{position:"fixed",bottom:82,right:82,width:44,height:44,borderRadius:"50%",background:C.card,border:"1px solid "+C.border,cursor:"pointer",fontSize:18,zIndex:100,display:"flex",alignItems:"center",justifyContent:"center"}} title="Transferir">↔️</button>
