@@ -3,6 +3,8 @@ import { useState, useEffect } from "react";
 import { C, DAYS, MONTHS, today } from "./shared.js";
 import { TaskRow } from "./TaskRow.jsx";
 
+function EmptyPlanner({msg,sub}){return(<div style={{textAlign:"center",padding:"24px 0",color:C.textMuted}}><div style={{fontSize:13,fontWeight:600}}>{msg}</div>{sub&&<div style={{fontSize:11,marginTop:4}}>{sub}</div>}</div>);}
+
 export function CalendarView({ tasks, aptReservations=[], calDate, setCalDate, selDate, setSelDate, toggleTask, setTaskStatus, deleteTask, setShowTaskModal, taskCats, setEditTask }) {
   const year = calDate.getFullYear();
   const month = calDate.getMonth();
