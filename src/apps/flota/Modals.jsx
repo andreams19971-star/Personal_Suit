@@ -294,5 +294,3 @@ export function ModalWrap({title,onClose,color,children}) {
 }
 
 export function MF({label,children}){return(<div><div style={{fontSize:10,color:C.textMuted,fontWeight:700,marginBottom:4}}>{label.toUpperCase()}</div>{children}</div>);}
-const lbl = {fontSize:10,color:C.textMuted,fontWeight:700,marginBottom:4,textTransform:"uppercase"};
-const inp = {width:"100%",background:C.card,border:"1px solid "+(C.border),borderRadius:9,padding:"9px 11px",color:C.text,fontSize:13,boxSizing:"border-box"};
