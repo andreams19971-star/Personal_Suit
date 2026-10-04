@@ -3,16 +3,16 @@
 
 // ─── COLORES ──────────────────────────────────────────────────────────────────
 export const C = {
-  bg:"#09090B",surface:"#111113",card:"#18181B",card2:"#1C1C1F",
-  border:"#27272A",borderSub:"#1C1C1F",
-  text:"#FAFAFA",textSub:"#A1A1AA",textMuted:"#52525B",
-  accent:"#22C55E",accentDim:"#052010",accentText:"#4ADE80",
-  green:"#22C55E",greenDim:"#052010",
-  red:"#EF4444",redDim:"#1F0808",
-  yellow:"#EAB308",yellowDim:"#1C1500",
-  orange:"#F97316",orangeDim:"#1C0A02",
-  blue:"#3B82F6",blueDim:"#071228",
-  purple:"#A855F7",purpleDim:"#180A28",
+  bg:"#F5F4F0",surface:"#FFFFFF",card:"#FFFFFF",card2:"#F9F8F5",
+  border:"#E8E6DF",borderSub:"#F0EEE9",
+  text:"#1A1916",textSub:"#6B6860",textMuted:"#A8A49C",
+  accent:"#5C8A6B",accentDim:"#EBF2EE",accentText:"#3D6B50",
+  green:"#4A7C59",greenDim:"#EBF2EE",
+  red:"#C0392B",redDim:"#FDECEA",
+  yellow:"#997A00",yellowDim:"#FEF9E7",
+  orange:"#C0641A",orangeDim:"#FEF0E7",
+  blue:"#3B6FA8",blueDim:"#EBF2FC",
+  purple:"#7B5EA7",purpleDim:"#F3EEF9",
 };
 
 export const MONTHS = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];

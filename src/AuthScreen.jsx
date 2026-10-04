@@ -2,16 +2,16 @@ import { useState, useEffect } from "react";
 import { supabase } from "./supabase.js";
 
 const C = {
-  bg:"#09090B", surface:"#111113", card:"#18181B",
-  border:"#27272A", text:"#FAFAFA", textSub:"#A1A1AA", textMuted:"#52525B",
-  accent:"#22C55E", accentDim:"#052010", accentText:"#4ADE80",
-  red:"#EF4444", redDim:"#1F0808",
+  bg:"#F5F4F0", surface:"#FFFFFF", card:"#FFFFFF",
+  border:"#E8E6DF", text:"#1A1916", textSub:"#6B6860", textMuted:"#A8A49C",
+  accent:"#5C8A6B", accentDim:"#EBF2EE", accentText:"#3D6B50",
+  red:"#C0392B", redDim:"#FDECEA",
 };
 
 const inp = {
-  width:"100%", background:C.card, border:"1px solid "+C.border,
+  width:"100%", background:C.surface, border:"1px solid "+C.border,
   borderRadius:10, padding:"12px 14px", color:C.text, fontSize:16,
-  boxSizing:"border-box",
+  boxSizing:"border-box", outline:"none",
 };
 
 // ── Detecta si Supabase envió un token de recovery en la URL ──

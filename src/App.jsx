@@ -19,9 +19,10 @@ const ALL_APPS = [
 ];
 
 const THEMES = {
-  dark:   { bg:"#09090B", surface:"#111113", card:"#18181B", border:"#27272A", text:"#FAFAFA", textSub:"#A1A1AA", textMuted:"#52525B", accent:"#22C55E", accentDim:"#052010" },
-  light:  { bg:"#FAFAFA", surface:"#FFFFFF", card:"#F4F4F5", border:"#E4E4E7", text:"#09090B", textSub:"#52525B", textMuted:"#A1A1AA", accent:"#16A34A", accentDim:"#DCFCE7" },
-  black:  { bg:"#000000", surface:"#0A0A0A", card:"#141414", border:"#222222", text:"#FAFAFA", textSub:"#A1A1AA", textMuted:"#444444", accent:"#22C55E", accentDim:"#052010" },
+  // Soft Minimal — paleta cálida y limpia (default)
+  light:  { bg:"#F5F4F0", surface:"#FFFFFF", card:"#FFFFFF", border:"#E8E6DF", text:"#1A1916", textSub:"#6B6860", textMuted:"#A8A49C", accent:"#5C8A6B", accentDim:"#EBF2EE" },
+  dark:   { bg:"#09090B", surface:"#111113", card:"#18181B", border:"#27272A", text:"#FAFAFA", textSub:"#A1A1AA", textMuted:"#52525B", accent:"#5C8A6B", accentDim:"#0D1F14" },
+  black:  { bg:"#000000", surface:"#0A0A0A", card:"#141414", border:"#222222", text:"#FAFAFA", textSub:"#A1A1AA", textMuted:"#444444", accent:"#5C8A6B", accentDim:"#0D1F14" },
 };
 
 const FONT_SIZES = [
@@ -58,8 +59,8 @@ function AppContent() {
   const setPref = (k,v) => { const n={...prefs,[k]:v}; setPrefs(n); savePrefs(n); };
 
   const themeKey = prefs.theme==="system"   ? getSystemTheme()
-                 : prefs.theme==="schedule" ? (getScheduledTheme(prefs)||"dark")
-                 : (prefs.theme||"dark");
+                 : prefs.theme==="schedule" ? (getScheduledTheme(prefs)||"light")
+                 : (prefs.theme||"light");
 
   // Timer para re-evaluar el tema por horario cada 60s
   useEffect(()=>{
@@ -67,7 +68,7 @@ function AppContent() {
     const timer = setInterval(()=>{ forceUpdate(n=>n+1); }, 60000);
     return ()=>clearInterval(timer);
   }, [prefs.theme, prefs.darkFrom, prefs.darkUntil]);
-  const C          = THEMES[themeKey]||THEMES.dark;
+  const C          = THEMES[themeKey]||THEMES.light;
   const fontScale  = FONT_SIZES.find(f=>f.id===(prefs.fontSize||"medium"))?.scale||1;
 
   useEffect(()=>{ document.documentElement.style.fontSize=(fontScale*16)+"px"; },[fontScale]);
@@ -113,9 +114,9 @@ function AppContent() {
   // ── Auth loading ──
   if (auth.loading) {
     return (
-      <div style={{position:"absolute",inset:0,background:"#09090B",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:14}}>
+      <div style={{position:"absolute",inset:0,background:"#F5F4F0",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:14}}>
         <div style={{fontSize:32}}>💰</div>
-        <div style={{fontSize:13,color:"#52525B"}}>Cargando...</div>
+        <div style={{fontSize:13,color:"#A8A49C"}}>Cargando...</div>
       </div>
     );
   }
@@ -146,9 +147,9 @@ function AppContent() {
   const profileMissing = auth.user && !auth.profile;
 
   const AppLoader = () => (
-    <div style={{position:"absolute",inset:0,background:"#09090B",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:12}}>
-      <div style={{width:32,height:32,border:"2px solid #27272A",borderTop:"2px solid #22C55E",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>
-      <div style={{fontSize:12,color:"#52525B"}}>Cargando...</div>
+    <div style={{position:"absolute",inset:0,background:"#F5F4F0",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:12}}>
+      <div style={{width:32,height:32,border:"2px solid #E8E6DF",borderTop:"2px solid #5C8A6B",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>
+      <div style={{fontSize:12,color:"#A8A49C"}}>Cargando...</div>
     </div>
   );
 
