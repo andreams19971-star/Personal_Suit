@@ -4,6 +4,8 @@ import { ACCOUNTS, C, CAR1, CAR1_DIM, CAR2, CAR2_DIM, CARRO1_DIARIO, MONTHS, fmt
 
 // Shared button style
 const btn = { width:"100%", marginTop:6, padding:13, borderRadius:12, border:"none", fontWeight:800, fontSize:15, cursor:"pointer" };
+// Shared input style
+const inp = { width:"100%", boxSizing:"border-box", padding:"10px 12px", borderRadius:10, border:"1px solid #333", background:"#111", color:"#fff", fontSize:15 };
 
 export function EditPagoModal({carId, pago, accounts, onClose, onSave}) {
   const [form, setForm] = useState({
