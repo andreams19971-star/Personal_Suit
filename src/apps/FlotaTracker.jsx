@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useFlotaData } from '../hooks/useFlotaData.js';
-import { C, CAR1, CAR2, today, fmtCOP, fmtShort, ACCOUNTS, MONTHS, getWorkDaysInMonth, getWorkDaysPassed } from './flota/shared.js';
+import { C, CAR1, CAR2, today, fmtCOP, fmtShort, ACCOUNTS, MONTHS, getWorkDaysInMonth, getWorkDaysPassed, CARRO1_DIARIO, CARRO2_MENSUAL } from './flota/shared.js';
 import { Dashboard } from './flota/Dashboard.jsx';
 import { CarroView } from './flota/CarroView.jsx';
 import { GastosView } from './flota/GastosView.jsx';
@@ -60,20 +60,7 @@ export default function FlotaTracker({ onBack }) {
     const nowPaid = await togglePayment(carroId, pagoId);
 
     if (nowPaid) {
-      try {
-        await supabase.from('transactions').insert([{
-          id: "flota-"+Date.now(),
-          date: pago.fecha, type: "income",
-          category: "flota_inc",
-          subcategory: carro?.nombre||"Flota",
-          account: pago.account || "cash",
-          amount: pago.monto,
-          note: "Cobro "+(carro?.nombre||"")+" · "+pago.fecha,
-          loan_id: null,
-        }]);
-        console.log('[FlotaTracker] ✅ Ingreso en FinanzApp');
-      } catch(e) { console.error('[FlotaTracker]', e); }
-      showToast("✓ Pagado — ingreso en FinanzApp");
+      showToast("Pagado — ingreso en FinanzApp");
     } else {
       showToast("Marcado como pendiente");
     }
@@ -83,22 +70,6 @@ export default function FlotaTracker({ onBack }) {
     if (r?.error) showToast("Error: "+r.error,"err");
     else showToast("Gasto registrado ✓");
     setModal(null);
-    // Sincronizar con FinanzApp como egreso
-    try {
-      const carro = cars.find(c=>c.id===carroId);
-      await supabase.from('transactions').insert([{
-        id: "flota-exp-"+Date.now(),
-        date: gasto.fecha,
-        type: "expense",
-        category: "transport",
-        subcategory: gasto.categoria,
-        account: gasto.account || "cash",
-        amount: gasto.monto,
-        note: "Gasto "+(carro?.nombre||"Flota")+" · "+gasto.categoria,
-        loan_id: null,
-      }]);
-      console.log('[FlotaTracker] ✅ Gasto sincronizado con FinanzApp');
-    } catch(e) { console.error('[FlotaTracker] sync gasto:', e); }
   };
 
   const agregarPagoDiario = async (carroId, fecha, account, monto) => {
