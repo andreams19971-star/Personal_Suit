@@ -131,6 +131,24 @@ Deno.serve(async (req) => {
     return new Response("OK");
   }
 
+  // ── /nuevo ─────────────────────────────────────────────────────────────
+  if (text === "/nuevo") {
+    await sendMessage(
+      chatId,
+      "✏️ <b>Nuevo registro</b>\n\n" +
+      "Escribe en este orden:\n\n" +
+      "<code>descripcion monto cuenta categoria</code>\n\n" +
+      "📌 <b>Ejemplos:</b>\n" +
+      "<code>cafe 5000</code>\n" +
+      "<code>cafe 5000 nequi</code>\n" +
+      "<code>cafe 5000 nequi comida</code>\n" +
+      "<code>+salario 3500000 bancolombia</code>\n\n" +
+      "💡 cuenta y categoría son opcionales\n" +
+      "💡 prefijo + para ingresos"
+    );
+    return new Response("OK");
+  }
+
   // ── /help ──────────────────────────────────────────────────────────────
   if (text === "/help") {
     await sendMessage(
@@ -247,11 +265,10 @@ Deno.serve(async (req) => {
     user_id: userId,
     type: parsed.type,
     amount: parsed.amount,
-    description: parsed.description,
     category: parsed.category,
     account: finalAccountLabel,
     date: today,
-    note: "via Telegram",
+    note: parsed.description + " (via Telegram)",
   });
 
   if (error) {
