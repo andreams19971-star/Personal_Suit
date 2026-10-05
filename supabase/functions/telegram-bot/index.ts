@@ -238,8 +238,6 @@ Deno.serve(async (req) => {
   }
 
   // Cuenta default: la primera disponible si no hizo match
-  const finalAccountId =
-    parsed.accountId || (accounts.length > 0 ? accounts[0].id : null);
   const finalAccountLabel =
     parsed.accountLabel || (accounts.length > 0 ? accounts[0].label : "sin cuenta");
 
@@ -251,7 +249,7 @@ Deno.serve(async (req) => {
     amount: parsed.amount,
     description: parsed.description,
     category: parsed.category,
-    account_id: finalAccountId,
+    account: finalAccountLabel,
     date: today,
     note: "via Telegram",
   });
