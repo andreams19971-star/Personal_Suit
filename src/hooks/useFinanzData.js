@@ -68,6 +68,20 @@ export function useFinanzData() {
           })
         }
       )
+      // Los triggers de FlotaTracker tambien actualizan y borran transacciones
+      .on('postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'transactions' },
+        (payload) => {
+          setTransactions(prev => prev.map(t => t.id === payload.new.id ? rowToTx(payload.new) : t))
+        }
+      )
+      .on('postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'transactions' },
+        (payload) => {
+          const goneId = payload.old && payload.old.id
+          if (goneId) setTransactions(prev => prev.filter(t => t.id !== goneId))
+        }
+      )
       .subscribe()
 
     return () => { supabase.removeChannel(channel) }

@@ -79,8 +79,9 @@ function TelegramSettings({ showToast }) {
     if (!id) return;
     setSaving(true);
     const { data: { user } } = await supabase.auth.getUser();
-    const payload = { chat_id: id, user_id: user ? user.id : "" };
-    const { error } = await supabase.from("app_settings").upsert({ key: "telegram_config", value: payload });
+    if (!user) { setSaving(false); showToast("Sesion expirada"); return; }
+    const payload = { chat_id: id, user_id: user.id };
+    const { error } = await supabase.from("app_settings").upsert({ user_id: user.id, key: "telegram_config", value: payload }, { onConflict: "user_id,key" });
     setSaving(false);
     if (error) { showToast("Error al guardar"); return; }
     setLinked(true);

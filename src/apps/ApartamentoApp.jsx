@@ -53,12 +53,14 @@ export default function ApartamentoApp({ onBack }) {
       }
     }
 
-    await dbAddRes(res);
+    const r = await dbAddRes(res);
+    if (r?.error) { showToast("❌ " + r.error, "err"); return; }
     showToast("Reserva creada ✓");
     setModal(null);
   };
   const updateReservationStatus = async (id, status) => {
-    await dbUpdateStatus(id, status);
+    const r = await dbUpdateStatus(id, status);
+    if (r?.error) { showToast("❌ " + r.error, "err"); return; }
     showToast("Estado actualizado ✓");
   };
   const deleteReservation = async (id) => {

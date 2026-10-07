@@ -37,7 +37,9 @@ export function useFlotaData() {
 
       let loadedCars = cr.data || []
       if (loadedCars.length === 0) {
-        const { data:inserted, error:ie } = await supabase.from('cars').insert(DEFAULT_CARS).select()
+        // Sin id fijo: cada usuario recibe sus propios carros
+        const seed = DEFAULT_CARS.map(({ id, ...c }) => ({ ...c, user_id: userId }))
+        const { data:inserted, error:ie } = await supabase.from('cars').insert(seed).select()
         if (ie) throw new Error('insert cars: '+ie.message)
         loadedCars = inserted || DEFAULT_CARS
       }
@@ -108,23 +110,7 @@ export function useFlotaData() {
       return pago.pagado
     }
 
-    // ── Sync a FinanzApp: si se marca como pagado, crear ingreso en transactions ──
-    if (newPagado) {
-      const userId = userIdRef.current || (await supabase.auth.getSession()).data?.session?.user?.id
-      const car = cars.find(c => c.id === carId)
-      await supabase.from('transactions').insert([{
-        user_id:     userId,
-        date:        pago.fecha,
-        type:        'income',
-        category:    'flota_inc',
-        subcategory: car?.nombre || 'Vehículo',
-        account:     pago.account || 'cash',
-        amount:      pago.monto,
-        note:        'Ingreso flota — ' + (car?.nombre || carId),
-      }])
-      console.log('[togglePayment] 💰 Sincronizado a FinanzApp')
-    }
-
+    // El ingreso en FinanzApp lo crea/borra el trigger car_payments_sync_tx (BD)
     console.log('[togglePayment] ✅', pagoId, '→ pagado:', newPagado)
     return newPagado
   }
@@ -220,23 +206,7 @@ export function useFlotaData() {
     setExpenses(prev => ({...prev, [carId]: (prev[carId]||[]).map(e=>e.id===localId?{...localRow,id:data.id}:e)}))
     console.log('[addExpense] ✅', data.id)
 
-    // ── Sync a FinanzApp: crear gasto en transactions ──
-    try {
-      const userId = userIdRef.current || (await supabase.auth.getSession()).data?.session?.user?.id
-      const car = cars.find(c => c.id === carId)
-      await supabase.from('transactions').insert([{
-        user_id:     userId,
-        date:        gasto.fecha,
-        type:        'expense',
-        category:    'transport',
-        subcategory: gasto.categoria || 'Gasto vehículo',
-        account:     gasto.account || 'cash',
-        amount:      gasto.monto,
-        note:        (gasto.nota || gasto.categoria || '') + (car ? ' — ' + car.nombre : ''),
-      }])
-      console.log('[addExpense] 💸 Sincronizado a FinanzApp')
-    } catch(e) { console.warn('[addExpense] sync warn:', e.message) }
-
+    // El gasto en FinanzApp lo crea el trigger car_expenses_sync_tx (BD)
     return { data }
   }
 
@@ -272,7 +242,8 @@ export function useFlotaData() {
     }
     setCars(prev => [...prev, newCar])
     if (!onlineRef.current) console.warn('[offline] intentando igualmente...')
-    const { error } = await supabase.from('cars').insert([newCar])
+    const userId = userIdRef.current || (await supabase.auth.getSession()).data?.session?.user?.id
+    const { error } = await supabase.from('cars').insert([{ ...newCar, user_id: userId }])
     if (error) console.error('[addCar]', error.message)
     else console.log('[addCar] ✅', newCar.nombre)
   }

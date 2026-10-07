@@ -128,13 +128,7 @@ alter table car_expenses  enable row level security;
 
 -- Políticas: cualquier usuario autenticado puede hacer todo
 -- (para uso personal, sin multi-usuario)
-create policy "Allow all for authenticated" on transactions  for all using (true) with check (true);
-create policy "Allow all for authenticated" on loans         for all using (true) with check (true);
-create policy "Allow all for authenticated" on tasks         for all using (true) with check (true);
-create policy "Allow all for authenticated" on habits        for all using (true) with check (true);
-create policy "Allow all for authenticated" on goals         for all using (true) with check (true);
-create policy "Allow all for authenticated" on notes         for all using (true) with check (true);
-create policy "Allow all for authenticated" on cars          for all using (true) with check (true);
-create policy "Allow all for authenticated" on car_payments  for all using (true) with check (true);
-create policy "Allow all for authenticated" on car_expenses  for all using (true) with check (true);
 
+
+
+-- Las políticas RLS se crean con supabase/migrations/20261007_01_rls_user_isolation.sql
