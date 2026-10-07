@@ -38,7 +38,7 @@ export function useApartamentoData() {
       let loadedRooms = rr.data || []
       if (loadedRooms.length === 0) {
         const inserts = DEFAULT_ROOMS.map(r => ({
-          id: r.id, name: r.name, description: r.description,
+          id: userId.slice(0,8) + '-' + r.id, user_id: userId, name: r.name, description: r.description,
           base_price: r.base_price, icon: r.icon, color: r.color,
           amenities: r.amenities
         }))
@@ -97,6 +97,8 @@ export function useApartamentoData() {
     if (error) {
       console.error('[addReservation] ❌', error.message)
       setReservations(prev => prev.filter(r => r.id !== localId))
+      // 23P01 = restriccion no_overlapping_dates (otra reserva gano la carrera)
+      if (error.code === '23P01') return { error: 'Esa habitación ya tiene una reserva en esas fechas' }
       return { error: error.message }
     }
     setReservations(prev => prev.map(r => r.id===localId ? {...newRes, id:data.id} : r))
@@ -109,8 +111,16 @@ export function useApartamentoData() {
       const updated = prev.map(r => r.id!==id ? r : {...r, status})
       return updated
     })
+    const before = reservations.find(r => r.id === id)
     if (!onlineRef.current) console.warn('[offline] intentando igualmente...')
-    await supabase.from('apt_reservations').update({ status }).eq('id', id)
+    const { error } = await supabase.from('apt_reservations').update({ status }).eq('id', id)
+    if (error) {
+      console.error('[updateReservationStatus] ❌', error.message)
+      if (before) setReservations(prev => prev.map(r => r.id!==id ? r : {...r, status: before.status}))
+      if (error.code === '23P01') return { error: 'Choca con otra reserva activa en esas fechas' }
+      return { error: error.message }
+    }
+    return { data: true }
   }
 
   async function deleteReservation(id) {

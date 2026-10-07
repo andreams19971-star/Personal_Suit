@@ -100,44 +100,13 @@ BEGIN
   END LOOP;
 END $$;
 
--- Políticas para tablas de datos (anon + authenticated)
-DO $$
-DECLARE
-  tbls text[] := ARRAY[
-    'transactions','loans','account_balances','credit_cards','card_charges',
-    'tasks','habits','goals','notes','cars','car_payments','car_expenses',
-    'apt_rooms','apt_reservations','apt_expenses','app_settings'
-  ];
-  t text;
-BEGIN
-  FOREACH t IN ARRAY tbls LOOP
-    BEGIN
-      EXECUTE format('CREATE POLICY "anon_all" ON %I FOR ALL TO anon USING (true) WITH CHECK (true)', t);
-    EXCEPTION WHEN duplicate_object THEN NULL; END;
-    BEGIN
-      EXECUTE format('CREATE POLICY "auth_all" ON %I FOR ALL TO authenticated USING (true) WITH CHECK (true)', t);
-    EXCEPTION WHEN duplicate_object THEN NULL; END;
-  END LOOP;
-END $$;
+-- Políticas de tablas de datos y de profiles:
+-- NO se crean aquí. Ejecuta en orden los archivos de supabase/migrations/
+-- (01 RLS por usuario, 02 triggers Flota→Finanzas, 03 anti-solapamiento).
+-- Nunca vuelvas a crear políticas USING (true): exponen todos los datos
+-- a cualquiera que tenga la anon key, que es pública.
 
--- Políticas para profiles
-DO $$
-BEGIN
-  -- Limpiar policies viejas de profiles
-  DROP POLICY IF EXISTS "own_profile"           ON profiles;
-  DROP POLICY IF EXISTS "admin_all_profiles"    ON profiles;
-  DROP POLICY IF EXISTS "profiles_select"       ON profiles;
-  DROP POLICY IF EXISTS "profiles_select_anon"  ON profiles;
-  DROP POLICY IF EXISTS "profiles_update"       ON profiles;
-  DROP POLICY IF EXISTS "profiles_insert"       ON profiles;
-  DROP POLICY IF EXISTS "anon_all"              ON profiles;
-  DROP POLICY IF EXISTS "auth_all"              ON profiles;
-END $$;
-
-CREATE POLICY "profiles_select"      ON profiles FOR SELECT TO authenticated USING (true);
-CREATE POLICY "profiles_select_anon" ON profiles FOR SELECT TO anon           USING (true);
-CREATE POLICY "profiles_update"      ON profiles FOR UPDATE TO authenticated  USING (auth.uid() = id) WITH CHECK (auth.uid() = id);
-CREATE POLICY "profiles_insert"      ON profiles FOR INSERT TO authenticated  WITH CHECK (auth.uid() = id);
+-- (profiles: ver supabase/migrations/20261007_01_rls_user_isolation.sql)
 
 -- ═══════════════════════════════════════════════
 -- 6. RPC ADMIN
